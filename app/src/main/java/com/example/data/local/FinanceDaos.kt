@@ -111,3 +111,21 @@ interface AuditLogDao {
     suspend fun insertAuditLog(log: AuditLogEntity)
 }
 
+@Dao
+interface DeletedItemDao {
+    @Query("SELECT * FROM deleted_items ORDER BY deletedAt DESC")
+    fun getAllDeletedItemsFlow(): Flow<List<DeletedItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeletedItem(item: DeletedItemEntity)
+
+    @Delete
+    suspend fun deleteItem(item: DeletedItemEntity)
+
+    @Query("DELETE FROM deleted_items WHERE id = :id")
+    suspend fun deleteItemById(id: String)
+
+    @Query("DELETE FROM deleted_items")
+    suspend fun clearAllDeletedItems()
+}
+

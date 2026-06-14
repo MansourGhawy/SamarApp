@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
@@ -125,7 +126,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    LEDGER, REPORTS, SETTINGS
+    LEDGER, REPORTS, SETTINGS, TRASH
 }
 
 @Composable
@@ -326,6 +327,16 @@ fun MainAppLayout(
                             showBackupRestoreSheet = true
                         }
                     )
+
+                    DrawerItem(
+                        selected = currentScreen == Screen.TRASH,
+                        icon = Icons.Default.Delete,
+                        label = "🗑️ سلة المحذوفات",
+                        onClick = {
+                            currentScreen = Screen.TRASH
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                 }
                 
                 // Footer / Developer info
@@ -437,6 +448,12 @@ fun MainAppLayout(
                             SettingsView(
                                 viewModel = viewModel,
                                 settings = settings
+                            )
+                        }
+                        Screen.TRASH -> {
+                            com.example.ui.screens.TrashScreen(
+                                viewModel = viewModel,
+                                onBack = { currentScreen = Screen.LEDGER }
                             )
                         }
                     }

@@ -109,6 +109,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     val auditLogsState: StateFlow<List<AuditLogEntity>> = repository.auditLogsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val deletedItemsFlow: Flow<List<DeletedItemEntity>> = repository.deletedItemsFlow
+
     // --- Safe License Activation Logic ---
     fun getOrGenerateUnifiedDeviceId(context: Context): String {
         val sharedPrefs = context.getSharedPreferences("makhzan_prefs", Context.MODE_PRIVATE)
@@ -455,7 +457,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteHabayebTransaction(txId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val tx = habayebDao.getTransactionById(txId)
+            if (tx != null) {
+                softDeleteHabayebTransactionToTrash(tx)
+            }
             if (tx?.linkedMainTxId != null) {
+                val linkedTx = transactionsState.value.find { it.id == tx.linkedMainTxId }
+                if (linkedTx != null) {
+                    softDeleteTransactionToTrash(linkedTx)
+                }
                 repository.deleteTransactionById(tx.linkedMainTxId)
             }
             habayebDao.deleteTransactionById(txId)
@@ -747,8 +756,142 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun permanentlyDeleteDeletedItem(item: DeletedItemEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeDeletedItem(item)
+            repository.saveAuditLog(
+                AuditLogEntity(
+                    sourceSystem = "سلة المحذوفات",
+                    actionType = "حذف نهائي",
+                    description = "تم حذف سجل من ${item.sourceSystem} نهائياً بغير رجعة",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    fun restoreDeletedItem(item: DeletedItemEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val root = JSONObject(item.jsonData)
+                when (item.originalTableName) {
+                    "transactions" -> {
+                        val tx = TransactionDb(
+                            id = root.getString("id"),
+                            timestamp = root.getLong("timestamp"),
+                            type = root.getString("type"),
+                            category = root.getString("category"),
+                            amount = root.getDouble("amount"),
+                            description = root.getString("description")
+                        )
+                        repository.saveTransaction(tx)
+                    }
+                    "habayeb_transactions" -> {
+                        val linkedId = if (root.has("linkedMainTxId") && !root.isNull("linkedMainTxId")) {
+                            root.getString("linkedMainTxId")
+                        } else null
+                        
+                        val tx = HabayebTransaction(
+                            id = root.getString("id"),
+                            customerId = root.getString("customerId"),
+                            type = root.getString("type"),
+                            amount = root.getDouble("amount"),
+                            timestamp = root.getLong("timestamp"),
+                            description = root.getString("description"),
+                            linkedMainTxId = linkedId
+                        )
+                        habayebDao.insertTransaction(tx)
+                    }
+                    "makhzan_transactions" -> {
+                        val tx = MakhzanTransactionEntity(
+                            id = root.getLong("id"),
+                            productId = root.getLong("productId"),
+                            productName = root.getString("productName"),
+                            type = root.getString("type"),
+                            quantityChanged = root.getDouble("quantityChanged"),
+                            pricePerUnit = root.getDouble("pricePerUnit"),
+                            timestamp = root.getLong("timestamp"),
+                            note = root.optString("note", "")
+                        )
+                        repository.saveMakhzanTransaction(tx)
+                    }
+                }
+                // Once restored, remove from trash
+                repository.removeDeletedItem(item)
+
+                repository.saveAuditLog(
+                    AuditLogEntity(
+                        sourceSystem = "سلة المحذوفات",
+                        actionType = "استعادة",
+                        description = "تم استعادة سجل محذوف وعودته لـ ${item.sourceSystem}",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun emptyTrash() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearDeletedItems()
+            repository.saveAuditLog(
+                AuditLogEntity(
+                    sourceSystem = "سلة المحذوفات",
+                    actionType = "إفراغ",
+                    description = "تم تفريغ سلة المحذوفات بالكامل",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    private suspend fun softDeleteTransactionToTrash(tx: TransactionDb) {
+        val jsonData = JSONObject().apply {
+            put("id", tx.id)
+            put("timestamp", tx.timestamp)
+            put("type", tx.type)
+            put("category", tx.category)
+            put("amount", tx.amount)
+            put("description", tx.description)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = tx.id, sourceSystem = "دار", originalTableName = "transactions", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
+    private suspend fun softDeleteHabayebTransactionToTrash(tx: HabayebTransaction) {
+        val jsonData = JSONObject().apply {
+            put("id", tx.id)
+            put("customerId", tx.customerId)
+            put("type", tx.type)
+            put("amount", tx.amount)
+            put("timestamp", tx.timestamp)
+            put("description", tx.description)
+            put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = tx.id, sourceSystem = "حبايب", originalTableName = "habayeb_transactions", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
+    private suspend fun softDeleteMakhzanTransactionToTrash(tx: MakhzanTransactionEntity) {
+        val jsonData = JSONObject().apply {
+            put("id", tx.id)
+            put("productId", tx.productId)
+            put("productName", tx.productName)
+            put("type", tx.type)
+            put("quantityChanged", tx.quantityChanged)
+            put("pricePerUnit", tx.pricePerUnit)
+            put("timestamp", tx.timestamp)
+            put("note", tx.note)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = tx.id.toString(), sourceSystem = "مخزن", originalTableName = "makhzan_transactions", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
     fun deleteTransaction(tx: TransactionDb) {
         viewModelScope.launch(Dispatchers.IO) {
+            softDeleteTransactionToTrash(tx)
             repository.deleteTransaction(tx)
 
             val typeAr = if (tx.type == "INCOME") "الوارد" else "المنصرف"
@@ -769,6 +912,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteTransactionById(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val tx = transactionsState.value.find { it.id == id }
+            if (tx != null) {
+                softDeleteTransactionToTrash(tx)
+            }
             repository.deleteTransactionById(id)
 
             if (tx != null) {
@@ -1133,6 +1279,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteMakhzanTransaction(tx: MakhzanTransactionEntity) {
         viewModelScope.launch(Dispatchers.IO) {
+            softDeleteMakhzanTransactionToTrash(tx)
             val product = repository.productsFlow.first().find { it.id == tx.productId }
             if (product != null) {
                 val newQty = if (tx.type == "وارد") {
@@ -1211,7 +1358,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
                 val auditLogs = repository.auditLogsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs)
+                val deletedItems = repository.deletedItemsFlow.first()
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
                 val success = googleDriveSyncHelper.uploadBackupToDrive(jsonStr)
                 launch(Dispatchers.Main) {
                     onComplete?.invoke(success)
@@ -1254,7 +1402,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
                 val auditLogs = repository.auditLogsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs)
+                val deletedItems = repository.deletedItemsFlow.first()
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
                 launch(Dispatchers.Main) {
                     onComplete(jsonStr)
                 }
@@ -1276,8 +1425,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
                 val auditLogs = repository.auditLogsFlow.first()
+                val deletedItems = repository.deletedItemsFlow.first()
 
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs)
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
                 val dir = getBackupDirectory()
                 val timestamp = System.currentTimeMillis() / 1000
                 val file = File(dir, "mzd_backup_${timestamp}.mzd")
@@ -1312,6 +1462,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.clearProducts()
                 habayebDao.clearAllCustomers()
                 habayebDao.clearAllTransactions()
+                repository.clearDeletedItems()
                 val db = AppDatabase.getDatabase(context)
                 db.openHelper.writableDatabase.execSQL("DELETE FROM audit_logs")
 
@@ -1443,6 +1594,23 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
+                if (root.has("deleted_items") && !root.isNull("deleted_items")) {
+                    val deletedItemsArr = root.optJSONArray("deleted_items")
+                    if (deletedItemsArr != null) {
+                        for (i in 0 until deletedItemsArr.length()) {
+                            val obj = deletedItemsArr.getJSONObject(i)
+                            val item = DeletedItemEntity(
+                                id = obj.getString("id"),
+                                sourceSystem = obj.getString("sourceSystem"),
+                                originalTableName = obj.getString("originalTableName"),
+                                jsonData = obj.getString("jsonData"),
+                                deletedAt = obj.getLong("deletedAt")
+                            )
+                            repository.saveDeletedItem(item)
+                        }
+                    }
+                }
+
                 // 5. State Refresh / State Reload and Notify
                 refreshLocalBackups()
 
@@ -1500,7 +1668,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         habayebTransactions: List<HabayebTransaction> = emptyList(),
         products: List<ProductEntity> = emptyList(),
         makhzanTransactions: List<MakhzanTransactionEntity> = emptyList(),
-        auditLogs: List<AuditLogEntity> = emptyList()
+        auditLogs: List<AuditLogEntity> = emptyList(),
+        deletedItems: List<DeletedItemEntity> = emptyList()
     ): String {
         val root = JSONObject()
 
@@ -1624,6 +1793,18 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             auditLogsArr.put(alObj)
         }
         root.put("audit_logs", auditLogsArr)
+
+        val deletedItemsArr = JSONArray()
+        for (di in deletedItems) {
+            val diObj = JSONObject()
+            diObj.put("id", di.id)
+            diObj.put("sourceSystem", di.sourceSystem)
+            diObj.put("originalTableName", di.originalTableName)
+            diObj.put("jsonData", di.jsonData)
+            diObj.put("deletedAt", di.deletedAt)
+            deletedItemsArr.put(diObj)
+        }
+        root.put("deleted_items", deletedItemsArr)
 
         return root.toString(2)
     }

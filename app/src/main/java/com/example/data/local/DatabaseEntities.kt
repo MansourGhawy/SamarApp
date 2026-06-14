@@ -89,3 +89,12 @@ data class AuditLogEntity(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Entity(tableName = "deleted_items")
+data class DeletedItemEntity(
+    @PrimaryKey val id: String, // Can use original ID if it's string, or generate a UUID
+    val sourceSystem: String, // e.g. "دار", "حبايب", "مخزن"
+    val originalTableName: String, 
+    val jsonData: String, // serialized object
+    val deletedAt: Long = System.currentTimeMillis()
+)
+

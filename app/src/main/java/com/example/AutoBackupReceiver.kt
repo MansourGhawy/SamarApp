@@ -45,6 +45,7 @@ class AutoBackupReceiver : BroadcastReceiver() {
                 val transactions = db.transactionDao().getAllTransactionsFlow().first()
                 val products = db.productDao().getAllProductsFlow().first()
                 val makhzanTransactions = db.makhzanTransactionDao().getAllMakhzanTransactionsFlow().first()
+                val deletedItems = db.deletedItemDao().getAllDeletedItemsDirect()
 
                 val habayebDb = HabayebDatabase.getDatabase(context)
                 val habayebCustomers = habayebDb.habayebDao().getAllCustomersDirect()
@@ -158,6 +159,18 @@ class AutoBackupReceiver : BroadcastReceiver() {
                 }
                 makhzanObj.put("transactions", makhzanTxsArr)
                 root.put("makhzan_inventory", makhzanObj)
+
+                val deletedItemsArr = JSONArray()
+                for (item in deletedItems) {
+                    val itemObj = JSONObject()
+                    itemObj.put("id", item.id)
+                    itemObj.put("sourceSystem", item.sourceSystem)
+                    itemObj.put("originalTableName", item.originalTableName)
+                    itemObj.put("jsonData", item.jsonData)
+                    itemObj.put("deletedAt", item.deletedAt)
+                    deletedItemsArr.put(itemObj)
+                }
+                root.put("deleted_items", deletedItemsArr)
 
                 val jsonStr = root.toString(2)
 

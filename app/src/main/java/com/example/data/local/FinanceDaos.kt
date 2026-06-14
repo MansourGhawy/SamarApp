@@ -107,6 +107,9 @@ interface DeletedItemDao {
     @Query("SELECT * FROM deleted_items ORDER BY deletedAt DESC")
     fun getAllDeletedItemsFlow(): Flow<List<DeletedItemEntity>>
 
+    @Query("SELECT * FROM deleted_items ORDER BY deletedAt DESC")
+    suspend fun getAllDeletedItemsDirect(): List<DeletedItemEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDeletedItem(item: DeletedItemEntity)
 

@@ -286,8 +286,9 @@ fun MainLedgerView(
                                 }
                             }
                             txsToDelete.forEach { txId ->
-                                viewModel.deleteTransactionById(txId)
+                                val tx = monthlyLedger.flatMap { ml -> ml.days.flatMap { it.transactions } }.find { it.id == txId }
                             }
+                            viewModel.deleteTransactionsBulk(txsToDelete, "حذف شامل لعدد ${selectedDayKeys.size} أيام")
                             selectedDayKeys.clear()
                             isDaySelectionMode = false
                         }
@@ -1168,9 +1169,7 @@ fun MainLedgerView(
                 Button(
                     onClick = {
                         scope.launch {
-                            selectedTxIds.forEach { id ->
-                                viewModel.deleteTransactionById(id)
-                            }
+                            viewModel.deleteTransactionsBulk(selectedTxIds.toList(), "حذف مخصص لعدد ${selectedTxIds.size} معاملات")
                             delay(200)
                             clearSelection()
                         }

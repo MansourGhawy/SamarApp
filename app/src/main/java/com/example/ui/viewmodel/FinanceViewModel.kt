@@ -661,6 +661,18 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun permanentlyDeleteMultipleItems(items: List<DeletedItemEntity>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            items.forEach { repository.removeDeletedItem(it) }
+        }
+    }
+
+    fun restoreMultipleItems(items: List<DeletedItemEntity>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            items.forEach { restoreDeletedItem(it) }
+        }
+    }
+
     fun restoreDeletedItem(item: DeletedItemEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -808,6 +820,21 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                             habayebDao.insertTransaction(tx)
                         }
                     }
+                    "dar_bundle" -> {
+                        val txsArray = root.getJSONArray("transactions")
+                        for (i in 0 until txsArray.length()) {
+                            val txObj = txsArray.getJSONObject(i)
+                            val tx = TransactionDb(
+                                id = txObj.getString("id"),
+                                timestamp = txObj.getLong("timestamp"),
+                                type = txObj.getString("type"),
+                                category = txObj.getString("category"),
+                                amount = txObj.getDouble("amount"),
+                                description = txObj.getString("description")
+                            )
+                            repository.saveTransaction(tx)
+                        }
+                    }
                 }
                 // Once restored, remove from trash
                 repository.removeDeletedItem(item)
@@ -942,6 +969,30 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         repository.saveDeletedItem(trashItem)
     }
 
+    private suspend fun softDeleteTransactionBundleToTrash(transactions: List<TransactionDb>, title: String) {
+        val jsonData = JSONObject().apply {
+            val txsArray = JSONArray()
+            transactions.forEach { tx ->
+                txsArray.put(JSONObject().apply {
+                    put("id", tx.id)
+                    put("timestamp", tx.timestamp)
+                    put("type", tx.type)
+                    put("category", tx.category)
+                    put("amount", tx.amount)
+                    put("description", tx.description)
+                })
+            }
+            put("transactions", txsArray)
+            put("totalTransactions", transactions.size)
+            val totalNet = transactions.sumOf { if (it.type == "INCOME") it.amount else -it.amount }
+            put("totalNet", totalNet)
+            put("name", title)
+        }.toString()
+        val id = "dar_bundle_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(4)}"
+        val trashItem = DeletedItemEntity(id = id, sourceSystem = "دار", originalTableName = "dar_bundle", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
     private suspend fun softDeleteHabayebTransactionToTrash(tx: HabayebTransaction) {
         val jsonData = JSONObject().apply {
             put("id", tx.id)
@@ -995,6 +1046,17 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val textDesc = "تم حذف حركة مالية ($typeAr): بقيمة ${formatDoubleCurrency(tx.amount)} تحت تصنيف (${tx.category})"
                 val txStr = "المعرف: ${tx.id}, النوع: ${typeAr}, التصنيف: ${tx.category}, المبلغ: ${tx.amount}, البيان: ${tx.description}"
             } else {
+            }
+        }
+    }
+
+    fun deleteTransactionsBulk(ids: List<String>, bundleTitle: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val allTxs = transactionsState.value
+            val toDelete = allTxs.filter { ids.contains(it.id) }
+            if (toDelete.isNotEmpty()) {
+                softDeleteTransactionBundleToTrash(toDelete, bundleTitle)
+                toDelete.forEach { repository.deleteTransactionById(it.id) }
             }
         }
     }

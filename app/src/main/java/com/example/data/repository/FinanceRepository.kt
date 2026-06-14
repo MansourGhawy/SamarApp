@@ -11,7 +11,6 @@ class FinanceRepository(private val database: AppDatabase) {
     private val customCategoryDao = database.customCategoryDao()
     private val productDao = database.productDao()
     private val makhzanTransactionDao = database.makhzanTransactionDao()
-    private val auditLogDao = database.auditLogDao()
     private val deletedItemDao = database.deletedItemDao()
 
     // Flow Exposures
@@ -21,13 +20,7 @@ class FinanceRepository(private val database: AppDatabase) {
     val customCategoriesFlow: Flow<List<CustomCategory>> = customCategoryDao.getAllCustomCategoriesFlow()
     val productsFlow: Flow<List<ProductEntity>> = productDao.getAllProductsFlow()
     val makhzanTransactionsFlow: Flow<List<MakhzanTransactionEntity>> = makhzanTransactionDao.getAllMakhzanTransactionsFlow()
-    val auditLogsFlow: Flow<List<AuditLogEntity>> = auditLogDao.getAllAuditLogsFlow()
     val deletedItemsFlow: Flow<List<DeletedItemEntity>> = deletedItemDao.getAllDeletedItemsFlow()
-
-    // Audit Log Saving (No deletion allowed!)
-    suspend fun saveAuditLog(log: AuditLogEntity) {
-        auditLogDao.insertAuditLog(log)
-    }
 
     // Deleted Items Trash
     suspend fun saveDeletedItem(item: DeletedItemEntity) {

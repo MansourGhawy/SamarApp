@@ -92,6 +92,29 @@ fun TrashScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val typeLabel = when (item.originalTableName) {
+                                    "transactions" -> "حركة مالية (الدار)"
+                                    "habayeb_transactions" -> "معاملة دين (حبايب)"
+                                    "makhzan_transactions" -> "حركة مخزنية (المخزن)"
+                                    "fixed_commitments" -> "التزام / هدف مالي"
+                                    "makhzan_products" -> "سلعة مخزنية"
+                                    "habayeb_customers" -> "حساب عميل / ديون"
+                                    else -> item.originalTableName
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF64748B).copy(alpha = 0.12f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = typeLabel,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF475569)
+                                    )
+                                }
+
                                 val systemColor = when (item.sourceSystem) {
                                     "حبايب" -> Color(0xFF3B82F6)
                                     "مخزن" -> Color(0xFFEAB308)
@@ -105,7 +128,7 @@ fun TrashScreen(
                                 ) {
                                     Text(
                                         text = item.sourceSystem,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = systemColor
                                     )
@@ -125,12 +148,31 @@ fun TrashScreen(
                                 val jsonObj = JSONObject(item.jsonData)
                                 desc = jsonObj.optString("description", "")
                                 if (desc.isEmpty()) {
-                                    desc = jsonObj.optString("productName", "عنصر محذوف")
+                                    desc = jsonObj.optString("productName", "")
                                 }
+                                if (desc.isEmpty()) {
+                                    desc = jsonObj.optString("name", "")
+                                }
+                                if (desc.isEmpty()) {
+                                    desc = "سجل محذوف"
+                                }
+
                                 if (jsonObj.has("amount")) {
-                                    amount = jsonObj.getDouble("amount").toString()
+                                    amount = jsonObj.getDouble("amount").toString() + " ر.ي"
                                 } else if (jsonObj.has("quantityChanged")) {
-                                    amount = jsonObj.getDouble("quantityChanged").toString()
+                                    val q = jsonObj.getDouble("quantityChanged")
+                                    val t = jsonObj.optString("type", "")
+                                    amount = "كمية: $q ($t)"
+                                } else if (jsonObj.has("targetAmount")) {
+                                    val tgt = jsonObj.getDouble("targetAmount")
+                                    val cur = jsonObj.optDouble("currentProgress", 0.0)
+                                    amount = "المستهدف: $tgt / المتوفر الحالي: $cur"
+                                } else if (jsonObj.has("sellingPrice")) {
+                                    val sp = jsonObj.getDouble("sellingPrice")
+                                    val qty = jsonObj.getDouble("quantity")
+                                    amount = "السعر: $sp / الكمية المحذوفة: $qty"
+                                } else if (jsonObj.has("phone")) {
+                                    amount = "الهاتف: " + jsonObj.optString("phone", "لا يوجد")
                                 }
                             } catch (e: Exception) { e.printStackTrace() }
 
@@ -142,9 +184,10 @@ fun TrashScreen(
                                     color = Color(0xFF1E293B)
                                 )
                                 if (amount.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "القيمة: $amount",
-                                        fontSize = 14.sp,
+                                        text = amount,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF0F766E)
                                     )

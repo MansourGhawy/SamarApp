@@ -103,15 +103,6 @@ interface MakhzanTransactionDao {
 }
 
 @Dao
-interface AuditLogDao {
-    @Query("SELECT * FROM audit_logs ORDER BY timestamp DESC")
-    fun getAllAuditLogsFlow(): Flow<List<AuditLogEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAuditLog(log: AuditLogEntity)
-}
-
-@Dao
 interface DeletedItemDao {
     @Query("SELECT * FROM deleted_items ORDER BY deletedAt DESC")
     fun getAllDeletedItemsFlow(): Flow<List<DeletedItemEntity>>

@@ -15,7 +15,6 @@ import com.example.data.local.FixedCommitment
 import com.example.data.local.TransactionDb
 import com.example.data.local.ProductEntity
 import com.example.data.local.MakhzanTransactionEntity
-import com.example.data.local.AuditLogEntity
 import com.example.data.local.HabayebDatabase
 import com.example.data.local.HabayebCustomer
 import com.example.data.local.HabayebTransaction
@@ -46,7 +45,6 @@ class AutoBackupReceiver : BroadcastReceiver() {
                 val transactions = db.transactionDao().getAllTransactionsFlow().first()
                 val products = db.productDao().getAllProductsFlow().first()
                 val makhzanTransactions = db.makhzanTransactionDao().getAllMakhzanTransactionsFlow().first()
-                val auditLogs = db.auditLogDao().getAllAuditLogsFlow().first()
 
                 val habayebDb = HabayebDatabase.getDatabase(context)
                 val habayebCustomers = habayebDb.habayebDao().getAllCustomersDirect()
@@ -160,20 +158,6 @@ class AutoBackupReceiver : BroadcastReceiver() {
                 }
                 makhzanObj.put("transactions", makhzanTxsArr)
                 root.put("makhzan_inventory", makhzanObj)
-
-                // Audit Logs Array
-                val auditLogsArr = JSONArray()
-                for (al in auditLogs) {
-                    val alObj = JSONObject()
-                    alObj.put("source_system", al.sourceSystem)
-                    alObj.put("action_type", al.actionType)
-                    alObj.put("description", al.description)
-                    alObj.put("old_value", al.oldValue ?: "")
-                    alObj.put("new_value", al.newValue ?: "")
-                    alObj.put("timestamp", al.timestamp)
-                    auditLogsArr.put(alObj)
-                }
-                root.put("audit_logs", auditLogsArr)
 
                 val jsonStr = root.toString(2)
 

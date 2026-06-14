@@ -69,15 +69,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                         val fingerprint = md.digest(certBytes).joinToString("") { "%02X".format(it) }
                         
                         android.util.Log.i("MIZAN_SEC", "Application Signing Handshake: $fingerprint")
-                        
-                        repository.saveAuditLog(
-                            AuditLogEntity(
-                                sourceSystem = "النظام الأمني",
-                                actionType = "سلامة التوقيع",
-                                description = "بصمة ترخيص التطبيق الحالية: $fingerprint",
-                                timestamp = System.currentTimeMillis()
-                            )
-                        )
                     }
                 }
             } catch (e: Exception) {
@@ -104,9 +95,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val makhzanTransactionsState: StateFlow<List<MakhzanTransactionEntity>> = repository.makhzanTransactionsFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val auditLogsState: StateFlow<List<AuditLogEntity>> = repository.auditLogsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val deletedItemsFlow: Flow<List<DeletedItemEntity>> = repository.deletedItemsFlow
@@ -239,21 +227,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         return false
     }
 
-    fun insertAuditLog(sourceSystem: String, actionType: String, description: String, oldValue: String? = null, newValue: String? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = sourceSystem,
-                    actionType = actionType,
-                    description = description,
-                    oldValue = oldValue,
-                    newValue = newValue,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
-        }
-    }
-
     val makhzanCapitalState: StateFlow<Double> = productsState
         .map { products ->
             products.sumOf { it.purchasePrice * it.quantity }
@@ -338,17 +311,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 )
                 habayebDao.insertTransaction(transaction)
             }
-
-            val textDesc = "تم إضافة حساب عميل جديد باسم (${customer.name}) برصيد افتتاحي قدره ${formatDoubleCurrency(initialAmount)}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "حبايب",
-                    actionType = "إضافة",
-                    description = textDesc,
-                    newValue = "المعرف: ${customer.id}, الاسم: ${customer.name}, رصيد أول المدة: $initialAmount, الهاتف: ${customer.phone}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -369,27 +331,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     linkedMainTxId = linkedMainTxId
             )
             habayebDao.insertTransaction(transaction)
-
-            val customer = habayebCustomersState.value.find { it.id == customerId }
-            val typeText = when(type) {
-                "OWED_BY_THEM" -> "دين عليه 📈"
-                "PAYMENT_BY_THEM" -> "سداد منه 📉"
-                "OWED_TO_THEM" -> "دين له 📉"
-                "PAYMENT_TO_THEM" -> "سداد له 📈"
-                else -> "معاملة"
-            }
-            val baseDesc = "تم تسجيل حركة مالية للعميل (${customer?.name ?: customerId}): $typeText بمبلغ ${formatDoubleCurrency(amount)}"
-            val textDesc = if (desc.isNotBlank()) "$baseDesc - التفاصيل: $desc" else baseDesc
-            val txStr = "المعرف: $txId, العميل: ${customer?.name ?: customerId}, النوع: $typeText, القيمة: $amount, الوصف: $desc"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "حبايب",
-                    actionType = "إضافة",
-                    description = textDesc,
-                    newValue = txStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -397,60 +338,41 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             val oldCustomer = habayebCustomersState.value.find { it.id == customerId }
             habayebDao.updateCustomerName(customerId, newName)
-
-            val textDesc = "تم تعديل اسم العميل من (${oldCustomer?.name ?: customerId}) إلى ($newName)"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "حبايب",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = "الاسم القديم: ${oldCustomer?.name ?: customerId}",
-                    newValue = "الاسم الجديد: $newName",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
     fun deleteHabayebCustomer(customerId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val customer = habayebCustomersState.value.find { it.id == customerId }
+            if (customer != null) {
+                softDeleteHabayebCustomerToTrash(customer)
+            }
+            val customerTxs = habayebDao.getAllTransactionsDirect().filter { it.customerId == customerId }
+            customerTxs.forEach { softDeleteHabayebTransactionToTrash(it) }
+
             habayebDao.deleteCustomerById(customerId)
             habayebDao.deleteTransactionsByCustomer(customerId)
-
-            val textDesc = "تم حذف حساب العميل (${customer?.name ?: customerId}) نهائياً مع كافة سجلاته المالية"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "حبايب",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = "المعرف: $customerId, الاسم: ${customer?.name ?: ""}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
     fun deleteMultipleHabayebCustomers(customerIds: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             val namesList = mutableListOf<String>()
+            val allTxs = habayebDao.getAllTransactionsDirect()
             for (id in customerIds) {
                 val customer = habayebCustomersState.value.find { it.id == id }
-                customer?.name?.let { namesList.add(it) }
+                if (customer != null) {
+                    namesList.add(customer.name)
+                    softDeleteHabayebCustomerToTrash(customer)
+                }
+                val customerTxs = allTxs.filter { it.customerId == id }
+                customerTxs.forEach { softDeleteHabayebTransactionToTrash(it) }
+
                 habayebDao.deleteCustomerById(id)
                 habayebDao.deleteTransactionsByCustomer(id)
             }
 
             val textDesc = "تم حذف حسابات العملاء المحددة: (${namesList.joinToString(", ")}) نهائياً مع كافة الحركات المالية التابعة لها"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "حبايب",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = "المعرفات: ${customerIds.joinToString(", ")}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -472,15 +394,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             if (tx != null) {
                 val customer = habayebCustomersState.value.find { it.id == tx.customerId }
                 val textDesc = "تم حذف معاملة للعميل (${customer?.name ?: tx.customerId}): بقيمة ${formatDoubleCurrency(tx.amount)} (${tx.description})"
-                repository.saveAuditLog(
-                    AuditLogEntity(
-                        sourceSystem = "حبايب",
-                        actionType = "حذف",
-                        description = textDesc,
-                        oldValue = "المعرف: ${tx.id}, العميل: ${customer?.name ?: tx.customerId}, القيمة: ${tx.amount}, البيان: ${tx.description}",
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
             }
         }
     }
@@ -744,29 +657,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val baseDesc = "تم إضافة حركة مالية ($typeAr): بقيمة ${formatDoubleCurrency(amount)} تحت تصنيف ($category)"
             val textDesc = if (description.isNotBlank()) "$baseDesc - التفاصيل: $description" else baseDesc
             val txStr = "المعرف: ${id}, النوع: ${typeAr}, التصنيف: ${category}, المبلغ: ${amount}, البيان: ${description}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "إضافة",
-                    description = textDesc,
-                    newValue = txStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
     fun permanentlyDeleteDeletedItem(item: DeletedItemEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeDeletedItem(item)
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "سلة المحذوفات",
-                    actionType = "حذف نهائي",
-                    description = "تم حذف سجل من ${item.sourceSystem} نهائياً بغير رجعة",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -815,18 +711,46 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                         )
                         repository.saveMakhzanTransaction(tx)
                     }
+                    "fixed_commitments" -> {
+                        val fc = FixedCommitment(
+                            name = root.getString("name"),
+                            targetAmount = root.getDouble("targetAmount"),
+                            currentProgress = root.getDouble("currentProgress"),
+                            orderIndex = root.optInt("orderIndex", 0)
+                        )
+                        repository.saveCommitment(fc)
+                    }
+                    "makhzan_products" -> {
+                        val product = ProductEntity(
+                            id = root.optLong("id", 0L),
+                            name = root.getString("name"),
+                            category = root.getString("category"),
+                            purchasePrice = root.getDouble("purchasePrice"),
+                            sellingPrice = root.getDouble("sellingPrice"),
+                            quantity = root.getDouble("quantity"),
+                            imageUrl = if (root.isNull("imageUrl")) null else root.optString("imageUrl", null),
+                            lowStockThreshold = root.optDouble("lowStockThreshold", 5.0),
+                            unitType = root.optString("unitType", "حبة"),
+                            hasSubUnits = root.optBoolean("hasSubUnits", false),
+                            parentUnitName = root.optString("parentUnitName", "كرتون"),
+                            subUnitName = root.optString("subUnitName", "حبة"),
+                            subUnitCountPerParent = root.optDouble("subUnitCountPerParent", 1.0)
+                        )
+                        repository.saveProduct(product)
+                    }
+                    "habayeb_customers" -> {
+                        val customer = HabayebCustomer(
+                            id = root.getString("id"),
+                            name = root.getString("name"),
+                            phone = root.getString("phone"),
+                            notes = root.getString("notes"),
+                            createdAt = root.getLong("createdAt")
+                        )
+                        habayebDao.insertCustomer(customer)
+                    }
                 }
                 // Once restored, remove from trash
                 repository.removeDeletedItem(item)
-
-                repository.saveAuditLog(
-                    AuditLogEntity(
-                        sourceSystem = "سلة المحذوفات",
-                        actionType = "استعادة",
-                        description = "تم استعادة سجل محذوف وعودته لـ ${item.sourceSystem}",
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -836,15 +760,50 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun emptyTrash() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearDeletedItems()
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "سلة المحذوفات",
-                    actionType = "إفراغ",
-                    description = "تم تفريغ سلة المحذوفات بالكامل",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
+    }
+
+    private suspend fun softDeleteCommitmentToTrash(fc: FixedCommitment) {
+        val jsonData = JSONObject().apply {
+            put("name", fc.name)
+            put("targetAmount", fc.targetAmount)
+            put("currentProgress", fc.currentProgress)
+            put("orderIndex", fc.orderIndex)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = "fc_${fc.name}", sourceSystem = "دار", originalTableName = "fixed_commitments", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
+    private suspend fun softDeleteProductToTrash(product: ProductEntity) {
+        val jsonData = JSONObject().apply {
+            put("id", product.id)
+            put("name", product.name)
+            put("category", product.category)
+            put("purchasePrice", product.purchasePrice)
+            put("sellingPrice", product.sellingPrice)
+            put("quantity", product.quantity)
+            put("imageUrl", product.imageUrl ?: JSONObject.NULL)
+            put("lowStockThreshold", product.lowStockThreshold)
+            put("unitType", product.unitType)
+            put("hasSubUnits", product.hasSubUnits)
+            put("parentUnitName", product.parentUnitName)
+            put("subUnitName", product.subUnitName)
+            put("subUnitCountPerParent", product.subUnitCountPerParent)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = "prod_${product.id}", sourceSystem = "مخزن", originalTableName = "makhzan_products", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
+    private suspend fun softDeleteHabayebCustomerToTrash(customer: HabayebCustomer) {
+        val jsonData = JSONObject().apply {
+            put("id", customer.id)
+            put("name", customer.name)
+            put("phone", customer.phone)
+            put("notes", customer.notes)
+            put("createdAt", customer.createdAt)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = "cust_${customer.id}", sourceSystem = "حبايب", originalTableName = "habayeb_customers", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
     }
 
     private suspend fun softDeleteTransactionToTrash(tx: TransactionDb) {
@@ -897,15 +856,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val typeAr = if (tx.type == "INCOME") "الوارد" else "المنصرف"
             val textDesc = "تم حذف حركة مالية ($typeAr): بقيمة ${formatDoubleCurrency(tx.amount)} تحت تصنيف (${tx.category})"
             val txStr = "المعرف: ${tx.id}, النوع: ${typeAr}, التصنيف: ${tx.category}, المبلغ: ${tx.amount}, البيان: ${tx.description}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = txStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -921,24 +871,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val typeAr = if (tx.type == "INCOME") "الوارد" else "المنصرف"
                 val textDesc = "تم حذف حركة مالية ($typeAr): بقيمة ${formatDoubleCurrency(tx.amount)} تحت تصنيف (${tx.category})"
                 val txStr = "المعرف: ${tx.id}, النوع: ${typeAr}, التصنيف: ${tx.category}, المبلغ: ${tx.amount}, البيان: ${tx.description}"
-                repository.saveAuditLog(
-                    AuditLogEntity(
-                        sourceSystem = "دار",
-                        actionType = "حذف",
-                        description = textDesc,
-                        oldValue = txStr,
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
             } else {
-                repository.saveAuditLog(
-                    AuditLogEntity(
-                        sourceSystem = "دار",
-                        actionType = "حذف",
-                        description = "تم حذف حركة مالية معرفها ($id)",
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
             }
         }
     }
@@ -955,16 +888,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 "المعرف: ${it.id}, النوع: ${oldTypeAr}, التصنيف: ${it.category}, المبلغ: ${it.amount}, البيان: ${it.description}"
             }
             val newTxStr = "المعرف: ${tx.id}, النوع: ${typeAr}, التصنيف: ${tx.category}, المبلغ: ${tx.amount}, البيان: ${tx.description}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = oldTxStr,
-                    newValue = newTxStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -980,15 +903,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             } else {
                 "تم إضافة التزام جديد لتدبير الدار: $name بمبلغ مستهدف ${formatDoubleCurrency(targetAmount)}"
             }
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = if (isEdit) "تعديل" else "إضافة",
-                    description = textDesc,
-                    newValue = "الاسم: $name, المبلغ المستهدف: $targetAmount, المتوفر حالياً: $currentProgress",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1000,16 +914,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val textDesc = "تم تعديل رصيد الالتزام (${commitment.name}): المتوفر حالياً أصبح ${formatDoubleCurrency(commitment.currentProgress)} من أصل ${formatDoubleCurrency(commitment.targetAmount)}"
             val oldStr = oldFc?.let { "الاسم: ${it.name}, المستهدف: ${it.targetAmount}, المتوفر: ${it.currentProgress}" }
             val newStr = "الاسم: ${commitment.name}, المستهدف: ${commitment.targetAmount}, المتوفر: ${commitment.currentProgress}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = oldStr,
-                    newValue = newStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1039,18 +943,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteCommitment(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val oldFc = commitmentsState.value.find { it.name == name }
+            if (oldFc != null) {
+                softDeleteCommitmentToTrash(oldFc)
+            }
             repository.deleteCommitment(name)
 
             val oldStr = oldFc?.let { "الاسم: ${it.name}, المستهدف: ${it.targetAmount}, المتوفر: ${it.currentProgress}" }
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "حذف",
-                    description = "تم حذف الالتزام المالي للدار: $name",
-                    oldValue = oldStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1061,15 +959,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
             val actionName = if (isEdit) "تعديل" else "إضافة"
             val textDesc = "تم $actionName تصنيف مخصص للدار: $emoji $name في مجموعة ($tabType)"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = actionName,
-                    description = textDesc,
-                    newValue = "الاسم: $name, المجموعة: $tabType, الرمز: $emoji",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1078,15 +967,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             repository.deleteCustomCategory(customCategory)
 
             val textDesc = "تم حذف التصنيف المخصص للدار: ${customCategory.iconEmoji} ${customCategory.name} من مجموعة (${customCategory.tabType})"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "دار",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = "الاسم: ${customCategory.name}, المجموعة: ${customCategory.tabType}, الرمز: ${customCategory.iconEmoji}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1124,15 +1004,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
             val textDesc = "تم إضافة منتج جديد للمخزن: $name بقيمة شراء ${formatDoubleCurrency(purchasePrice)} وسعر بيع ${formatDoubleCurrency(sellingPrice)}"
             val pStr = "الاسم: $name, التصنيف: $category, سعر الشراء: $purchasePrice, سعر البيع: $sellingPrice, الكمية الابتدائية: $quantity $unitType"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "إضافة",
-                    description = textDesc,
-                    newValue = pStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
 
             // Save the opening transaction note entered by the user
             val initTx = MakhzanTransactionEntity(
@@ -1156,34 +1027,16 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val textDesc = "تم تعديل بيانات المنتج في المخزن: ${product.name}، الكمية الحالية: ${product.quantity} ${product.unitType}"
             val oldStr = oldProd?.let { "الاسم: ${it.name}, التصنيف: ${it.category}, سعر الشراء: ${it.purchasePrice}, سعر البيع: ${it.sellingPrice}, الكمية: ${it.quantity} ${it.unitType}" }
             val newStr = "الاسم: ${product.name}, التصنيف: ${product.category}, سعر الشراء: ${product.purchasePrice}, سعر البيع: ${product.sellingPrice}, الكمية: ${product.quantity} ${product.unitType}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = oldStr,
-                    newValue = newStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
     fun deleteProduct(product: ProductEntity) {
         viewModelScope.launch(Dispatchers.IO) {
+            softDeleteProductToTrash(product)
             repository.deleteProduct(product)
 
             val textDesc = "تم حذف منتج من المخزن نهائياً: ${product.name}"
             val oldStr = "الاسم: ${product.name}, التصنيف: ${product.category}, سعر الشراء: ${product.purchasePrice}, سعر البيع: ${product.sellingPrice}, الكمية: ${product.quantity} ${product.unitType}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = oldStr,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1206,18 +1059,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 note = note
             )
             repository.saveMakhzanTransaction(makhzanTx)
-
-            val textDesc = "تم توريد كمية جديدة للسلعة في المخزن: ${product.name} (+ $addQty ${product.unitType})، الملاحظة: $note"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = "الكمية السابقة: ${product.quantity} ${product.unitType}",
-                    newValue = "الكمية الجديدة: ${updated.quantity} ${product.unitType}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1244,18 +1085,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 note = note
             )
             repository.saveMakhzanTransaction(makhzanTx)
-
-            val textDesc = "تم تسجيل حركة بيع (صادر) للسلعة في المخزن: ${product.name} (- $finalSaleQty ${product.unitType}) بقيمة ${formatDoubleCurrency(product.sellingPrice * finalSaleQty)}"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "تعديل",
-                    description = textDesc,
-                    oldValue = "الكمية السابقة: ${product.quantity} ${product.unitType}",
-                    newValue = "الكمية الجديدة: ${updated.quantity} ${product.unitType}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
 
             // 2. Auto sync to mizan al-dar
             if (syncToMizan) {
@@ -1290,17 +1119,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.updateProduct(product.copy(quantity = newQty.coerceAtLeast(0.0)))
             }
             repository.deleteMakhzanTransaction(tx)
-
-            val textDesc = "تم حذف حركة مخزنية للسلعة (${tx.productName}): النوع (${tx.type})، الكمية الملغاة (${tx.quantityChanged})"
-            repository.saveAuditLog(
-                AuditLogEntity(
-                    sourceSystem = "مخزن",
-                    actionType = "حذف",
-                    description = textDesc,
-                    oldValue = "سلعة: ${tx.productName}, النوع: ${tx.type}, الكمية: ${tx.quantityChanged}, الملاحظة: ${tx.note}",
-                    timestamp = System.currentTimeMillis()
-                )
-            )
         }
     }
 
@@ -1309,8 +1127,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             repository.deleteAllData()
             habayebDao.clearAllCustomers()
             habayebDao.clearAllTransactions()
-            val db = AppDatabase.getDatabase(getApplication())
-            db.openHelper.writableDatabase.execSQL("DELETE FROM audit_logs")
             refreshLocalBackups()
         }
     }
@@ -1357,9 +1173,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
-                val auditLogs = repository.auditLogsFlow.first()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, deletedItems)
                 val success = googleDriveSyncHelper.uploadBackupToDrive(jsonStr)
                 launch(Dispatchers.Main) {
                     onComplete?.invoke(success)
@@ -1401,9 +1216,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
-                val auditLogs = repository.auditLogsFlow.first()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, deletedItems)
                 launch(Dispatchers.Main) {
                     onComplete(jsonStr)
                 }
@@ -1424,10 +1238,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val productsList = repository.productsFlow.first()
                 val makhzanTxList = repository.makhzanTransactionsFlow.first()
-                val auditLogs = repository.auditLogsFlow.first()
                 val deletedItems = repository.deletedItemsFlow.first()
 
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, auditLogs, deletedItems)
+                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, productsList, makhzanTxList, deletedItems)
                 val dir = getBackupDirectory()
                 val timestamp = System.currentTimeMillis() / 1000
                 val file = File(dir, "mzd_backup_${timestamp}.mzd")
@@ -1463,8 +1276,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 habayebDao.clearAllCustomers()
                 habayebDao.clearAllTransactions()
                 repository.clearDeletedItems()
-                val db = AppDatabase.getDatabase(context)
-                db.openHelper.writableDatabase.execSQL("DELETE FROM audit_logs")
 
                 // 3. Mizan Al-Dar Restore (settings, fixed_commitments, transactions)
                 val currentLocalSettings = repository.settingsFlow.first() ?: AppSettings()
@@ -1575,25 +1386,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                // 4.7. Smart Audit Log Restore (with Null-Safety, supporting backward compatibility)
-                if (root.has("audit_logs") && !root.isNull("audit_logs")) {
-                    val auditLogsArr = root.optJSONArray("audit_logs")
-                    if (auditLogsArr != null) {
-                        for (i in 0 until auditLogsArr.length()) {
-                            val obj = auditLogsArr.getJSONObject(i)
-                            val log = AuditLogEntity(
-                                sourceSystem = obj.getString("source_system"),
-                                actionType = obj.getString("action_type"),
-                                description = obj.getString("description"),
-                                oldValue = obj.optString("old_value", "").takeIf { it.isNotEmpty() },
-                                newValue = obj.optString("new_value", "").takeIf { it.isNotEmpty() },
-                                timestamp = obj.getLong("timestamp")
-                            )
-                            repository.saveAuditLog(log)
-                        }
-                    }
-                }
-
                 if (root.has("deleted_items") && !root.isNull("deleted_items")) {
                     val deletedItemsArr = root.optJSONArray("deleted_items")
                     if (deletedItemsArr != null) {
@@ -1668,7 +1460,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         habayebTransactions: List<HabayebTransaction> = emptyList(),
         products: List<ProductEntity> = emptyList(),
         makhzanTransactions: List<MakhzanTransactionEntity> = emptyList(),
-        auditLogs: List<AuditLogEntity> = emptyList(),
         deletedItems: List<DeletedItemEntity> = emptyList()
     ): String {
         val root = JSONObject()
@@ -1779,20 +1570,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
         makhzanObj.put("transactions", makhzanTxsArr)
         root.put("makhzan_inventory", makhzanObj)
-
-        // Audit Logs Array
-        val auditLogsArr = JSONArray()
-        for (al in auditLogs) {
-            val alObj = JSONObject()
-            alObj.put("source_system", al.sourceSystem)
-            alObj.put("action_type", al.actionType)
-            alObj.put("description", al.description)
-            alObj.put("old_value", al.oldValue ?: "")
-            alObj.put("new_value", al.newValue ?: "")
-            alObj.put("timestamp", al.timestamp)
-            auditLogsArr.put(alObj)
-        }
-        root.put("audit_logs", auditLogsArr)
 
         val deletedItemsArr = JSONArray()
         for (di in deletedItems) {

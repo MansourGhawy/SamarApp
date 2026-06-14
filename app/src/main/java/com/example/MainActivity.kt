@@ -319,22 +319,22 @@ fun MainAppLayout(
                     )
                     
                     DrawerItem(
-                        selected = false,
-                        icon = Icons.Default.Refresh,
-                        label = "☁️ النسخ الاحتياطي والاسترداد",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            showBackupRestoreSheet = true
-                        }
-                    )
-
-                    DrawerItem(
                         selected = currentScreen == Screen.TRASH,
                         icon = Icons.Default.Delete,
                         label = "🗑️ سلة المحذوفات",
                         onClick = {
                             currentScreen = Screen.TRASH
                             scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        selected = false,
+                        icon = Icons.Default.Refresh,
+                        label = "☁️ النسخ الاحتياطي والاسترداد",
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showBackupRestoreSheet = true
                         }
                     )
                 }

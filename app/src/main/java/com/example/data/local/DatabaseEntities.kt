@@ -78,17 +78,6 @@ data class MakhzanTransactionEntity(
     val note: String = ""
 )
 
-@Entity(tableName = "audit_logs")
-data class AuditLogEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val sourceSystem: String, // "دار", "حبايب", "مخزن"
-    val actionType: String, // "إضافة", "تعديل", "حذف"
-    val description: String,
-    val oldValue: String? = null,
-    val newValue: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
 @Entity(tableName = "deleted_items")
 data class DeletedItemEntity(
     @PrimaryKey val id: String, // Can use original ID if it's string, or generate a UUID

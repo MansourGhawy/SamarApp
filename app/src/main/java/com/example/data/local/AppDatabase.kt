@@ -13,7 +13,6 @@ import androidx.room.RoomDatabase
         CustomCategory::class,
         ProductEntity::class,
         MakhzanTransactionEntity::class,
-        AuditLogEntity::class,
         DeletedItemEntity::class
     ],
     version = 14,
@@ -26,7 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun customCategoryDao(): CustomCategoryDao
     abstract fun productDao(): ProductDao
     abstract fun makhzanTransactionDao(): MakhzanTransactionDao
-    abstract fun auditLogDao(): AuditLogDao
     abstract fun deletedItemDao(): DeletedItemDao
 
     companion object {

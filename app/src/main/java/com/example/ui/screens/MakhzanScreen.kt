@@ -1149,7 +1149,7 @@ fun AddProductDialog(
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
                                 ),
-                                modifier = Modifier.weight(1.2f).height(48.dp)
+                                modifier = Modifier.weight(1.2f).height(54.dp)
                             )
 
                             OutlinedTextField(
@@ -1165,7 +1165,7 @@ fun AddProductDialog(
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
                                 ),
-                                modifier = Modifier.weight(0.8f).height(48.dp)
+                                modifier = Modifier.weight(0.8f).height(54.dp)
                             )
                         }
                     }
@@ -1209,7 +1209,7 @@ fun AddProductDialog(
                                             focusedContainerColor = Color.White,
                                             unfocusedContainerColor = Color.White
                                         ),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -1230,7 +1230,7 @@ fun AddProductDialog(
                                             focusedContainerColor = Color.White,
                                             unfocusedContainerColor = Color.White
                                         ),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -1387,7 +1387,7 @@ fun AddProductDialog(
                                                 textStyle = TextStyle(fontSize = 10.sp),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1.0f).height(48.dp)
+                                                modifier = Modifier.weight(1.0f).height(54.dp)
                                             )
                                             OutlinedTextField(
                                                 value = subUnitName,
@@ -1396,7 +1396,7 @@ fun AddProductDialog(
                                                 textStyle = TextStyle(fontSize = 10.sp),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1.0f).height(48.dp)
+                                                modifier = Modifier.weight(1.0f).height(54.dp)
                                             )
                                         }
 
@@ -1431,7 +1431,7 @@ fun AddProductDialog(
                                             singleLine = true,
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                            modifier = Modifier.fillMaxWidth().height(54.dp)
                                         )
 
                                         HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 0.5.dp)
@@ -1456,7 +1456,7 @@ fun AddProductDialog(
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1f).height(48.dp)
+                                                modifier = Modifier.weight(1f).height(54.dp)
                                             )
                                             OutlinedTextField(
                                                 value = childQtyInput,
@@ -1467,7 +1467,7 @@ fun AddProductDialog(
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1f).height(48.dp)
+                                                modifier = Modifier.weight(1f).height(54.dp)
                                             )
                                         }
 
@@ -1512,7 +1512,7 @@ fun AddProductDialog(
                                                     focusedContainerColor = Color.White,
                                                     unfocusedContainerColor = Color.White
                                                 ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -1534,7 +1534,7 @@ fun AddProductDialog(
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -1555,7 +1555,7 @@ fun AddProductDialog(
                                                     focusedContainerColor = Color.White,
                                                     unfocusedContainerColor = Color.White
                                                 ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -1580,7 +1580,7 @@ fun AddProductDialog(
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -1601,7 +1601,7 @@ fun AddProductDialog(
                                                     focusedContainerColor = Color.White,
                                                     unfocusedContainerColor = Color.White
                                                 ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -1648,7 +1648,7 @@ fun AddProductDialog(
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -1669,7 +1669,7 @@ fun AddProductDialog(
                         unfocusedContainerColor = Color.White
                     ),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
                 )
             }
         },
@@ -1796,7 +1796,7 @@ fun RestockDialog(
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(54.dp)
                                 )
                                 OutlinedTextField(
                                     value = childQtyInput,
@@ -1806,7 +1806,7 @@ fun RestockDialog(
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(54.dp)
                                 )
                             }
 
@@ -1845,7 +1845,7 @@ fun RestockDialog(
                                 placeholder = { Text("0.0", textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth()) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().height(54.dp)
                             )
                         }
 
@@ -1884,7 +1884,7 @@ fun RestockDialog(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFCBD5E1)),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().height(54.dp)
                         )
                     }
                 } else {
@@ -1897,7 +1897,7 @@ fun RestockDialog(
                             placeholder = { Text("0.0", textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth()) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().height(54.dp)
                         )
                     }
                 }
@@ -1915,7 +1915,7 @@ fun RestockDialog(
                         unfocusedContainerColor = Color.White
                     ),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
                 )
             }
         },
@@ -2032,7 +2032,7 @@ fun RegisterSaleDialog(
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFEF4444), unfocusedBorderColor = Color(0xFFFECACA)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(54.dp)
                                 )
                                 OutlinedTextField(
                                     value = childQtyInput,
@@ -2042,7 +2042,7 @@ fun RegisterSaleDialog(
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFEF4444), unfocusedBorderColor = Color(0xFFFECACA)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(54.dp)
                                 )
                             }
 
@@ -2081,7 +2081,7 @@ fun RegisterSaleDialog(
                                 placeholder = { Text("0.0", textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth()) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().height(54.dp)
                             )
                         }
 
@@ -2117,7 +2117,7 @@ fun RegisterSaleDialog(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFEF4444), unfocusedBorderColor = Color(0xFFCBD5E1)),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().height(54.dp)
                         )
                     }
                 } else {
@@ -2130,7 +2130,7 @@ fun RegisterSaleDialog(
                             placeholder = { Text("0.0", textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth()) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().height(54.dp)
                         )
                     }
                 }
@@ -2148,7 +2148,7 @@ fun RegisterSaleDialog(
                         unfocusedContainerColor = Color.White
                     ),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -2329,7 +2329,7 @@ fun EditProductDialog(
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
                                 ),
-                                modifier = Modifier.weight(1.2f).height(48.dp)
+                                modifier = Modifier.weight(1.2f).height(54.dp)
                             )
 
                             OutlinedTextField(
@@ -2344,7 +2344,7 @@ fun EditProductDialog(
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
                                 ),
-                                modifier = Modifier.weight(0.8f).height(48.dp)
+                                modifier = Modifier.weight(0.8f).height(54.dp)
                             )
                         }
                     }
@@ -2388,7 +2388,7 @@ fun EditProductDialog(
                                             focusedContainerColor = Color.White,
                                             unfocusedContainerColor = Color.White
                                         ),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -2409,7 +2409,7 @@ fun EditProductDialog(
                                             focusedContainerColor = Color.White,
                                             unfocusedContainerColor = Color.White
                                         ),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -2566,7 +2566,7 @@ fun EditProductDialog(
                                                 textStyle = TextStyle(fontSize = 10.sp),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1.0f).height(48.dp)
+                                                modifier = Modifier.weight(1.0f).height(54.dp)
                                             )
                                             OutlinedTextField(
                                                 value = subUnitName,
@@ -2575,7 +2575,7 @@ fun EditProductDialog(
                                                 textStyle = TextStyle(fontSize = 10.sp),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1.0f).height(48.dp)
+                                                modifier = Modifier.weight(1.0f).height(54.dp)
                                             )
                                         }
 
@@ -2610,7 +2610,7 @@ fun EditProductDialog(
                                             singleLine = true,
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                            modifier = Modifier.fillMaxWidth().height(54.dp)
                                         )
 
                                         HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 0.5.dp)
@@ -2635,7 +2635,7 @@ fun EditProductDialog(
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1f).height(48.dp)
+                                                modifier = Modifier.weight(1f).height(54.dp)
                                             )
                                             OutlinedTextField(
                                                 value = childQtyInput,
@@ -2646,7 +2646,7 @@ fun EditProductDialog(
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                                modifier = Modifier.weight(1f).height(48.dp)
+                                                modifier = Modifier.weight(1f).height(54.dp)
                                             )
                                         }
 
@@ -2691,7 +2691,7 @@ fun EditProductDialog(
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -2712,7 +2712,7 @@ fun EditProductDialog(
                                                     focusedContainerColor = Color.White,
                                                     unfocusedContainerColor = Color.White
                                                 ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -2737,7 +2737,7 @@ fun EditProductDialog(
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                 singleLine = true,
                                                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFBAE6FD)),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -2758,7 +2758,7 @@ fun EditProductDialog(
                                                     focusedContainerColor = Color.White,
                                                     unfocusedContainerColor = Color.White
                                                 ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                                modifier = Modifier.fillMaxWidth().height(54.dp)
                                             )
                                         }
                                     }
@@ -2805,7 +2805,7 @@ fun EditProductDialog(
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF0284C7), unfocusedBorderColor = Color(0xFFE2E8F0)),
-                                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        modifier = Modifier.fillMaxWidth().height(54.dp)
                                     )
                                 }
                             }
@@ -3478,7 +3478,7 @@ fun BarcodeScannerDialog(
                         placeholder = { Text("بحث عن اسم المنتج...", fontSize = 11.sp) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(54.dp),
                         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp)

@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -99,6 +100,8 @@ fun TrashScreen(
                                     "fixed_commitments" -> "التزام / هدف مالي"
                                     "makhzan_products" -> "سلعة مخزنية"
                                     "habayeb_customers" -> "حساب عميل / ديون"
+                                    "habayeb_bundle" -> "حزمة حساب عميل (حبايب)"
+                                    "makhzan_bundle" -> "حزمة منتج كاملة (المخزن)"
                                     else -> item.originalTableName
                                 }
                                 Box(
@@ -159,6 +162,9 @@ fun TrashScreen(
 
                                 if (jsonObj.has("amount")) {
                                     amount = jsonObj.getDouble("amount").toString() + " ر.ي"
+                                } else if (item.originalTableName.endsWith("_bundle")) {
+                                    val txCount = jsonObj.optInt("totalTransactions", 0)
+                                    amount = "إجمالي عدد المعاملات المشمولة: $txCount"
                                 } else if (jsonObj.has("quantityChanged")) {
                                     val q = jsonObj.getDouble("quantityChanged")
                                     val t = jsonObj.optString("type", "")
@@ -198,11 +204,41 @@ fun TrashScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                var showDeleteConfirm by remember { mutableStateOf(false) }
+
+                                if (showDeleteConfirm) {
+                                    AlertDialog(
+                                        onDismissRequest = { showDeleteConfirm = false },
+                                        confirmButton = {
+                                            Button(
+                                                onClick = {
+                                                    viewModel.permanentlyDeleteDeletedItem(item)
+                                                    showDeleteConfirm = false
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text("حذف نهائي", color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showDeleteConfirm = false }) {
+                                                Text("إلغاء", color = Color(0xFF64748B))
+                                            }
+                                        },
+                                        title = { Text("تأكيد الحذف النهائي 🚫", fontWeight = FontWeight.Bold) },
+                                        text = { Text("هل أنت متأكد من حذف هذا العنصر نهائياً؟ هذا الإجراء لا يمكن التراجع عنه مطلقاً.") },
+                                        containerColor = Color.White,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                }
+
                                 OutlinedButton(
-                                    onClick = { viewModel.permanentlyDeleteDeletedItem(item) },
-                                    modifier = Modifier.weight(1f).height(36.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                                    onClick = { showDeleteConfirm = true },
+                                    modifier = Modifier.weight(1f).height(38.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                                    border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f))
                                 ) {
                                     Text("حذف نهائي", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }

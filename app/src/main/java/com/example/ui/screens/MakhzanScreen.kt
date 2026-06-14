@@ -44,7 +44,7 @@ import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MakhzanScreen(
     viewModel: FinanceViewModel,
@@ -76,6 +76,11 @@ fun MakhzanScreen(
 
     // Barcode scanner trigger state
     var showBarcodeScanner by remember { mutableStateOf(false) }
+
+    // Selection mode state
+    var selectedProductIds by remember { mutableStateOf(setOf<Long>()) }
+    val isSelectionMode = selectedProductIds.isNotEmpty()
+    var showMultiDeleteConfirm by remember { mutableStateOf(false) }
 
     // Dialog trigger states
     var showAddDialog by remember { mutableStateOf(false) }
@@ -344,13 +349,26 @@ fun MakhzanScreen(
                     }
                 } else {
                     items(filteredProducts) { item ->
+                        val isSelected = selectedProductIds.contains(item.id)
                         ProductItemCard(
                             product = item,
                             currencySymbol = settings.currencySymbol,
                             viewModel = viewModel,
-                            onRestock = { showRestockDialogForProduct = item },
-                            onSale = { showSaleDialogForProduct = item },
-                            onClick = { showDetailSheetForProduct = item }
+                            isSelected = isSelected,
+                            onRestock = { if (!isSelectionMode) showRestockDialogForProduct = item },
+                            onSale = { if (!isSelectionMode) showSaleDialogForProduct = item },
+                            onClick = {
+                                if (isSelectionMode) {
+                                    selectedProductIds = if (isSelected) selectedProductIds - item.id else selectedProductIds + item.id
+                                } else {
+                                    showDetailSheetForProduct = item
+                                }
+                            },
+                            onLongClick = {
+                                if (!isSelectionMode) {
+                                    selectedProductIds = setOf(item.id)
+                                }
+                            }
                         )
                     }
                 }
@@ -381,58 +399,86 @@ fun MakhzanScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left: Qr/Barcode button
-                        IconButton(
-                            onClick = { showBarcodeScanner = true },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "قراءة باركود",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Middle: Description & Header Text
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        if (isSelectionMode) {
+                            IconButton(onClick = { selectedProductIds = emptySet() }) {
+                                Icon(Icons.Default.Close, "إلغاء التحديد", tint = Color.White)
+                            }
                             Text(
-                                text = "المخزن الذكي",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
+                                text = "${selectedProductIds.size} محدد",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                             )
-                            if (collapseProgress > 0.4f) {
-                                Text(
-                                    text = "إدارة المخزون والعمليات",
-                                    fontSize = 9.sp,
-                                    color = Color.White.copy(alpha = 0.75f * collapseProgress)
+                            IconButton(onClick = { 
+                                if (selectedProductIds.size == filteredProducts.size) {
+                                    selectedProductIds = emptySet()
+                                } else {
+                                    selectedProductIds = filteredProducts.map { it.id }.toSet()
+                                }
+                            }) {
+                                Icon(
+                                    if (selectedProductIds.size == filteredProducts.size) Icons.Default.CheckBox else Icons.Default.SelectAll,
+                                    "تحديد الكل",
+                                    tint = Color.White
                                 )
                             }
-                        }
+                            IconButton(onClick = { showMultiDeleteConfirm = true }) {
+                                Icon(Icons.Default.Delete, "حذف المحدد", tint = Color.White)
+                            }
+                        } else {
+                            // Left: Qr/Barcode button
+                            IconButton(
+                                onClick = { showBarcodeScanner = true },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCodeScanner,
+                                    contentDescription = "قراءة باركود",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
 
-                        // Right: Close/Back button
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "رجوع",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            // Middle: Description & Header Text
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "المخزن الذكي",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                                if (collapseProgress > 0.4f) {
+                                    Text(
+                                        text = "إدارة المخزون والعمليات",
+                                        fontSize = 9.sp,
+                                        color = Color.White.copy(alpha = 0.75f * collapseProgress)
+                                    )
+                                }
+                            }
+
+                            // Right: Close/Back button
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = "رجوع",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
 
@@ -777,6 +823,35 @@ fun MakhzanScreen(
             }
         )
     }
+
+    if (showMultiDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showMultiDeleteConfirm = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toDelete = productsList.filter { selectedProductIds.contains(it.id) }
+                        toDelete.forEach { viewModel.deleteProduct(it) }
+                        selectedProductIds = emptySet()
+                        showMultiDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("حذف ${selectedProductIds.size} منتجات", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMultiDeleteConfirm = false }) {
+                    Text("إلغاء", color = Color.Gray, fontWeight = FontWeight.Medium)
+                }
+            },
+            title = { Text("تأكيد الحذف المتعدد 🗑️", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = { Text("هل أنت متأكد من نقل المنتجات المحددة (${selectedProductIds.size}) إلى سلة المحذوفات؟") },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 }
 
 fun formatProductStock(product: ProductEntity): String {
@@ -820,19 +895,22 @@ fun getProductEmoji(product: ProductEntity): String {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProductItemCard(
     product: ProductEntity,
     currencySymbol: String,
     viewModel: FinanceViewModel,
+    isSelected: Boolean = false,
     onRestock: () -> Unit,
     onSale: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     val isCritical = product.quantity <= product.lowStockThreshold
 
     // Beautiful Pastel colored badges
-    val badgeBgColor = if (isCritical) Color(0xFFFEE2E2) else Color(0xFFDCFCE7)
+    val badgeBgColor = if (isSelected) Color(0xFF1B3B6F).copy(alpha = 0.1f) else if (isCritical) Color(0xFFFEE2E2) else Color(0xFFDCFCE7)
     val badgeTextColor = if (isCritical) Color(0xFFEF4444) else Color(0xFF16A34A)
     val badgeTextLabel = if (isCritical) "⚠️ حرج" else "متوفر"
 
@@ -840,13 +918,19 @@ fun ProductItemCard(
     val totalExpectedSales = product.sellingPrice * product.quantity
     val expectedProfit = totalExpectedSales - totalPurchase
 
+    val borderColor = if (isSelected) Color(0xFF1B3B6F) else Color(0xFFF1F5F9)
+    val borderWidth = if (isSelected) 2.dp else 1.dp
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 5.dp)
-            .clickable { onClick() }
-            .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(14.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .border(borderWidth, borderColor, RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) Color(0xFFF1F5F9) else Color.White),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {

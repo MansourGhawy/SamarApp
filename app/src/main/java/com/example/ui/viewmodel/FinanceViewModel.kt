@@ -344,11 +344,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteHabayebCustomer(customerId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val customer = habayebCustomersState.value.find { it.id == customerId }
-            if (customer != null) {
-                softDeleteHabayebCustomerToTrash(customer)
-            }
             val customerTxs = habayebDao.getAllTransactionsDirect().filter { it.customerId == customerId }
-            customerTxs.forEach { softDeleteHabayebTransactionToTrash(it) }
+            
+            if (customer != null) {
+                softDeleteHabayebBundleToTrash(customer, customerTxs)
+            }
 
             habayebDao.deleteCustomerById(customerId)
             habayebDao.deleteTransactionsByCustomer(customerId)
@@ -357,22 +357,17 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteMultipleHabayebCustomers(customerIds: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val namesList = mutableListOf<String>()
             val allTxs = habayebDao.getAllTransactionsDirect()
             for (id in customerIds) {
                 val customer = habayebCustomersState.value.find { it.id == id }
-                if (customer != null) {
-                    namesList.add(customer.name)
-                    softDeleteHabayebCustomerToTrash(customer)
-                }
                 val customerTxs = allTxs.filter { it.customerId == id }
-                customerTxs.forEach { softDeleteHabayebTransactionToTrash(it) }
+                if (customer != null) {
+                    softDeleteHabayebBundleToTrash(customer, customerTxs)
+                }
 
                 habayebDao.deleteCustomerById(id)
                 habayebDao.deleteTransactionsByCustomer(id)
             }
-
-            val textDesc = "تم حذف حسابات العملاء المحددة: (${namesList.joinToString(", ")}) نهائياً مع كافة الحركات المالية التابعة لها"
         }
     }
 
@@ -738,6 +733,41 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                         )
                         repository.saveProduct(product)
                     }
+                    "makhzan_bundle" -> {
+                        val prodData = root.getJSONObject("product")
+                        val product = ProductEntity(
+                            id = prodData.optLong("id", 0L),
+                            name = prodData.getString("name"),
+                            category = prodData.getString("category"),
+                            purchasePrice = prodData.getDouble("purchasePrice"),
+                            sellingPrice = prodData.getDouble("sellingPrice"),
+                            quantity = prodData.getDouble("quantity"),
+                            imageUrl = if (prodData.isNull("imageUrl")) null else prodData.optString("imageUrl", null),
+                            lowStockThreshold = prodData.optDouble("lowStockThreshold", 5.0),
+                            unitType = prodData.optString("unitType", "حبة"),
+                            hasSubUnits = prodData.optBoolean("hasSubUnits", false),
+                            parentUnitName = prodData.optString("parentUnitName", "كرتون"),
+                            subUnitName = prodData.optString("subUnitName", "حبة"),
+                            subUnitCountPerParent = prodData.optDouble("subUnitCountPerParent", 1.0)
+                        )
+                        repository.saveProduct(product)
+                        
+                        val txsArray = root.getJSONArray("transactions")
+                        for (i in 0 until txsArray.length()) {
+                            val txObj = txsArray.getJSONObject(i)
+                            val tx = MakhzanTransactionEntity(
+                                id = txObj.getLong("id"),
+                                productId = txObj.getLong("productId"),
+                                productName = txObj.getString("productName"),
+                                type = txObj.getString("type"),
+                                quantityChanged = txObj.getDouble("quantityChanged"),
+                                pricePerUnit = txObj.getDouble("pricePerUnit"),
+                                timestamp = txObj.getLong("timestamp"),
+                                note = txObj.getString("note")
+                            )
+                            repository.saveMakhzanTransaction(tx)
+                        }
+                    }
                     "habayeb_customers" -> {
                         val customer = HabayebCustomer(
                             id = root.getString("id"),
@@ -747,6 +777,36 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                             createdAt = root.getLong("createdAt")
                         )
                         habayebDao.insertCustomer(customer)
+                    }
+                    "habayeb_bundle" -> {
+                        val custData = root.getJSONObject("customer")
+                        val customer = HabayebCustomer(
+                            id = custData.getString("id"),
+                            name = custData.getString("name"),
+                            phone = custData.getString("phone"),
+                            notes = custData.getString("notes"),
+                            createdAt = custData.getLong("createdAt")
+                        )
+                        habayebDao.insertCustomer(customer)
+                        
+                        val txsArray = root.getJSONArray("transactions")
+                        for (i in 0 until txsArray.length()) {
+                            val txObj = txsArray.getJSONObject(i)
+                            val linkedId = if (txObj.has("linkedMainTxId") && !txObj.isNull("linkedMainTxId")) {
+                                txObj.getString("linkedMainTxId")
+                            } else null
+                            
+                            val tx = HabayebTransaction(
+                                id = txObj.getString("id"),
+                                customerId = txObj.getString("customerId"),
+                                type = txObj.getString("type"),
+                                amount = txObj.getDouble("amount"),
+                                timestamp = txObj.getLong("timestamp"),
+                                description = txObj.getString("description"),
+                                linkedMainTxId = linkedId
+                            )
+                            habayebDao.insertTransaction(tx)
+                        }
                     }
                 }
                 // Once restored, remove from trash
@@ -774,6 +834,40 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         repository.saveDeletedItem(trashItem)
     }
 
+    private suspend fun softDeleteProductBundleToTrash(product: ProductEntity, transactions: List<MakhzanTransactionEntity>) {
+        val jsonData = JSONObject().apply {
+            put("product", JSONObject().apply {
+                put("id", product.id)
+                put("name", product.name)
+                put("category", product.category)
+                put("purchasePrice", product.purchasePrice)
+                put("sellingPrice", product.sellingPrice)
+                put("quantity", product.quantity)
+                put("unitType", product.unitType)
+                put("lowStockThreshold", product.lowStockThreshold)
+                put("imageUrl", product.imageUrl ?: JSONObject.NULL)
+            })
+            val txsArray = JSONArray()
+            transactions.forEach { tx ->
+                txsArray.put(JSONObject().apply {
+                    put("id", tx.id)
+                    put("productId", tx.productId)
+                    put("productName", tx.productName)
+                    put("type", tx.type)
+                    put("quantityChanged", tx.quantityChanged)
+                    put("pricePerUnit", tx.pricePerUnit)
+                    put("timestamp", tx.timestamp)
+                    put("note", tx.note)
+                })
+            }
+            put("transactions", txsArray)
+            put("totalTransactions", transactions.size)
+            put("name", product.name)
+        }.toString()
+        val trashItem = DeletedItemEntity(id = "makhzan_bundle_${product.id}", sourceSystem = "مخزن", originalTableName = "makhzan_bundle", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
     private suspend fun softDeleteProductToTrash(product: ProductEntity) {
         val jsonData = JSONObject().apply {
             put("id", product.id)
@@ -791,6 +885,35 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             put("subUnitCountPerParent", product.subUnitCountPerParent)
         }.toString()
         val trashItem = DeletedItemEntity(id = "prod_${product.id}", sourceSystem = "مخزن", originalTableName = "makhzan_products", jsonData = jsonData)
+        repository.saveDeletedItem(trashItem)
+    }
+
+    private suspend fun softDeleteHabayebBundleToTrash(customer: HabayebCustomer, transactions: List<HabayebTransaction>) {
+        val jsonData = JSONObject().apply {
+            put("customer", JSONObject().apply {
+                put("id", customer.id)
+                put("name", customer.name)
+                put("phone", customer.phone)
+                put("notes", customer.notes)
+                put("createdAt", customer.createdAt)
+            })
+            val txsArray = JSONArray()
+            transactions.forEach { tx ->
+                txsArray.put(JSONObject().apply {
+                    put("id", tx.id)
+                    put("customerId", tx.customerId)
+                    put("type", tx.type)
+                    put("amount", tx.amount)
+                    put("timestamp", tx.timestamp)
+                    put("description", tx.description)
+                    put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
+                })
+            }
+            put("transactions", txsArray)
+            put("totalTransactions", transactions.size)
+            put("name", customer.name) // For easy display
+        }.toString()
+        val trashItem = DeletedItemEntity(id = "bundle_${customer.id}", sourceSystem = "حبايب", originalTableName = "habayeb_bundle", jsonData = jsonData)
         repository.saveDeletedItem(trashItem)
     }
 
@@ -1032,11 +1155,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteProduct(product: ProductEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            softDeleteProductToTrash(product)
+            val productTxs = makhzanTransactionsState.value.filter { it.productId == product.id }
+            softDeleteProductBundleToTrash(product, productTxs)
+            
             repository.deleteProduct(product)
-
-            val textDesc = "تم حذف منتج من المخزن نهائياً: ${product.name}"
-            val oldStr = "الاسم: ${product.name}, التصنيف: ${product.category}, سعر الشراء: ${product.purchasePrice}, سعر البيع: ${product.sellingPrice}, الكمية: ${product.quantity} ${product.unitType}"
+            productTxs.forEach { repository.deleteMakhzanTransaction(it) }
         }
     }
 

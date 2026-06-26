@@ -868,4 +868,19 @@
     <string name="customization_save_changes">تم وحفظ التعديلات</string>
     <string name="toast_save_failed">فشل حفظ البيانات</string>
     <string name="toast_operation_failed">فشلت العملية</string>
+    <!-- Habayeb New Strings -->
+    <string name="habayeb_filter_owed_by">لي عند الناس</string>
+    <string name="habayeb_filter_owed_to">علي للناس</string>
+    <string name="habayeb_sort_amount_desc">أكبر مبلغ 🔽</string>
+    <string name="habayeb_sort_amount_asc">أقل مبلغ 🔼</string>
+    <string name="habayeb_sort_amount">حسب المبلغ 💰</string>
+    <string name="habayeb_sort_date_desc">أحدث تاريخ ⏱️</string>
+    <string name="habayeb_sort_date_asc">أقدم تاريخ ⏱️</string>
+    <string name="habayeb_sort_date">حسب التاريخ 📅</string>
+    <string name="habayeb_no_debtors">لا يوجد مدينين حالياً!</string>
+    <string name="habayeb_no_creditors">لا يوجد دائنين حالياً!</string>
+    <string name="habayeb_add_customer_fab">إضافة عميل أو مورد</string>
+    <string name="habayeb_bulk_delete_title">تأكيد الحذف الجماعي الآمن</string>
+    <string name="habayeb_bulk_delete_confirm">هل أنت متأكد من حذف الحسابات المختارة (%d) مع جميع سجلاتها المالية نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="habayeb_attachment_included">تم إرفاق الملف</string>
 </resources>

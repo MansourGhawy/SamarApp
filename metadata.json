@@ -1,0 +1,6 @@
+{
+  "name": "ميزان الدار",
+  "description": "تطبيق ميزان الدار لإدارة الميزانية المنزلية واليوميات والالتزامات الأسرية بمرونة ورقي.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

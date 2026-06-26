@@ -1,0 +1,74 @@
+name: Build Mizan Al Dar App
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # حماية حقيقية للذاكرة وإجبار مترجم كوتلن و KSP لتفادي NPE و OOM
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1024m" -Dkotlin.compiler.execution.strategy="in-process"
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # محرك المسح الذكي وتوليد شهادة الـ Debug بالمسميات والمسارات المخصصة للمشروع تلقائياً
+      - name: Auto-Generate Debug Keystore
+        run: |
+          echo "🔑 Generating default debug keystore..."
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          
+          # نسخ الملف للمسارات الافتراضية
+          cp ~/.android/debug.keystore ./debug.keystore || true
+          
+          # مسح ذكي لاستخراج أي تسمية مخصصة لملفات التوقيع في ملفات الـ Gradle وتوليدها تلقائياً بالاسم الصحيح
+          echo "🔍 Scanning build files for custom keystore names..."
+          find . -name "build.gradle*" | while read -r gradle_file; do
+            # استخراج الكلمات التي تنتهي بـ .keystore أو .jks
+            filenames=$(grep -o -E '[a-zA-Z0-9_\-]+\.(keystore|jks)' "$gradle_file" | sort -u)
+            dir_path=$(dirname "$gradle_file")
+            for fname in $filenames; do
+              target_path="$dir_path/$fname"
+              if [ ! -f "$target_path" ]; then
+                echo "🎯 Auto-generating missing custom keystore: $target_path"
+                cp ~/.android/debug.keystore "$target_path"
+              else
+                echo "ℹ️ Keystore already exists at: $target_path"
+              fi
+            done
+          done
+          echo "✅ Smart Keystore allocation completed."
+
+      # محرك التحقق الذاتي وتوليد قرادل بإصدار متوافق ومطلوب بالاسم (Gradle 9.3.1) لتجنب انهيار البناء
+      - name: Auto-Generate Wrapper & Build
+        run: |
+          if [ -f "./gradlew" ]; then
+            echo "✅ Gradle wrapper found. Granting permissions and building..."
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace --no-parallel --max-workers=1
+          else
+            echo "⚠️ Gradle wrapper NOT found! Auto-generating stable wrapper..."
+            # تقييد التوليد بالإصدار 9.3.1 المطلوبة رسمياً بواسطة AGP 9.1.1 في مشروعك
+            gradle wrapper --gradle-version 9.3.1
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace --no-parallel --max-workers=1
+          fi
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizan-Al-Dar-Final-Build
+          path: app/build/outputs/apk/debug/*.apk

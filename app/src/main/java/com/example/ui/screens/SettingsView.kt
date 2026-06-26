@@ -92,9 +92,6 @@ fun SettingsView(
     var showGoogleLoginWebView by remember { mutableStateOf(false) }
 
     var showTrapDialog by remember { mutableStateOf(false) }
-    var userRole by remember { mutableStateOf(settings.userRole) }
-    var guardianName by remember { mutableStateOf(settings.guardianRelation) }
-    var guardianPhone by remember { mutableStateOf(settings.guardianNumber) }
     var currencySymbol by remember { mutableStateOf(settings.currencySymbol) }
     var schoolExpenses by remember { mutableStateOf(settings.schoolExpensesEnabled) }
     var isAutoBackupEnabled by remember { mutableStateOf(settings.isAutoBackupEnabled) }
@@ -156,9 +153,6 @@ fun SettingsView(
                     viewModel.executeMasterRestore(jsonText, context) { success, restoredSettings ->
                         if (success && restoredSettings != null) {
                             // Reload settings safely using newly restored values
-                            userRole = restoredSettings.userRole
-                            guardianName = restoredSettings.guardianRelation
-                            guardianPhone = restoredSettings.guardianNumber
                             currencySymbol = restoredSettings.currencySymbol
                             schoolExpenses = restoredSettings.schoolExpensesEnabled
                         }
@@ -303,9 +297,6 @@ fun SettingsView(
     // Save changes helper (retains structural properties)
     fun saveAllSettings() {
         val updated = settings.copy(
-            userRole = userRole,
-            guardianRelation = guardianName,
-            guardianNumber = guardianPhone,
             currencySymbol = currencySymbol,
             schoolExpensesEnabled = schoolExpenses,
             isAutoBackupEnabled = isAutoBackupEnabled
@@ -796,7 +787,7 @@ fun SettingsView(
                                         val runBackup = {
                                             viewModel.createLocalBackup(context) { file ->
                                                 if (file != null) {
-                                                    com.example.ui.viewmodel.shareBackupFile(context, file)
+                                                    com.example.ui.helper.shareBackupFile(context, file)
                                                 }
                                             }
                                         }
@@ -1065,7 +1056,7 @@ fun SettingsView(
 
                                                         Spacer(modifier = Modifier.height(4.dp))
                                                         TextButton(
-                                                            onClick = { com.example.ui.viewmodel.openGoogleDriveApp(context) },
+                                                            onClick = { com.example.ui.helper.openGoogleDriveApp(context) },
                                                             modifier = Modifier.align(Alignment.CenterHorizontally)
                                                         ) {
                                                             Text(
@@ -1267,9 +1258,6 @@ fun SettingsView(
                                     if (pastedBackupText.isNotBlank()) {
                                         viewModel.executeMasterRestore(pastedBackupText, context) { success, restoredSettings ->
                                             if (success && restoredSettings != null) {
-                                                userRole = restoredSettings.userRole
-                                                guardianName = restoredSettings.guardianRelation
-                                                guardianPhone = restoredSettings.guardianNumber
                                                 currencySymbol = restoredSettings.currencySymbol
                                                 schoolExpenses = restoredSettings.schoolExpensesEnabled
                                                 
@@ -1327,9 +1315,6 @@ fun SettingsView(
                                         .clickable {
                                             viewModel.restoreFromLocalFile(file, context) { success, restoredSettings ->
                                                 if (success && restoredSettings != null) {
-                                                    userRole = restoredSettings.userRole
-                                                    guardianName = restoredSettings.guardianRelation
-                                                    guardianPhone = restoredSettings.guardianNumber
                                                     currencySymbol = restoredSettings.currencySymbol
                                                     schoolExpenses = restoredSettings.schoolExpensesEnabled
                                                 }

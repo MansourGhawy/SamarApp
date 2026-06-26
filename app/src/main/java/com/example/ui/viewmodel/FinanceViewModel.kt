@@ -2,10 +2,6 @@ package com.example.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Environment
-import android.widget.Toast
 import com.example.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,35 +11,55 @@ import com.example.data.CloudSyncState
 import com.example.data.CloudBackupFile
 import com.example.data.repository.FinanceRepository
 import com.example.domain.DateUtils
-import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.UUID
-import java.security.MessageDigest
+
+sealed class UiEvent {
+    data class ShowToast(val messageRes: Int, val isLong: Boolean = false) : UiEvent()
+    data class ShareFile(val file: File) : UiEvent()
+    data class OpenGoogleDriveApp(val appId: String = "com.google.android.apps.docs") : UiEvent()
+}
 
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: FinanceRepository
     private val habayebDao: HabayebDao
 
-    val syncSettingsViewModel = SyncSettingsViewModel(application)
+    private var syncSettingsViewModel: SyncSettingsViewModel? = null
 
-    val googleDriveSyncHelper: GoogleDriveSyncHelper get() = syncSettingsViewModel.googleDriveSyncHelper
-    val googleDriveSyncState: StateFlow<CloudSyncState> get() = syncSettingsViewModel.googleDriveSyncState
-    val cloudBackupsList: StateFlow<List<CloudBackupFile>> get() = syncSettingsViewModel.cloudBackupsList
-    val isFetchingCloudBackups: StateFlow<Boolean> get() = syncSettingsViewModel.isFetchingCloudBackups
+    fun setSyncSettingsViewModel(vm: SyncSettingsViewModel) {
+        this.syncSettingsViewModel = vm
+    }
+
+    private val _uiEventChannel = kotlinx.coroutines.channels.Channel<UiEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
+    val uiEventFlow = _uiEventChannel.receiveAsFlow()
+
+    private fun sendUiEvent(event: UiEvent) {
+        viewModelScope.launch {
+            _uiEventChannel.send(event)
+        }
+    }
+
+    val googleDriveSyncHelper: GoogleDriveSyncHelper get() = syncSettingsViewModel?.googleDriveSyncHelper ?: GoogleDriveSyncHelper(getApplication())
+    val googleDriveSyncState: StateFlow<CloudSyncState> get() = syncSettingsViewModel?.googleDriveSyncState ?: MutableStateFlow(CloudSyncState.Idle).asStateFlow()
+    val cloudBackupsList: StateFlow<List<CloudBackupFile>> get() = syncSettingsViewModel?.cloudBackupsList ?: MutableStateFlow<List<CloudBackupFile>>(emptyList()).asStateFlow()
+    val isFetchingCloudBackups: StateFlow<Boolean> get() = syncSettingsViewModel?.isFetchingCloudBackups ?: MutableStateFlow(false).asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
         repository = FinanceRepository(database)
         habayebDao = database.habayebDao()
+
+        val prefs = application.getSharedPreferences("mizan_prefs", Context.MODE_PRIVATE)
+        viewModelScope.launch {
+            repository.populateDefaultCategoriesIfNeeded(prefs)
+        }
     }
 
     // State Flows from Repository
@@ -86,9 +102,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     val deletedItemsFlow: Flow<List<DeletedItemEntity>> = repository.deletedItemsFlow
 
     // --- Safe License Activation Logic delegated to SyncSettingsViewModel ---
-    fun getOrGenerateUnifiedDeviceId(context: Context): String = syncSettingsViewModel.getOrGenerateUnifiedDeviceId(context)
+    fun getOrGenerateUnifiedDeviceId(context: Context): String = com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(context)
 
-    val showActivationRequired: MutableStateFlow<Boolean> get() = syncSettingsViewModel.showActivationRequired
+    val showActivationRequired: MutableStateFlow<Boolean> get() = syncSettingsViewModel?.showActivationRequired ?: MutableStateFlow(false)
 
     // Privacy Mode State
     val isPrivacyModeEnabled = MutableStateFlow(true)
@@ -96,11 +112,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         isPrivacyModeEnabled.value = !isPrivacyModeEnabled.value
     }
 
-    val deviceIdState: StateFlow<String> get() = syncSettingsViewModel.deviceIdState
-    val isActivatedState: StateFlow<Boolean> get() = syncSettingsViewModel.isActivatedState
+    val deviceIdState: StateFlow<String> get() = syncSettingsViewModel?.deviceIdState ?: MutableStateFlow("").asStateFlow()
+    val isActivatedState: StateFlow<Boolean> get() = syncSettingsViewModel?.isActivatedState ?: MutableStateFlow(false).asStateFlow()
 
-    fun activateLicense(code: String): Boolean = syncSettingsViewModel.activateLicense(code)
-    fun isTrialExpired(): Boolean = syncSettingsViewModel.isTrialExpired()
+    fun activateLicense(code: String): Boolean = syncSettingsViewModel?.activateLicense(code) ?: false
+    fun isTrialExpired(): Boolean = syncSettingsViewModel?.isTrialExpired() ?: false
 
     // --- Habayeb Debts ---
     val habayebCustomersState: StateFlow<List<HabayebCustomer>> = habayebDao.getAllCustomersFlow()
@@ -211,9 +227,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 habayebDao.insertCustomerWithOpeningTransaction(customer, transaction)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
             }
         }
     }
@@ -238,9 +252,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 habayebDao.insertTransaction(transaction)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
             }
         }
     }
@@ -251,9 +263,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 habayebDao.updateCustomerName(customerId, newName)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
             }
         }
     }
@@ -265,15 +275,13 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val customerTxs = habayebDao.getAllTransactionsDirect().filter { it.customerId == customerId }
                 
                 if (customer != null) {
-                    softDeleteHabayebBundleToTrash(customer, customerTxs)
+                    repository.softDeleteHabayebBundleToTrash(customer, customerTxs)
                 }
 
                 habayebDao.deleteCustomerAndTransactions(customerId)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -286,16 +294,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     val customer = habayebCustomersState.value.find { it.id == id }
                     val customerTxs = allTxs.filter { it.customerId == id }
                     if (customer != null) {
-                        softDeleteHabayebBundleToTrash(customer, customerTxs)
+                        repository.softDeleteHabayebBundleToTrash(customer, customerTxs)
                     }
 
                     habayebDao.deleteCustomerAndTransactions(id)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -305,21 +311,19 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val tx = habayebDao.getTransactionById(txId)
                 if (tx != null) {
-                    softDeleteHabayebTransactionToTrash(tx)
+                    repository.softDeleteHabayebTransactionToTrash(tx)
                 }
                 if (tx?.linkedMainTxId != null) {
                     val linkedTx = transactionsState.value.find { it.id == tx.linkedMainTxId }
                     if (linkedTx != null) {
-                        softDeleteTransactionToTrash(linkedTx)
+                        repository.softDeleteTransactionToTrash(linkedTx)
                     }
                     repository.deleteTransactionById(tx.linkedMainTxId)
                 }
                 habayebDao.deleteTransactionById(txId)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -353,38 +357,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Backups list delegated to SyncSettingsViewModel
-    val localBackups: StateFlow<List<File>> get() = syncSettingsViewModel.localBackups
-
-    init {
-        val prefs = application.getSharedPreferences("mizan_prefs", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("categories_populated", false)) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val defaults = listOf(
-                    CustomCategory(name = "دقيق", tabType = "أغذية الدار", iconEmoji = "🌾"),
-                    CustomCategory(name = "سكر", tabType = "أغذية الدار", iconEmoji = "🍬"),
-                    CustomCategory(name = "أرز", tabType = "أغذية الدار", iconEmoji = "🍚"),
-                    CustomCategory(name = "بهارات", tabType = "أغذية الدار", iconEmoji = "🌶️"),
-                    CustomCategory(name = "بقوليات", tabType = "أغذية الدار", iconEmoji = "🫘"),
-                    CustomCategory(name = "شاي", tabType = "أغذية الدار", iconEmoji = "☕"),
-                    CustomCategory(name = "خضار", tabType = "أغذية الدار", iconEmoji = "🛒"),
-                    CustomCategory(name = "غاز", tabType = "فواتير الدار", iconEmoji = "🔥"),
-                    CustomCategory(name = "كهرباء", tabType = "فواتير الدار", iconEmoji = "⚡"),
-                    CustomCategory(name = "ماء", tabType = "فواتير الدار", iconEmoji = "💧"),
-                    CustomCategory(name = "إنترنت ورصيد", tabType = "فواتير الدار", iconEmoji = "🌐"),
-                    CustomCategory(name = "حليب", tabType = "العائلة", iconEmoji = "🍼"),
-                    CustomCategory(name = "حفاظات", tabType = "العائلة", iconEmoji = "👶"),
-                    CustomCategory(name = "مصروف مدرسي", tabType = "العائلة", iconEmoji = "🎒"),
-                    CustomCategory(name = "أخرى", tabType = "أخرى ومخصص", iconEmoji = "📁"),
-                    CustomCategory(name = "ادخار", tabType = "أخرى ومخصص", iconEmoji = "🏦"),
-                    CustomCategory(name = "طوارئ", tabType = "أخرى ومخصص", iconEmoji = "🚨"),
-                    CustomCategory(name = "علاج ودواء", tabType = "أخرى ومخصص", iconEmoji = "💊"),
-                    CustomCategory(name = "أثاث ومستلزمات", tabType = "أخرى ومخصص", iconEmoji = "🛋️")
-                )
-                defaults.forEach { repository.saveCustomCategory(it) }
-                prefs.edit().putBoolean("categories_populated", true).apply()
-            }
-        }
-    }
+    val localBackups: StateFlow<List<File>> get() = syncSettingsViewModel?.localBackups ?: MutableStateFlow<List<File>>(emptyList()).asStateFlow()
 
     // --- Calculations using BigDecimal ---
 
@@ -572,137 +545,37 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 description = description
             )
             repository.saveTransaction(tx)
-
-            val typeAr = if (type == "INCOME") "الوارد" else "المنصرف"
-            val baseDesc = "تم إضافة حركة مالية ($typeAr): بقيمة ${formatDoubleCurrency(amount)} تحت تصنيف ($category)"
-            val textDesc = if (description.isNotBlank()) "$baseDesc - التفاصيل: $description" else baseDesc
-            val txStr = "المعرف: ${id}, النوع: ${typeAr}, التصنيف: ${category}, المبلغ: ${amount}, البيان: ${description}"
         }
     }
 
-    fun permanentlyDeleteDeletedItem(item: DeletedItemEntity) = syncSettingsViewModel.permanentlyDeleteDeletedItem(item)
-
-    fun permanentlyDeleteMultipleItems(items: List<DeletedItemEntity>) = syncSettingsViewModel.permanentlyDeleteMultipleItems(items)
-
-    fun restoreMultipleItems(items: List<DeletedItemEntity>) = syncSettingsViewModel.restoreMultipleItems(items)
-
-    fun restoreDeletedItem(item: DeletedItemEntity) = syncSettingsViewModel.restoreDeletedItem(item)
-
-    fun emptyTrash() = syncSettingsViewModel.emptyTrash()
-
-    private suspend fun softDeleteCommitmentToTrash(fc: FixedCommitment) {
-        val jsonData = JSONObject().apply {
-            put("name", fc.name)
-            put("targetAmount", fc.targetAmount)
-            put("currentProgress", fc.currentProgress)
-            put("orderIndex", fc.orderIndex)
-        }.toString()
-        val trashItem = DeletedItemEntity(id = "fc_${fc.name}", sourceSystem = "دار", originalTableName = "fixed_commitments", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
+    fun permanentlyDeleteDeletedItem(item: DeletedItemEntity) {
+        syncSettingsViewModel?.permanentlyDeleteDeletedItem(item)
     }
 
-    private suspend fun softDeleteHabayebBundleToTrash(customer: HabayebCustomer, transactions: List<HabayebTransaction>) {
-        val jsonData = JSONObject().apply {
-            put("customer", JSONObject().apply {
-                put("id", customer.id)
-                put("name", customer.name)
-                put("phone", customer.phone)
-                put("notes", customer.notes)
-                put("createdAt", customer.createdAt)
-            })
-            val txsArray = JSONArray()
-            transactions.forEach { tx ->
-                txsArray.put(JSONObject().apply {
-                    put("id", tx.id)
-                    put("customerId", tx.customerId)
-                    put("type", tx.type)
-                    put("amount", tx.amount)
-                    put("timestamp", tx.timestamp)
-                    put("description", tx.description)
-                    put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
-                })
-            }
-            put("transactions", txsArray)
-            put("totalTransactions", transactions.size)
-            put("name", customer.name) // For easy display
-        }.toString()
-        val trashItem = DeletedItemEntity(id = "bundle_${customer.id}", sourceSystem = "حبايب", originalTableName = "habayeb_bundle", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
+    fun permanentlyDeleteMultipleItems(items: List<DeletedItemEntity>) {
+        syncSettingsViewModel?.permanentlyDeleteMultipleItems(items)
     }
 
-    private suspend fun softDeleteHabayebCustomerToTrash(customer: HabayebCustomer) {
-        val jsonData = JSONObject().apply {
-            put("id", customer.id)
-            put("name", customer.name)
-            put("phone", customer.phone)
-            put("notes", customer.notes)
-            put("createdAt", customer.createdAt)
-        }.toString()
-        val trashItem = DeletedItemEntity(id = "cust_${customer.id}", sourceSystem = "حبايب", originalTableName = "habayeb_customers", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
+    fun restoreMultipleItems(items: List<DeletedItemEntity>) {
+        syncSettingsViewModel?.restoreMultipleItems(items)
     }
 
-    private suspend fun softDeleteTransactionToTrash(tx: TransactionDb) {
-        val jsonData = JSONObject().apply {
-            put("id", tx.id)
-            put("timestamp", tx.timestamp)
-            put("type", tx.type)
-            put("category", tx.category)
-            put("amount", tx.amount)
-            put("description", tx.description)
-        }.toString()
-        val trashItem = DeletedItemEntity(id = tx.id, sourceSystem = "دار", originalTableName = "transactions", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
+    fun restoreDeletedItem(item: DeletedItemEntity) {
+        syncSettingsViewModel?.restoreDeletedItem(item)
     }
 
-    private suspend fun softDeleteTransactionBundleToTrash(transactions: List<TransactionDb>, title: String) {
-        val jsonData = JSONObject().apply {
-            val txsArray = JSONArray()
-            transactions.forEach { tx ->
-                txsArray.put(JSONObject().apply {
-                    put("id", tx.id)
-                    put("timestamp", tx.timestamp)
-                    put("type", tx.type)
-                    put("category", tx.category)
-                    put("amount", tx.amount)
-                    put("description", tx.description)
-                })
-            }
-            put("transactions", txsArray)
-            put("totalTransactions", transactions.size)
-            val totalNet = transactions.sumOf { if (it.type == "INCOME") it.amount else -it.amount }
-            put("totalNet", totalNet)
-            put("name", title)
-        }.toString()
-        val id = "dar_bundle_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(4)}"
-        val trashItem = DeletedItemEntity(id = id, sourceSystem = "دار", originalTableName = "dar_bundle", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
-    }
-
-    private suspend fun softDeleteHabayebTransactionToTrash(tx: HabayebTransaction) {
-        val jsonData = JSONObject().apply {
-            put("id", tx.id)
-            put("customerId", tx.customerId)
-            put("type", tx.type)
-            put("amount", tx.amount)
-            put("timestamp", tx.timestamp)
-            put("description", tx.description)
-            put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
-        }.toString()
-        val trashItem = DeletedItemEntity(id = tx.id, sourceSystem = "حبايب", originalTableName = "habayeb_transactions", jsonData = jsonData)
-        repository.saveDeletedItem(trashItem)
+    fun emptyTrash() {
+        syncSettingsViewModel?.emptyTrash()
     }
 
     fun deleteTransaction(tx: TransactionDb) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                softDeleteTransactionToTrash(tx)
+                repository.softDeleteTransactionToTrash(tx)
                 repository.deleteTransaction(tx)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -712,14 +585,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val tx = transactionsState.value.find { it.id == id }
                 if (tx != null) {
-                    softDeleteTransactionToTrash(tx)
+                    repository.softDeleteTransactionToTrash(tx)
                 }
                 repository.deleteTransactionById(id)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -730,14 +601,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val allTxs = transactionsState.value
                 val toDelete = allTxs.filter { ids.contains(it.id) }
                 if (toDelete.isNotEmpty()) {
-                    softDeleteTransactionBundleToTrash(toDelete, bundleTitle)
+                    repository.softDeleteTransactionBundleToTrash(toDelete, bundleTitle)
                     toDelete.forEach { repository.deleteTransactionById(it.id) }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -748,9 +617,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveTransaction(tx)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_operation_failed))
             }
         }
     }
@@ -763,9 +630,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveCommitment(fc)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
             }
         }
     }
@@ -776,9 +641,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveCommitment(commitment)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_operation_failed))
             }
         }
     }
@@ -813,14 +676,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val oldFc = commitmentsState.value.find { it.name == name }
                 if (oldFc != null) {
-                    softDeleteCommitmentToTrash(oldFc)
+                    repository.softDeleteCommitmentToTrash(oldFc)
                 }
                 repository.deleteCommitment(name)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
@@ -831,9 +692,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveCustomCategory(CustomCategory(name = name, tabType = tabType, iconEmoji = emoji))
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
             }
         }
     }
@@ -844,68 +703,88 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 repository.deleteCustomCategory(customCategory)
             } catch (e: Exception) {
                 e.printStackTrace()
-                launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_delete_failed), Toast.LENGTH_SHORT).show()
-                }
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_delete_failed))
             }
         }
     }
 
-    fun deleteAllData() = syncSettingsViewModel.deleteAllData()
+    fun deleteAllData() {
+        syncSettingsViewModel?.deleteAllData()
+    }
 
-    fun clearLocalCopyAndWipeMemory(context: Context) = syncSettingsViewModel.clearLocalCopyAndWipeMemory(context)
+    fun clearLocalCopyAndWipeMemory(context: Context) {
+        syncSettingsViewModel?.clearLocalCopyAndWipeMemory(context)
+    }
 
     // --- Backup & Restore (.mzd) delegated to SyncSettingsViewModel ---
 
-    fun getBaseBackupDirectory(): File = syncSettingsViewModel.getBaseBackupDirectory()
+    fun getBaseBackupDirectory(): File = syncSettingsViewModel?.getBaseBackupDirectory() ?: File(getApplication<Application>().filesDir, "backups")
 
-    fun getBackupDirectory(): File = syncSettingsViewModel.getBackupDirectory()
+    fun getBackupDirectory(): File = syncSettingsViewModel?.getBackupDirectory() ?: File(getApplication<Application>().filesDir, "backups")
 
-    fun refreshLocalBackups() = syncSettingsViewModel.refreshLocalBackups()
+    fun refreshLocalBackups() {
+        syncSettingsViewModel?.refreshLocalBackups()
+    }
 
-    fun handleGoogleOAuthCode(code: String, email: String? = null, redirectUri: String = "", onComplete: ((Boolean) -> Unit)? = null) =
-        syncSettingsViewModel.handleGoogleOAuthCode(code, email, redirectUri, onComplete)
+    fun handleGoogleOAuthCode(code: String, email: String? = null, redirectUri: String = "", onComplete: ((Boolean) -> Unit)? = null) {
+        syncSettingsViewModel?.handleGoogleOAuthCode(code, email, redirectUri, onComplete)
+    }
 
-    fun backupToGoogleDriveDirect(onComplete: ((Boolean) -> Unit)? = null) =
-        syncSettingsViewModel.backupToGoogleDriveDirect(onComplete)
+    fun backupToGoogleDriveDirect(onComplete: ((Boolean) -> Unit)? = null) {
+        syncSettingsViewModel?.backupToGoogleDriveDirect(onComplete)
+    }
 
-    fun restoreFromGoogleDriveDirect(context: Context, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.restoreFromGoogleDriveDirect(context, onComplete)
+    fun restoreFromGoogleDriveDirect(context: Context, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.restoreFromGoogleDriveDirect(context, onComplete)
+    }
 
-    fun googleDriveLogout(onComplete: (() -> Unit)? = null) =
-        syncSettingsViewModel.googleDriveLogout(onComplete)
+    fun googleDriveLogout(onComplete: (() -> Unit)? = null) {
+        syncSettingsViewModel?.googleDriveLogout(onComplete)
+    }
 
-    fun fetchCloudBackupsList() = syncSettingsViewModel.fetchCloudBackupsList()
+    fun fetchCloudBackupsList() {
+        syncSettingsViewModel?.fetchCloudBackupsList()
+    }
 
-    fun uploadBackupToGoogleDrive(onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.uploadBackupToGoogleDrive(onComplete)
+    fun uploadBackupToGoogleDrive(onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.uploadBackupToGoogleDrive(onComplete)
+    }
 
-    fun uploadBackupToGoogleDriveWithFilename(filename: String, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.uploadBackupToGoogleDriveWithFilename(filename, onComplete)
+    fun uploadBackupToGoogleDriveWithFilename(filename: String, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.uploadBackupToGoogleDriveWithFilename(filename, onComplete)
+    }
 
-    fun restoreFromGoogleDriveById(context: Context, fileId: String, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.restoreFromGoogleDriveById(context, fileId, onComplete)
+    fun restoreFromGoogleDriveById(context: Context, fileId: String, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.restoreFromGoogleDriveById(context, fileId, onComplete)
+    }
 
-    fun deleteCloudBackupById(fileId: String, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.deleteCloudBackupById(fileId, onComplete)
+    fun deleteCloudBackupById(fileId: String, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.deleteCloudBackupById(fileId, onComplete)
+    }
 
-    fun deleteMultipleCloudBackupsByIds(fileIds: List<String>, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.deleteMultipleCloudBackupsByIds(fileIds, onComplete)
+    fun deleteMultipleCloudBackupsByIds(fileIds: List<String>, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.deleteMultipleCloudBackupsByIds(fileIds, onComplete)
+    }
 
-    fun getBackupJsonForClipboard(onComplete: (String) -> Unit) =
-        syncSettingsViewModel.getBackupJsonForClipboard(onComplete)
+    fun getBackupJsonForClipboard(onComplete: (String) -> Unit) {
+        syncSettingsViewModel?.getBackupJsonForClipboard(onComplete)
+    }
 
-    fun createLocalBackup(context: Context, onComplete: (File?) -> Unit) =
-        syncSettingsViewModel.createLocalBackup(context, onComplete)
+    fun createLocalBackup(context: Context, onComplete: (File?) -> Unit) {
+        syncSettingsViewModel?.createLocalBackup(context, onComplete)
+    }
 
-    fun executeMasterRestore(rawJsonString: String, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) =
-        syncSettingsViewModel.executeMasterRestore(rawJsonString, context, onComplete)
+    fun executeMasterRestore(rawJsonString: String, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) {
+        syncSettingsViewModel?.executeMasterRestore(rawJsonString, context, onComplete)
+    }
 
-    fun restoreFromMzdContent(jsonContent: String, context: Context, onComplete: (Boolean) -> Unit) =
-        syncSettingsViewModel.restoreFromMzdContent(jsonContent, context, onComplete)
+    fun restoreFromMzdContent(jsonContent: String, context: Context, onComplete: (Boolean) -> Unit) {
+        syncSettingsViewModel?.restoreFromMzdContent(jsonContent, context, onComplete)
+    }
 
-    fun restoreFromLocalFile(file: File, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) =
-        syncSettingsViewModel.restoreFromLocalFile(file, context, onComplete)
+    fun restoreFromLocalFile(file: File, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) {
+        syncSettingsViewModel?.restoreFromLocalFile(file, context, onComplete)
+    }
 
     // Format utility for prices in Arabic
     fun formatCurrency(amount: BigDecimal, symbol: String = "ر.ي"): String {
@@ -928,13 +807,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val formatted = formatter.format(amount)
         return "$formatted $symbol"
     }
-
-    // Formulate a beautiful, personalized, warm WhatsApp message based on family relationship context
-    fun generateWhatsappMessage(userRole: String, guardianRelation: String, missingText: String): String {
-        return "السلام عليكم، هذه قائمة بالنواقص والاحتياجات المسجلة:\n" +
-               "$missingText\n" +
-               "مع خالص التحيات."
-    }
 }
 
 // Ledger Presentation models
@@ -954,42 +826,3 @@ data class DayLedger(
     val netAmount: BigDecimal,
     val transactions: List<TransactionDb>
 )
-
-// Helper function to share the backup file using FileProvider
-fun shareBackupFile(context: Context, file: File) {
-    try {
-        val uri = androidx.core.content.FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "application/octet-stream"
-            putExtra(android.content.Intent.EXTRA_STREAM, uri)
-            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(android.content.Intent.createChooser(intent, "حفظ أو مشاركة ملف النسخة 💾"))
-    } catch (e: Exception) {
-        Toast.makeText(context, "فشل مشاركة الملف: ${e.message}", Toast.LENGTH_SHORT).show()
-    }
-}
-
-// Helper to launch or download Google Drive app from store
-fun openGoogleDriveApp(context: Context) {
-    try {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.docs")
-        if (launchIntent != null) {
-            context.startActivity(launchIntent)
-        } else {
-            val playIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=com.google.android.apps.docs"))
-            context.startActivity(playIntent)
-        }
-    } catch (e: Exception) {
-        try {
-            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.docs"))
-            context.startActivity(webIntent)
-        } catch (ex: Exception) {
-            Toast.makeText(context, "تعذر فتح متجر التطبيقات.", Toast.LENGTH_SHORT).show()
-        }
-    }
-}

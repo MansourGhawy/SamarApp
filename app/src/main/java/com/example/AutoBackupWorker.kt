@@ -80,90 +80,14 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
             val habayebCustomers = db.habayebDao().getAllCustomersDirect()
             val habayebTransactions = db.habayebDao().getAllTransactionsDirect()
 
-            // Generate full comprehensive JSON payload
-            val root = JSONObject()
-
-            val metadata = JSONObject()
-            metadata.put("app_name", "Mizan Al-Dar")
-            metadata.put("app_version", "1.1.0")
-            metadata.put("backup_timestamp", System.currentTimeMillis() / 1000)
-            metadata.put("security_hash", "security_" + (settings.hashCode() + transactions.size * 31).toString())
-            root.put("metadata", metadata)
-
-            val settingsObj = JSONObject()
-            settingsObj.put("currency_symbol", settings.currencySymbol)
-            settingsObj.put("user_role", settings.userRole)
-            settingsObj.put("guardian_number", settings.guardianNumber)
-            settingsObj.put("guardian_relation", settings.guardianRelation)
-            settingsObj.put("school_expenses_enabled", settings.schoolExpensesEnabled)
-            settingsObj.put("theme_mode", settings.themeMode)
-            root.put("settings", settingsObj)
-
-            val commitmentsArr = JSONArray()
-            for (fc in commitments) {
-                val fcObj = JSONObject()
-                fcObj.put("name", fc.name)
-                fcObj.put("target_amount", fc.targetAmount)
-                fcObj.put("current_progress", fc.currentProgress)
-                fcObj.put("order_index", fc.orderIndex)
-                commitmentsArr.put(fcObj)
-            }
-            root.put("fixed_commitments", commitmentsArr)
-
-            val transactionsArr = JSONArray()
-            for (tx in transactions) {
-                val txObj = JSONObject()
-                txObj.put("id", tx.id)
-                txObj.put("timestamp", tx.timestamp)
-                txObj.put("type", tx.type)
-                txObj.put("category", tx.category)
-                txObj.put("amount", tx.amount)
-                txObj.put("description", tx.description)
-                transactionsArr.put(txObj)
-            }
-            root.put("transactions", transactionsArr)
-
-            val habayebObj = JSONObject()
-            val habayebCustomersArr = JSONArray()
-            for (c in habayebCustomers) {
-                val cObj = JSONObject()
-                cObj.put("id", c.id)
-                cObj.put("name", c.name)
-                cObj.put("phone", c.phone)
-                cObj.put("notes", c.notes)
-                cObj.put("created_at", c.createdAt)
-                habayebCustomersArr.put(cObj)
-            }
-            habayebObj.put("customers", habayebCustomersArr)
-
-            val habayebTxsArr = JSONArray()
-            for (t in habayebTransactions) {
-                val tObj = JSONObject()
-                tObj.put("id", t.id)
-                tObj.put("customer_id", t.customerId)
-                tObj.put("type", t.type)
-                tObj.put("amount", t.amount)
-                tObj.put("timestamp", t.timestamp)
-                tObj.put("description", t.description)
-                tObj.put("linked_main_tx_id", t.linkedMainTxId)
-                habayebTxsArr.put(tObj)
-            }
-            habayebObj.put("debt_transactions", habayebTxsArr)
-            root.put("habayeb_debts", habayebObj)
-
-            val deletedItemsArr = JSONArray()
-            for (item in deletedItems) {
-                val itemObj = JSONObject()
-                itemObj.put("id", item.id)
-                itemObj.put("sourceSystem", item.sourceSystem)
-                itemObj.put("originalTableName", item.originalTableName)
-                itemObj.put("jsonData", item.jsonData)
-                itemObj.put("deletedAt", item.deletedAt)
-                deletedItemsArr.put(itemObj)
-            }
-            root.put("deleted_items", deletedItemsArr)
-
-            val jsonStr = root.toString(2)
+            val jsonStr = com.example.data.serialization.MzdBackupSerializer.exportBackupToJson(
+                settings = settings,
+                commitments = commitments,
+                transactions = transactions,
+                habayebCustomers = habayebCustomers,
+                habayebTransactions = habayebTransactions,
+                deletedItems = deletedItems
+            )
 
             val sdfMonth = SimpleDateFormat("yyyy-MM", Locale.US)
             val monthStr = sdfMonth.format(Date())

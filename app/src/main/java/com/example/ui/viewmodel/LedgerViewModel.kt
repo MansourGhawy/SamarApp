@@ -1,6 +1,8 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.R
@@ -8,13 +10,12 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.AppSettings
 import com.example.data.local.CustomCategory
 import com.example.data.local.TransactionDb
-import com.example.data.local.DeletedItemEntity
+import com.example.data.repository.FinanceRepository
+import com.example.domain.StringUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * LedgerViewModel handles all of the Daily Ledger and General Accounting logic,
@@ -23,8 +24,8 @@ import org.json.JSONObject
  * It manages:
  * - Dynamic year/month/category filtered StateFlows of transactions.
  * - Reactive and leak-free balance calculations (Total Income, Total Expense, Net Balance).
- * - Full Arabic character search normalization.
- * - Thread-safe insert, update, delete, and soft delete transactions.
+ * - Full Arabic character search normalization via centralized StringUtils.
+ * - Thread-safe insert, update, delete, and soft delete transactions via FinanceRepository.
  * - Custom category creation and removal.
  * - Dynamic mapping of error states to localized resource IDs with zero hardcoded strings.
  */
@@ -33,7 +34,7 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
     private val database = AppDatabase.getDatabase(application)
     private val ledgerDao = database.ledgerDao()
     private val settingsDao = database.settingsDao()
-    private val deletedItemDao = database.deletedItemDao()
+    private val repository = FinanceRepository(database)
 
     // --- Core Database Flows ---
     val settingsState: StateFlow<AppSettings> = settingsDao.getSettingsFlow()
@@ -56,10 +57,10 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         if (query.isBlank()) {
             emptyList()
         } else {
-            val normalizedQuery = normalizeArabic(query)
+            val normalizedQuery = StringUtils.normalizeArabic(query)
             transactions.filter { tx ->
-                normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true) ||
-                normalizeArabic(tx.category).contains(normalizedQuery, ignoreCase = true)
+                StringUtils.normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true) ||
+                StringUtils.normalizeArabic(tx.category).contains(normalizedQuery, ignoreCase = true)
             }.sortedByDescending { it.timestamp }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -76,10 +77,9 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         selectedMonth,
         selectedCategory
     ) { transactions, year, month, category ->
+        val calendar = java.util.Calendar.getInstance()
         transactions.filter { tx ->
-            val calendar = java.util.Calendar.getInstance().apply {
-                timeInMillis = tx.timestamp * 1000
-            }
+            calendar.timeInMillis = tx.timestamp * 1000
             val txYear = calendar.get(java.util.Calendar.YEAR)
             val txMonth = calendar.get(java.util.Calendar.MONTH) + 1
 
@@ -131,12 +131,12 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 ledgerDao.insertTransaction(tx)
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in addTransaction: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in addTransaction: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
-                        getApplication<Application>().getString(R.string.toast_backup_export_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        getApplication<Application>().getString(R.string.toast_save_failed),
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -148,12 +148,12 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 ledgerDao.insertTransaction(tx)
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in updateTransaction: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in updateTransaction: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
-                        getApplication<Application>().getString(R.string.toast_backup_export_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        getApplication<Application>().getString(R.string.toast_save_failed),
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -163,15 +163,15 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteTransaction(tx: TransactionDb) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                softDeleteTransactionToTrash(tx)
+                repository.softDeleteTransactionToTrash(tx)
                 ledgerDao.deleteTransaction(tx)
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in deleteTransaction: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in deleteTransaction: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
                         getApplication<Application>().getString(R.string.toast_delete_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -183,16 +183,16 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val tx = transactionsState.value.find { it.id == id }
                 if (tx != null) {
-                    softDeleteTransactionToTrash(tx)
+                    repository.softDeleteTransactionToTrash(tx)
                 }
                 ledgerDao.deleteTransactionById(id)
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in deleteTransactionById: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in deleteTransactionById: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
                         getApplication<Application>().getString(R.string.toast_delete_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -205,16 +205,16 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                 val allTxs = transactionsState.value
                 val toDelete = allTxs.filter { ids.contains(it.id) }
                 if (toDelete.isNotEmpty()) {
-                    softDeleteTransactionBundleToTrash(toDelete, bundleTitle)
+                    repository.softDeleteTransactionBundleToTrash(toDelete, bundleTitle)
                     toDelete.forEach { ledgerDao.deleteTransactionById(it.id) }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in deleteTransactionsBulk: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in deleteTransactionsBulk: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
                         getApplication<Application>().getString(R.string.toast_delete_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -228,12 +228,12 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 ledgerDao.insertCategory(CustomCategory(name = name, tabType = tabType, iconEmoji = emoji))
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in saveCustomCategory: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in saveCustomCategory: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
-                        getApplication<Application>().getString(R.string.toast_backup_export_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        getApplication<Application>().getString(R.string.toast_save_failed),
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -245,12 +245,12 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 ledgerDao.deleteCategory(customCategory)
             } catch (e: Exception) {
-                android.util.Log.e("LedgerViewModel", "Error in deleteCustomCategory: ${e.message}", e)
+                Log.e("LedgerViewModel", "Error in deleteCustomCategory: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                         getApplication(),
                         getApplication<Application>().getString(R.string.toast_delete_failed),
-                        android.widget.Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -275,93 +275,5 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         selectedYear.value = null
         selectedMonth.value = null
         selectedCategory.value = null
-    }
-
-    // --- Currency Formatter Utilities ---
-
-    fun formatCurrency(amount: java.math.BigDecimal, symbol: String = "ر.ي"): String {
-        return try {
-            val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
-            val formatted = formatter.format(amount)
-            "$formatted $symbol"
-        } catch (e: Exception) {
-            val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
-            val formatted = formatter.format(amount)
-            "$formatted $symbol"
-        }
-    }
-
-    fun formatDoubleCurrency(amount: Double, symbol: String = "ر.ي"): String {
-        return try {
-            val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
-            val formatted = formatter.format(amount)
-            "$formatted $symbol"
-        } catch (e: Exception) {
-            val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
-            val formatted = formatter.format(amount)
-            "$formatted $symbol"
-        }
-    }
-
-    // --- Private Helper Methods ---
-
-    private fun normalizeArabic(text: String): String {
-        return text.replace("أ", "ا")
-            .replace("إ", "ا")
-            .replace("آ", "ا")
-            .replace("ة", "ه")
-            .replace("ى", "ي")
-            .trim()
-    }
-
-    private suspend fun softDeleteTransactionToTrash(tx: TransactionDb) {
-        val jsonData = JSONObject().apply {
-            put("id", tx.id)
-            put("timestamp", tx.timestamp)
-            put("type", tx.type)
-            put("category", tx.category)
-            put("amount", tx.amount)
-            put("description", tx.description)
-        }.toString()
-        val trashItem = DeletedItemEntity(
-            id = tx.id,
-            sourceSystem = "دار",
-            originalTableName = "transactions",
-            jsonData = jsonData
-        )
-        deletedItemDao.insertDeletedItem(trashItem)
-    }
-
-    private suspend fun softDeleteTransactionBundleToTrash(transactions: List<TransactionDb>, title: String) {
-        val jsonData = JSONObject().apply {
-            val txsArray = JSONArray()
-            transactions.forEach { tx ->
-                txsArray.put(JSONObject().apply {
-                    put("id", tx.id)
-                    put("timestamp", tx.timestamp)
-                    put("type", tx.type)
-                    put("category", tx.category)
-                    put("amount", tx.amount)
-                    put("description", tx.description)
-                })
-            }
-            put("transactions", txsArray)
-            put("totalTransactions", transactions.size)
-            val totalNet = transactions.sumOf { if (it.type.equals("INCOME", ignoreCase = true)) it.amount else -it.amount }
-            put("totalNet", totalNet)
-            put("name", title)
-        }.toString()
-        val id = "dar_bundle_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().take(4)}"
-        val trashItem = DeletedItemEntity(
-            id = id,
-            sourceSystem = "دار",
-            originalTableName = "dar_bundle",
-            jsonData = jsonData
-        )
-        deletedItemDao.insertDeletedItem(trashItem)
     }
 }

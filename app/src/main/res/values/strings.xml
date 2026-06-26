@@ -854,4 +854,18 @@
     <string name="makhzan_bento_profit">الربح المتوقع</string>
     <string name="makhzan_bento_alerts">تنبيهات المخزون</string>
     <string name="makhzan_search_placeholder">ابحث عن منتج...</string>
+
+    <!-- Navigation & Customization sheet (تخصيص شريط التنقل) -->
+    <string name="customization_sheet_title">تخصيص شريط التنقل</string>
+    <string name="customization_sheet_desc">انقر على النجمة لتثبيت الصفحة الافتراضية، أو استخدم الأسهم لتعديل الترتيب</string>
+    <string name="nav_habayeb_plain">حسابات حبايب</string>
+    <string name="nav_ledger_plain">ميزان الدار</string>
+    <string name="customization_default_launch_page">صفحة الإقلاع الافتراضية</string>
+    <string name="customization_toast_default_selected">تم تحديد %s كواجهة افتراضية</string>
+    <string name="customization_set_default">تعيين كواجهة افتراضية</string>
+    <string name="customization_move_up">تحريك للأعلى</string>
+    <string name="customization_move_down">تحريك للأسفل</string>
+    <string name="customization_save_changes">تم وحفظ التعديلات</string>
+    <string name="toast_save_failed">فشل حفظ البيانات</string>
+    <string name="toast_operation_failed">فشلت العملية</string>
 </resources>

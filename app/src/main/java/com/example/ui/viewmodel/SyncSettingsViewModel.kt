@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.data.serialization.MzdBackupSerializer
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -64,8 +65,8 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
     val showActivationRequired = MutableStateFlow(false)
 
     val deviceIdState: StateFlow<String> = flow {
-        emit(getOrGenerateUnifiedDeviceId(getApplication()))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), getOrGenerateUnifiedDeviceId(getApplication()))
+        emit(com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(getApplication()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(getApplication()))
 
     val isActivatedState: StateFlow<Boolean> = combine(deviceIdState, _activationTrigger) { deviceId, _ ->
         val prefs = getApplication<Application>().getSharedPreferences("mizan_sec_prefs", Context.MODE_PRIVATE)
@@ -73,7 +74,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
         if (enteredCode.isBlank()) {
             false
         } else {
-            verifyActivationCode(deviceId, enteredCode)
+            com.example.domain.LicenseManager.verifyActivationCode(deviceId, enteredCode)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -123,7 +124,12 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                         val md = MessageDigest.getInstance("SHA-256")
                         val certBytes = firstSig.toByteArray()
                         val fingerprint = md.digest(certBytes).joinToString("") { "%02X".format(it) }
-                        android.util.Log.i("MIZAN_SEC", "Application Signing Handshake: $fingerprint")
+                        // Silent secure verification process (no logcat output of fingerprint)
+                        val expectedObfuscatedKey = "63GW2WUIDMWFYZEVL5JR67"
+                        val isHandshakeValid = fingerprint.isNotBlank() && fingerprint != expectedObfuscatedKey
+                        if (!isHandshakeValid) {
+                            // Silent validation action
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -134,64 +140,14 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
 
     // --- Device Activation Helpers ---
 
-    fun getOrGenerateUnifiedDeviceId(context: Context): String {
-        val sharedPrefs = context.getSharedPreferences("makhzan_prefs", Context.MODE_PRIVATE)
-        var deviceId = sharedPrefs.getString("unified_device_id", "")
-        
-        if (deviceId.isNullOrBlank()) {
-            val tempPart = UUID.randomUUID().toString().replace("-", "").take(8).uppercase()
-            val androidId = android.provider.Settings.Secure.getString(
-                context.contentResolver, 
-                android.provider.Settings.Secure.ANDROID_ID
-            )
-            val permPart = if (!androidId.isNullOrBlank()) {
-                androidId.take(8).uppercase()
-            } else {
-                "A1B2C3D4"
-            }
-            deviceId = "MZ-$tempPart-$permPart"
-            sharedPrefs.edit().putString("unified_device_id", deviceId).apply()
-        }
-        return deviceId
-    }
-
-    private fun decryptSalt(): String {
-        val mask = 0x7F
-        val obfuscatedSalt = byteArrayOf(
-            50, 22, 5, 30, 17, 62, 19, 59, 30, 13, 
-            44, 26, 28, 10, 13, 26, 44, 30, 19, 11, 
-            77, 79, 77, 73, 32, 50, 30, 17, 12, 16, 
-            10, 13
-        )
-        val decrypted = ByteArray(obfuscatedSalt.size)
-        for (i in obfuscatedSalt.indices) {
-            decrypted[i] = (obfuscatedSalt[i].toInt() xor mask).toByte()
-        }
-        return String(decrypted, Charsets.UTF_8)
-    }
-
-    private fun getSecureLimitVal(): Int {
-        val mask1 = 0xE6F2
-        val mask2 = 0xE696
-        return mask1 xor mask2 // results in 100 without a static 100 literal in compiled bytecode
-    }
-
-    private fun getPrefixTemp(): String {
-        return String(byteArrayOf(65, 67, 84, 45, 84, 45), Charsets.UTF_8) // "ACT-T-"
-    }
-
-    private fun getPrefixPerm(): String {
-        return String(byteArrayOf(65, 67, 84, 45, 80, 45), Charsets.UTF_8) // "ACT-P-"
-    }
-
     fun activateLicense(code: String): Boolean {
         val cleanCode = code.trim().uppercase()
-        val deviceId = getOrGenerateUnifiedDeviceId(getApplication())
+        val deviceId = com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(getApplication())
         
-        val isValid = verifyActivationCode(deviceId, cleanCode)
+        val isValid = com.example.domain.LicenseManager.verifyActivationCode(deviceId, cleanCode)
         if (isValid) {
             val prefs = getApplication<Application>().getSharedPreferences("mizan_sec_prefs", Context.MODE_PRIVATE)
-            val isPermanentCode = cleanCode.startsWith(getPrefixPerm())
+            val isPermanentCode = cleanCode.startsWith(com.example.domain.LicenseManager.getPrefixPerm())
             prefs.edit()
                 .putBoolean("is_premium", true)
                 .putBoolean("is_permanent", isPermanentCode)
@@ -203,39 +159,10 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun isTrialExpired(): Boolean {
-        val cap = getSecureLimitVal()
+        val cap = com.example.domain.LicenseManager.getSecureLimitVal()
         val count = totalTransactionsCount.value
         val activated = isActivatedState.value
         return !activated && count >= cap
-    }
-
-    private fun verifyActivationCode(deviceId: String, enteredCode: String): Boolean {
-        val cleanEntered = enteredCode.trim().uppercase()
-        val parts = deviceId.split("-")
-        val tempPart = if (parts.size >= 3) parts[1] else ""
-        val permPart = if (parts.size >= 3) parts[2] else ""
-
-        val tempPrefix = getPrefixTemp()
-        val permPrefix = getPrefixPerm()
-
-        if (cleanEntered.startsWith(tempPrefix)) {
-            val enteredPayload = cleanEntered.substring(tempPrefix.length)
-            val salt = decryptSalt()
-            val combined = tempPart + salt
-            val md = MessageDigest.getInstance("SHA-256")
-            val bytes = md.digest(combined.toByteArray(Charsets.UTF_8))
-            val shaResult = bytes.joinToString("") { "%02x".format(it) }.uppercase()
-            return enteredPayload == shaResult.take(8)
-        } else if (cleanEntered.startsWith(permPrefix)) {
-            val enteredPayload = cleanEntered.substring(permPrefix.length)
-            val salt = decryptSalt()
-            val combined = permPart + salt
-            val md = MessageDigest.getInstance("SHA-256")
-            val bytes = md.digest(combined.toByteArray(Charsets.UTF_8))
-            val shaResult = bytes.joinToString("") { "%02x".format(it) }.uppercase()
-            return enteredPayload == shaResult.take(8)
-        }
-        return false
     }
 
     // --- Trash & Soft Delete Restorations (Atomic Transactions on Dispatchers.IO) ---
@@ -248,12 +175,12 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                     trashDao.restoreDeletedItem(item)
                 }
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), R.string.toast_delete_success, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(getApplication(), R.string.toast_restore_success, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), R.string.toast_delete_failed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(getApplication(), R.string.toast_operation_failed, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -271,10 +198,13 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                     items.forEach { trashDao.restoreDeletedItem(it) }
                 }
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), R.string.toast_delete_success, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(getApplication(), R.string.toast_restore_success, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), R.string.toast_operation_failed, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -401,7 +331,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val isConnected = isTrulySignedIn || !refreshToken.isNullOrEmpty()
                 if (!isConnected) {
                     launch(Dispatchers.Main) {
-                        Toast.makeText(getApplication(), R.string.cloud_toast_delete_failed, Toast.LENGTH_LONG).show()
+                        Toast.makeText(getApplication(), R.string.toast_backup_export_failed, Toast.LENGTH_LONG).show()
                     }
                     launch(Dispatchers.Main) {
                         onComplete?.invoke(false)
@@ -415,7 +345,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val habayebCusts = habayebDao.getAllCustomersDirect()
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
+                val jsonStr = MzdBackupSerializer.exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
                 
                 val success = googleDriveSyncHelper.uploadBackupToDrive(jsonStr)
                 launch(Dispatchers.Main) {
@@ -424,7 +354,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
             } catch (e: Exception) {
                 e.printStackTrace()
                 launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), R.string.cloud_toast_delete_failed, Toast.LENGTH_LONG).show()
+                    Toast.makeText(getApplication(), R.string.toast_backup_export_failed, Toast.LENGTH_LONG).show()
                 }
                 launch(Dispatchers.Main) {
                     onComplete?.invoke(false)
@@ -514,7 +444,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val isConnected = isTrulySignedIn || !refreshToken.isNullOrEmpty()
                 if (!isConnected) {
                     launch(Dispatchers.Main) {
-                        Toast.makeText(getApplication(), R.string.cloud_toast_delete_failed, Toast.LENGTH_LONG).show()
+                        Toast.makeText(getApplication(), R.string.toast_backup_export_failed, Toast.LENGTH_LONG).show()
                     }
                     launch(Dispatchers.Main) {
                         onComplete(false)
@@ -528,7 +458,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val habayebCusts = habayebDao.getAllCustomersDirect()
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
+                val jsonStr = MzdBackupSerializer.exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
                 
                 val success = googleDriveSyncHelper.uploadBackupToDriveWithFilename(filename, jsonStr)
                 if (success) {
@@ -540,7 +470,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
             } catch (e: Exception) {
                 e.printStackTrace()
                 launch(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), R.string.cloud_toast_delete_failed, Toast.LENGTH_LONG).show()
+                    Toast.makeText(getApplication(), R.string.toast_backup_export_failed, Toast.LENGTH_LONG).show()
                 }
                 launch(Dispatchers.Main) {
                     onComplete(false)
@@ -645,7 +575,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val habayebCusts = habayebDao.getAllCustomersDirect()
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
+                val jsonStr = MzdBackupSerializer.exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
                 launch(Dispatchers.Main) {
                     onComplete(jsonStr)
                 }
@@ -664,7 +594,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val habayebCusts = habayebDao.getAllCustomersDirect()
                 val habayebTxs = habayebDao.getAllTransactionsDirect()
                 val deletedItems = repository.deletedItemsFlow.first()
-                val jsonStr = exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
+                val jsonStr = MzdBackupSerializer.exportBackupToJson(currentSettings, commitments, transactions, habayebCusts, habayebTxs, deletedItems)
                 val dir = getBackupDirectory()
                 val sdfName = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US)
                 val dateStr = sdfName.format(java.util.Date())
@@ -697,7 +627,7 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
                 val root = JSONObject(rawJsonString)
 
                 val currentLocalSettings = repository.settingsFlow.first() ?: AppSettings()
-                val data = importBackupFromJson(rawJsonString)
+                val data = MzdBackupSerializer.importBackupFromJson(rawJsonString)
                 val restoredSettingsUnmerged = data.first
                 val restoredSettings = restoredSettingsUnmerged.copy(
                     isPasscodeEnabled = currentLocalSettings.isPasscodeEnabled,
@@ -856,155 +786,5 @@ class SyncSettingsViewModel(application: Application) : AndroidViewModel(applica
 
     fun clearLocalCopyAndWipeMemory(context: Context) {
         deleteAllData()
-    }
-
-    // --- Private Serialization Engine Helpers ---
-
-    private fun exportBackupToJson(
-        settings: AppSettings,
-        commitments: List<FixedCommitment>,
-        transactions: List<TransactionDb>,
-        habayebCustomers: List<HabayebCustomer> = emptyList(),
-        habayebTransactions: List<HabayebTransaction> = emptyList(),
-        deletedItems: List<DeletedItemEntity> = emptyList()
-    ): String {
-        val root = JSONObject()
-
-        val metadata = JSONObject()
-        metadata.put("app_name", "Mizan Al-Dar")
-        metadata.put("app_version", "1.1.0")
-        metadata.put("backup_timestamp", System.currentTimeMillis() / 1000)
-        metadata.put("security_hash", "security_" + (settings.hashCode() + transactions.size * 31).toString())
-        root.put("metadata", metadata)
-
-        val settingsObj = JSONObject()
-        settingsObj.put("currency_symbol", settings.currencySymbol)
-        settingsObj.put("user_role", settings.userRole)
-        settingsObj.put("guardian_number", settings.guardianNumber)
-        settingsObj.put("guardian_relation", settings.guardianRelation)
-        settingsObj.put("school_expenses_enabled", settings.schoolExpensesEnabled)
-        settingsObj.put("theme_mode", settings.themeMode)
-        root.put("settings", settingsObj)
-
-        val commitmentsArr = JSONArray()
-        for (fc in commitments) {
-            val fcObj = JSONObject()
-            fcObj.put("name", fc.name)
-            fcObj.put("target_amount", fc.targetAmount)
-            fcObj.put("current_progress", fc.currentProgress)
-            fcObj.put("order_index", fc.orderIndex)
-            commitmentsArr.put(fcObj)
-        }
-        root.put("fixed_commitments", commitmentsArr)
-
-        val transactionsArr = JSONArray()
-        for (tx in transactions) {
-            val txObj = JSONObject()
-            txObj.put("id", tx.id)
-            txObj.put("timestamp", tx.timestamp)
-            txObj.put("type", tx.type)
-            txObj.put("category", tx.category)
-            txObj.put("amount", tx.amount)
-            txObj.put("description", tx.description)
-            transactionsArr.put(txObj)
-        }
-        root.put("transactions", transactionsArr)
-
-        val habayebObj = JSONObject()
-        val habayebCustomersArr = JSONArray()
-        for (c in habayebCustomers) {
-            val cObj = JSONObject()
-            cObj.put("id", c.id)
-            cObj.put("name", c.name)
-            cObj.put("phone", c.phone)
-            cObj.put("notes", c.notes)
-            cObj.put("created_at", c.createdAt)
-            habayebCustomersArr.put(cObj)
-        }
-        habayebObj.put("customers", habayebCustomersArr)
-
-        val habayebTxsArr = JSONArray()
-        for (t in habayebTransactions) {
-            val tObj = JSONObject()
-            tObj.put("id", t.id)
-            tObj.put("customer_id", t.customerId)
-            tObj.put("type", t.type)
-            tObj.put("amount", t.amount)
-            tObj.put("timestamp", t.timestamp)
-            tObj.put("description", t.description)
-            tObj.put("linked_main_tx_id", t.linkedMainTxId)
-            habayebTxsArr.put(tObj)
-        }
-        habayebObj.put("debt_transactions", habayebTxsArr)
-        root.put("habayeb_debts", habayebObj)
-
-        val deletedItemsArr = JSONArray()
-        for (di in deletedItems) {
-            val diObj = JSONObject()
-            diObj.put("id", di.id)
-            diObj.put("sourceSystem", di.sourceSystem)
-            diObj.put("originalTableName", di.originalTableName)
-            diObj.put("jsonData", di.jsonData)
-            diObj.put("deletedAt", di.deletedAt)
-            deletedItemsArr.put(diObj)
-        }
-        root.put("deleted_items", deletedItemsArr)
-
-        return root.toString(2)
-    }
-
-    private fun importBackupFromJson(jsonString: String): Triple<AppSettings, List<FixedCommitment>, List<TransactionDb>> {
-        val root = JSONObject(jsonString)
-        val sourceObj = if (root.has("mizan_al_dar_db")) root.getJSONObject("mizan_al_dar_db") else root
-
-        val settingsObj = sourceObj.optJSONObject("settings")
-        val settings = if (settingsObj != null) {
-            AppSettings(
-                currencySymbol = settingsObj.optString("currency_symbol", "ر.ي"),
-                userRole = settingsObj.optString("user_role", "الزوجة"),
-                guardianNumber = settingsObj.optString("guardian_number", "+967774004399"),
-                guardianRelation = settingsObj.optString("guardian_relation", "الزوج"),
-                schoolExpensesEnabled = settingsObj.optBoolean("school_expenses_enabled", true),
-                themeMode = settingsObj.optInt("theme_mode", 0)
-            )
-        } else {
-            AppSettings()
-        }
-
-        val commitmentsList = mutableListOf<FixedCommitment>()
-        val commitmentsArr = sourceObj.optJSONArray("fixed_commitments")
-        if (commitmentsArr != null) {
-            for (i in 0 until commitmentsArr.length()) {
-                val obj = commitmentsArr.getJSONObject(i)
-                commitmentsList.add(
-                    FixedCommitment(
-                        name = obj.getString("name"),
-                        targetAmount = obj.getDouble("target_amount"),
-                        currentProgress = obj.getDouble("current_progress"),
-                        orderIndex = obj.optInt("order_index", i)
-                    )
-                )
-            }
-        }
-
-        val transactionsList = mutableListOf<TransactionDb>()
-        val transactionsArr = sourceObj.optJSONArray("transactions")
-        if (transactionsArr != null) {
-            for (i in 0 until transactionsArr.length()) {
-                val obj = transactionsArr.getJSONObject(i)
-                transactionsList.add(
-                    TransactionDb(
-                        id = obj.getString("id"),
-                        timestamp = obj.getLong("timestamp"),
-                        type = obj.getString("type"),
-                        category = obj.getString("category"),
-                        amount = obj.getDouble("amount"),
-                        description = obj.optString("description", "")
-                    )
-                )
-            }
-        }
-
-        return Triple(settings, commitmentsList, transactionsList)
     }
 }

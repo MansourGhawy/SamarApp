@@ -62,6 +62,12 @@ import com.example.data.local.AppSettings
 import com.example.ui.screens.*
 import com.example.ui.theme.MizanTheme
 import com.example.ui.viewmodel.FinanceViewModel
+import com.example.ui.navigation.Screen
+import com.example.ui.components.WelcomeOnboardingDialog
+import com.example.ui.components.DrawerItem
+import com.example.ui.components.ContactIcon
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 import android.content.pm.PackageManager
@@ -77,7 +83,31 @@ class MainActivity : ComponentActivity() {
         AutoBackupWorker.scheduleDailyBackupWorker(this)
 
         setContent {
+            val syncViewModel: com.example.ui.viewmodel.SyncSettingsViewModel = viewModel()
             val viewModel: FinanceViewModel = viewModel()
+            viewModel.setSyncSettingsViewModel(syncViewModel)
+
+            val context = LocalContext.current
+            LaunchedEffect(viewModel) {
+                viewModel.uiEventFlow.collect { event ->
+                    when (event) {
+                        is com.example.ui.viewmodel.UiEvent.ShowToast -> {
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(event.messageRes),
+                                if (event.isLong) android.widget.Toast.LENGTH_LONG else android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        is com.example.ui.viewmodel.UiEvent.ShareFile -> {
+                            com.example.ui.helper.shareBackupFile(context, event.file)
+                        }
+                        is com.example.ui.viewmodel.UiEvent.OpenGoogleDriveApp -> {
+                            com.example.ui.helper.openGoogleDriveApp(context)
+                        }
+                    }
+                }
+            }
+
             val settings by viewModel.settingsState.collectAsStateWithLifecycle()
             val isSettingsLoaded by viewModel.isSettingsLoaded.collectAsStateWithLifecycle()
             
@@ -168,10 +198,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class Screen {
-    HABAYEB, LEDGER, REPORTS, SETTINGS, TRASH, BUSINESS_PROFILE
-}
-
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun MainAppLayout(
@@ -180,6 +206,14 @@ fun MainAppLayout(
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
+    val versionName = remember(context) {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.2"
+        } catch (e: Exception) {
+            "1.2"
+        }
+    }
+    val sdfName = remember { java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US) }
     val defaultStartDest by viewModel.defaultStartDestinationState.collectAsStateWithLifecycle()
     val tabOrderStr by viewModel.tabOrderState.collectAsStateWithLifecycle()
 
@@ -215,16 +249,14 @@ fun MainAppLayout(
             viewModel.getBackupJsonForClipboard { jsonStr ->
                 scope.launch {
                     try {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            outputStream.write(jsonStr.toByteArray())
-                            scope.launch {
-                                Toast.makeText(context, context.getString(R.string.toast_backup_export_success), Toast.LENGTH_SHORT).show()
+                        withContext(Dispatchers.IO) {
+                            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(jsonStr.toByteArray())
                             }
                         }
+                        Toast.makeText(context, context.getString(R.string.toast_backup_export_success), Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
-                        scope.launch {
-                            Toast.makeText(context, context.getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
-                        }
+                        Toast.makeText(context, context.getString(R.string.toast_backup_export_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -235,20 +267,23 @@ fun MainAppLayout(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: android.net.Uri? ->
         if (uri != null) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val jsonText = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
-                if (jsonText.isNotBlank()) {
-                    viewModel.executeMasterRestore(jsonText, context) { success, _ ->
-                        if (success) {
-                            Toast.makeText(context, context.getString(R.string.toast_restore_success), Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.toast_restore_invalid_file), Toast.LENGTH_LONG).show()
+            scope.launch {
+                try {
+                    val jsonText = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
+                    }
+                    if (jsonText.isNotBlank()) {
+                        viewModel.executeMasterRestore(jsonText, context) { success, _ ->
+                            if (success) {
+                                Toast.makeText(context, context.getString(R.string.toast_restore_success), Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_restore_invalid_file), Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
@@ -430,7 +465,7 @@ fun MainAppLayout(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Text(
-                        text = stringResource(id = R.string.drawer_app_version, "1.2"),
+                        text = stringResource(id = R.string.drawer_app_version, versionName),
                         fontSize = 11.sp,
                         color = Color.Gray,
                         fontWeight = FontWeight.Normal,
@@ -577,12 +612,12 @@ fun MainAppLayout(
                     }
                 }
 
-                val items = remember(finalTabOrder) {
+                val items = remember(finalTabOrder, context) {
                     finalTabOrder.map { screen ->
                         when (screen) {
-                            Screen.HABAYEB -> Triple(Screen.HABAYEB, Icons.Default.People, "حسابات الديون")
-                            Screen.LEDGER -> Triple(Screen.LEDGER, Icons.Default.AccountBalanceWallet, "ميزان الدار")
-                            else -> Triple(Screen.HABAYEB, Icons.Default.People, "حسابات الديون")
+                            Screen.HABAYEB -> Triple(Screen.HABAYEB, Icons.Default.People, context.getString(R.string.nav_habayeb_plain))
+                            Screen.LEDGER -> Triple(Screen.LEDGER, Icons.Default.AccountBalanceWallet, context.getString(R.string.nav_ledger_plain))
+                            else -> Triple(Screen.HABAYEB, Icons.Default.People, context.getString(R.string.nav_habayeb_plain))
                         }
                     }
                 }
@@ -712,7 +747,7 @@ fun MainAppLayout(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "تخصيص شريط التنقل",
+                                text = stringResource(id = R.string.customization_sheet_title),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF3F51B5),
@@ -720,7 +755,7 @@ fun MainAppLayout(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "انقر على النجمة لتثبيت الصفحة الافتراضية، أو استخدم الأسهم لتعديل الترتيب",
+                                text = stringResource(id = R.string.customization_sheet_desc),
                                 fontSize = 12.sp,
                                 color = Color.Gray,
                                 textAlign = TextAlign.Center
@@ -730,8 +765,8 @@ fun MainAppLayout(
                             finalTabOrder.forEachIndexed { index, screen ->
                                 val isDefault = screen.name == defaultStartDest
                                 val label = when (screen) {
-                                    Screen.HABAYEB -> "حسابات حبايب"
-                                    Screen.LEDGER -> "ميزان الدار"
+                                    Screen.HABAYEB -> stringResource(id = R.string.nav_habayeb_plain)
+                                    Screen.LEDGER -> stringResource(id = R.string.nav_ledger_plain)
                                     else -> screen.name
                                 }
                                 val icon = when (screen) {
@@ -776,7 +811,7 @@ fun MainAppLayout(
                                                 )
                                                 if (isDefault) {
                                                     Text(
-                                                        text = "صفحة الإقلاع الافتراضية",
+                                                        text = stringResource(id = R.string.customization_default_launch_page),
                                                         fontSize = 10.sp,
                                                         color = Color(0xFF2563EB),
                                                         fontWeight = FontWeight.Medium
@@ -793,12 +828,12 @@ fun MainAppLayout(
                                                 onClick = {
                                                     viewModel.saveDefaultStart(screen.name)
                                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    Toast.makeText(context, "تم تحديد $label كواجهة افتراضية", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.customization_toast_default_selected, label), Toast.LENGTH_SHORT).show()
                                                 }
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Star,
-                                                    contentDescription = "تعيين كواجهة افتراضية",
+                                                    contentDescription = stringResource(id = R.string.customization_set_default),
                                                     tint = if (isDefault) Color(0xFFF59E0B) else Color(0xFFCBD5E1),
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -816,7 +851,7 @@ fun MainAppLayout(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.ArrowUpward,
-                                                    contentDescription = "تحريك للأعلى",
+                                                    contentDescription = stringResource(id = R.string.customization_move_up),
                                                     tint = if (index > 0) Color(0xFF3F51B5) else Color(0xFFCBD5E1),
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -834,7 +869,7 @@ fun MainAppLayout(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.ArrowDownward,
-                                                    contentDescription = "تحريك للأسفل",
+                                                    contentDescription = stringResource(id = R.string.customization_move_down),
                                                     tint = if (index < finalTabOrder.size - 1) Color(0xFF3F51B5) else Color(0xFFCBD5E1),
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -851,7 +886,7 @@ fun MainAppLayout(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth().height(48.dp)
                             ) {
-                                Text("تم وحفظ التعديلات", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(stringResource(id = R.string.customization_save_changes), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }
@@ -994,7 +1029,6 @@ fun MainAppLayout(
             settings = settings,
             viewModel = viewModel,
             onExportMzd = {
-                val sdfName = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US)
                 val dateStr = sdfName.format(java.util.Date())
                 safExportLauncher.launch("Mizan_$dateStr.mzd")
             },
@@ -1012,272 +1046,5 @@ fun MainAppLayout(
             },
             onDismiss = { showBackupRestoreSheet = false }
         )
-    }
-}
-
-@Composable
-fun DrawerItem(
-    selected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    val containerColor = if (selected) com.example.ui.theme.EmeraldPrimary.copy(alpha = 0.12f) else Color.Transparent
-    val contentColor = if (selected) com.example.ui.theme.EmeraldPrimary else Color.DarkGray
-    val fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-
-    Surface(
-        onClick = onClick,
-        color = containerColor,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = fontWeight,
-                color = contentColor
-            )
-        }
-    }
-}
-
-@Composable
-fun ContactIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(Color.Gray.copy(alpha = 0.12f))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.Gray,
-            modifier = Modifier.size(16.dp)
-        )
-    }
-}
-
-@Composable
-fun WelcomeOnboardingDialog(
-    onDismiss: () -> Unit
-) {
-    // Dark Olive Green color constant
-    val mizanGreen = Color(0xFF14452F)
-
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        visible = true
-    }
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
-        label = "onboarding_fade"
-    )
-
-    AlertDialog(
-        onDismissRequest = { /* Prevent dismissing by clicking outside to force onboarding action */ },
-        properties = androidx.compose.ui.window.DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false
-        ),
-        shape = RoundedCornerShape(24.dp),
-        containerColor = Color.White,
-        tonalElevation = 6.dp,
-        confirmButton = {},
-        dismissButton = {},
-        modifier = Modifier
-            .fillMaxWidth(0.92f)
-            .padding(vertical = 20.dp),
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer(alpha = alpha) // Custom fade-in for elite elegance
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // الشعار المضيء - Intersecting glowing circles logo
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .background(mizanGreen.copy(alpha = 0.08f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.foundation.Canvas(modifier = Modifier.size(56.dp)) {
-                        val radius = size.minDimension / 3.5f
-                        drawCircle(
-                            color = mizanGreen.copy(alpha = 0.12f),
-                            radius = radius * 1.3f,
-                            center = center.copy(x = center.x - 10f)
-                        )
-                        drawCircle(
-                            color = mizanGreen.copy(alpha = 0.20f),
-                            radius = radius * 1.3f,
-                            center = center.copy(x = center.x + 10f)
-                        )
-                        drawCircle(
-                            color = mizanGreen,
-                            radius = radius,
-                            center = center,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = null,
-                        tint = mizanGreen,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = stringResource(id = R.string.onboarding_slogan),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Black,
-                    color = mizanGreen,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Features list in scrollable container
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(15.dp)
-                ) {
-                    OnboardingFeatureItem(
-                        iconEmoji = "🏠",
-                        title = stringResource(id = R.string.onboarding_mizan_title),
-                        description = stringResource(id = R.string.onboarding_mizan_desc)
-                    )
-                    OnboardingFeatureItem(
-                        iconEmoji = "🤝",
-                        title = stringResource(id = R.string.onboarding_habayeb_title),
-                        description = stringResource(id = R.string.onboarding_habayeb_desc)
-                    )
-
-                    OnboardingFeatureItem(
-                        iconEmoji = "🗑️",
-                        title = stringResource(id = R.string.onboarding_trash_title),
-                        description = stringResource(id = R.string.onboarding_trash_desc)
-                    )
-                    OnboardingFeatureItem(
-                        iconEmoji = "🛡️",
-                        title = stringResource(id = R.string.onboarding_backup_title),
-                        description = stringResource(id = R.string.onboarding_backup_desc)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Scale & Bounce effect state
-                val infiniteTransition = rememberInfiniteTransition(label = "bounce")
-                val scale by infiniteTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 1.04f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1000, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "scale"
-                )
-
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = mizanGreen),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .graphicsLayer(scaleX = scale, scaleY = scale)
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.onboarding_start_button),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-    )
-}
-
-@Composable
-fun OnboardingFeatureItem(
-    iconEmoji: String,
-    title: String,
-    description: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.Start
-    ) {
-        // Icon circle
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(Color(0xFFF1F5F9), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = iconEmoji, fontSize = 18.sp)
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Text portion
-        val mizanGreen = Color(0xFF14452F)
-        Column(
-            modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = mizanGreen,
-                textAlign = TextAlign.Start
-            )
-            Spacer(modifier = Modifier.height(1.dp))
-            Text(
-                text = description,
-                fontSize = 11.5.sp,
-                color = Color(0xFF64748B),
-                lineHeight = 16.sp,
-                textAlign = TextAlign.Start,
-                fontWeight = FontWeight.Medium
-            )
-        }
     }
 }

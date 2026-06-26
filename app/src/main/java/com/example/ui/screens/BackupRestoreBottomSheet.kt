@@ -392,7 +392,7 @@ fun BackupRestoreBottomSheet(
 
                                             Spacer(modifier = Modifier.height(4.dp))
                                             TextButton(
-                                                onClick = { com.example.ui.viewmodel.openGoogleDriveApp(context) },
+                                                onClick = { com.example.ui.helper.openGoogleDriveApp(context) },
                                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                                             ) {
                                                 Text(

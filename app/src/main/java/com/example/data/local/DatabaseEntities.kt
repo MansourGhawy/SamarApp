@@ -7,18 +7,12 @@ import androidx.room.Index
 
 object DatabaseDefaults {
     const val DEFAULT_CURRENCY_SYMBOL = "ر.ي"
-    const val DEFAULT_USER_ROLE = "الزوجة"
-    const val DEFAULT_GUARDIAN_NUMBER = "+967774004399"
-    const val DEFAULT_GUARDIAN_RELATION = "الزوج"
 }
 
 @Entity(tableName = "app_settings")
 data class AppSettings(
     @PrimaryKey val id: Int = 1,
     val currencySymbol: String = DatabaseDefaults.DEFAULT_CURRENCY_SYMBOL,
-    val userRole: String = DatabaseDefaults.DEFAULT_USER_ROLE,
-    val guardianNumber: String = DatabaseDefaults.DEFAULT_GUARDIAN_NUMBER,
-    val guardianRelation: String = DatabaseDefaults.DEFAULT_GUARDIAN_RELATION,
     val schoolExpensesEnabled: Boolean = true,
     val themeMode: Int = 0, // 0 = Auto, 1 = Light, 2 = Dark
     val doubleCheckExit: Boolean = true,

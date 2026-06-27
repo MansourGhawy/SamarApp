@@ -36,7 +36,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val syncViewModel: com.example.ui.viewmodel.SyncSettingsViewModel = viewModel()
             val viewModel: FinanceViewModel = viewModel()
-            viewModel.setSyncSettingsViewModel(syncViewModel)
 
             val context = LocalContext.current
             LaunchedEffect(viewModel) {
@@ -121,7 +120,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         } else {
-                            MainAppLayout(viewModel = viewModel, settings = settings, onExit = { 
+                            MainAppLayout(viewModel = viewModel, syncViewModel = syncViewModel, settings = settings, onExit = { 
                                 finishAffinity() 
                             })
                         }

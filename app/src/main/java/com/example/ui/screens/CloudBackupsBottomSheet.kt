@@ -41,21 +41,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.screens.cloud.components.*
 import kotlinx.coroutines.launch
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudBackupsBottomSheet(
     viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
     // Collect flows safely using safe lifecycle-aware state collectors
-    val cloudBackups by viewModel.cloudBackupsList.collectAsStateWithLifecycle()
-    val isFetching by viewModel.isFetchingCloudBackups.collectAsStateWithLifecycle()
-    val syncState by viewModel.googleDriveSyncState.collectAsStateWithLifecycle()
+    val cloudBackups by syncViewModel.cloudBackupsList.collectAsStateWithLifecycle()
+    val isFetching by syncViewModel.isFetchingCloudBackups.collectAsStateWithLifecycle()
+    val syncState by syncViewModel.googleDriveSyncState.collectAsStateWithLifecycle()
     
-    val storedEmail = viewModel.googleDriveSyncHelper.getStoredEmail()
+    val storedEmail = syncViewModel.googleDriveSyncHelper.getStoredEmail()
     val isConnected = !storedEmail.isNullOrEmpty() || syncState is CloudSyncState.Authenticated || syncState is CloudSyncState.Success
     
     // UI Local States
@@ -70,7 +73,7 @@ fun CloudBackupsBottomSheet(
     // Fetch cloud backups list when bottom sheet opens
     LaunchedEffect(Unit) {
         if (isConnected) {
-            viewModel.fetchCloudBackupsList()
+            syncViewModel.fetchCloudBackupsList()
         }
     }
 
@@ -205,7 +208,7 @@ fun CloudBackupsBottomSheet(
                         email = storedEmail ?: stringResource(R.string.cloud_default_connected_acc),
                         backupsCount = cloudBackups.size,
                         isFetching = isFetching,
-                        onRefresh = { viewModel.fetchCloudBackupsList() },
+                        onRefresh = { syncViewModel.fetchCloudBackupsList() },
                         isSelectionMode = isSelectionMode,
                         isAllSelected = isAllSelected,
                         onToggleSelectAll = {
@@ -392,7 +395,7 @@ fun CloudBackupsBottomSheet(
                         Button(
                             onClick = {
                                 ongoingActionMessage = context.getString(R.string.cloud_progress_uploading_instant)
-                                viewModel.uploadBackupToGoogleDrive { success ->
+                                syncViewModel.uploadBackupToGoogleDrive { success ->
                                     ongoingActionMessage = null
                                 }
                             },
@@ -436,7 +439,7 @@ fun CloudBackupsBottomSheet(
             context = context,
             targetId = targetId,
             cloudBackups = cloudBackups,
-            viewModel = viewModel,
+            syncViewModel = syncViewModel,
             onDismiss = { showRestoreConfirmId = null },
             onStartAction = { msg -> ongoingActionMessage = msg },
             onCompleteAction = { ongoingActionMessage = null },
@@ -451,7 +454,7 @@ fun CloudBackupsBottomSheet(
             context = context,
             targetId = targetId,
             cloudBackups = cloudBackups,
-            viewModel = viewModel,
+            syncViewModel = syncViewModel,
             onDismiss = { showDeleteConfirmId = null },
             onStartAction = { msg -> ongoingActionMessage = msg },
             onCompleteAction = { ongoingActionMessage = null }
@@ -463,7 +466,7 @@ fun CloudBackupsBottomSheet(
         com.example.ui.screens.cloud.components.CloudMultiDeleteConfirmDialog(
             context = context,
             selectedFileIds = selectedFileIds.toList(),
-            viewModel = viewModel,
+            syncViewModel = syncViewModel,
             onDismiss = { showMultiDeleteConfirm = false },
             onStartAction = { msg -> ongoingActionMessage = msg },
             onCompleteAction = { success -> 

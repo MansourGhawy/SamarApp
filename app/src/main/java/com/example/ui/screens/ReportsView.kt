@@ -200,9 +200,9 @@ fun ReportsView(
                 // Tab 1: ديون حبايب
                 val reportTitle = "تقرير ديون وأمانات حبايب الدار"
                 val summaryHeaders = listOf(
-                    "إجمالي حقوقنا عند الناس (مطلوب لنا): ${formatDouble(owedByThemTotal)}",
-                    "إجمالي ديون الناس علينا (مطلوب للغير): ${formatDouble(owedToThemTotal)}",
-                    "صافي موقف الميزان الإئتماني: ${formatDouble(owedByThemTotal - owedToThemTotal)}"
+                    "إجمالي حقوقنا عند الناس (مطلوب لنا): ${formatDouble(owedByThemTotal.toDouble())}",
+                    "إجمالي ديون الناس علينا (مطلوب للغير): ${formatDouble(owedToThemTotal.toDouble())}",
+                    "صافي موقف الميزان الإئتماني: ${formatDouble((owedByThemTotal - owedToThemTotal).toDouble())}"
                 )
                 val detailedData = customerDebtProfiles.map { (customer, balance) ->
                     val statusText = if (balance > 0) {
@@ -220,9 +220,9 @@ fun ReportsView(
                 } else {
                     val builder = StringBuilder()
                     builder.append("🤝 *تقرير حبايب للديون والالتزامات والأمانات*\n\n")
-                    builder.append("🟢 *حقوق الدار عند الحبايب:* ${formatDouble(owedByThemTotal)}\n")
-                    builder.append("🔴 *التزامات الدار للغير:* ${formatDouble(owedToThemTotal)}\n")
-                    builder.append("⚖️ *نسبة الميزان وصافي التدابير:* ${formatDouble(owedByThemTotal - owedToThemTotal)}\n\n")
+                    builder.append("🟢 *حقوق الدار عند الحبايب:* ${formatDouble(owedByThemTotal.toDouble())}\n")
+                    builder.append("🔴 *التزامات الدار للغير:* ${formatDouble(owedToThemTotal.toDouble())}\n")
+                    builder.append("⚖️ *نسبة الميزان وصافي التدابير:* ${formatDouble((owedByThemTotal - owedToThemTotal).toDouble())}\n\n")
                     builder.append("📋 *بيان رصيد الحبايب المفتوح:*\n")
                     customerDebtProfiles.forEach { (customer, balance) ->
                         val status = if (balance > 0) "لنا عنده" else if (balance < 0) "له عندنا" else "مخلص"
@@ -487,8 +487,8 @@ fun ReportsView(
                         habayebReportContent(
                             habayebSearchQuery = habayebSearchQuery,
                             onSearchQueryChanged = { reportsViewModel.updateHabayebSearchQuery(it) },
-                            owedByThemTotal = owedByThemTotal,
-                            owedToThemTotal = owedToThemTotal,
+                            owedByThemTotal = owedByThemTotal.toDouble(),
+                            owedToThemTotal = owedToThemTotal.toDouble(),
                             filteredCustomerProfiles = filteredCustomerProfiles,
                             onCustomerSelected = { selectedCustomerForDetails = it },
                             formatDouble = ::formatDouble

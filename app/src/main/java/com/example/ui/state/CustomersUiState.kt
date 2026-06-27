@@ -2,6 +2,7 @@ package com.example.ui.state
 
 import androidx.compose.runtime.Immutable
 import com.example.data.local.entities.HabayebCustomer
+import java.math.BigDecimal
 
 @Immutable
 data class CustomerUiState(
@@ -20,7 +21,7 @@ data class CustomerUiState(
 @Immutable
 data class CustomersUiState(
     val customers: List<CustomerUiState> = emptyList(),
-    val totalOwedByThem: Double = 0.0,
-    val totalOwedToThem: Double = 0.0,
+    val totalOwedByThem: BigDecimal = BigDecimal.ZERO,
+    val totalOwedToThem: BigDecimal = BigDecimal.ZERO,
     val isLoading: Boolean = false
 )

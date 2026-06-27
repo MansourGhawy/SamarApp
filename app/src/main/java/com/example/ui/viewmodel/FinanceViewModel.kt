@@ -32,12 +32,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val repository: FinanceRepository
     private val habayebDao: HabayebDao
 
-    private var syncSettingsViewModel: SyncSettingsViewModel? = null
-
-    fun setSyncSettingsViewModel(vm: SyncSettingsViewModel) {
-        this.syncSettingsViewModel = vm
-    }
-
     private val _uiEventChannel = kotlinx.coroutines.channels.Channel<UiEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
     val uiEventFlow = _uiEventChannel.receiveAsFlow()
 
@@ -47,10 +41,10 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    val googleDriveSyncHelper: GoogleDriveSyncHelper get() = syncSettingsViewModel?.googleDriveSyncHelper ?: GoogleDriveSyncHelper(getApplication())
-    val googleDriveSyncState: StateFlow<CloudSyncState> get() = syncSettingsViewModel?.googleDriveSyncState ?: MutableStateFlow(CloudSyncState.Idle).asStateFlow()
-    val cloudBackupsList: StateFlow<List<CloudBackupFile>> get() = syncSettingsViewModel?.cloudBackupsList ?: MutableStateFlow<List<CloudBackupFile>>(emptyList()).asStateFlow()
-    val isFetchingCloudBackups: StateFlow<Boolean> get() = syncSettingsViewModel?.isFetchingCloudBackups ?: MutableStateFlow(false).asStateFlow()
+    val googleDriveSyncHelper = GoogleDriveSyncHelper(getApplication())
+    val googleDriveSyncState: StateFlow<CloudSyncState> = googleDriveSyncHelper.syncState
+    val cloudBackupsList: StateFlow<List<CloudBackupFile>> = MutableStateFlow<List<CloudBackupFile>>(emptyList()).asStateFlow()
+    val isFetchingCloudBackups: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -105,7 +99,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     // --- Safe License Activation Logic delegated to SyncSettingsViewModel ---
     fun getOrGenerateUnifiedDeviceId(context: Context): String = com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(context)
 
-    val showActivationRequired: MutableStateFlow<Boolean> get() = syncSettingsViewModel?.showActivationRequired ?: MutableStateFlow(false)
+    val showActivationRequired = MutableStateFlow(false)
 
     // Privacy Mode State
     val isPrivacyModeEnabled = MutableStateFlow(true)
@@ -113,11 +107,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         isPrivacyModeEnabled.value = !isPrivacyModeEnabled.value
     }
 
-    val deviceIdState: StateFlow<String> get() = syncSettingsViewModel?.deviceIdState ?: MutableStateFlow("").asStateFlow()
-    val isActivatedState: StateFlow<Boolean> get() = syncSettingsViewModel?.isActivatedState ?: MutableStateFlow(false).asStateFlow()
+    val deviceIdState: StateFlow<String> = MutableStateFlow("").asStateFlow()
+    val isActivatedState: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
-    fun activateLicense(code: String): Boolean = syncSettingsViewModel?.activateLicense(code) ?: false
-    fun isTrialExpired(): Boolean = syncSettingsViewModel?.isTrialExpired() ?: false
+    fun activateLicense(code: String): Boolean = false
+    fun isTrialExpired(): Boolean = false
 
     // --- Habayeb Debts ---
     val habayebCustomersState: StateFlow<List<HabayebCustomer>> = habayebDao.getAllCustomersFlow()
@@ -133,22 +127,22 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         main.size + habayeb.size
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    private val sharedPrefs = application.getSharedPreferences("mizan_prefs", Context.MODE_PRIVATE)
+    private val sharedPrefs = application.getSharedPreferences(FinanceConstants.PREFS_NAME, Context.MODE_PRIVATE)
 
-    private val _linkHabayebDebtsState = MutableStateFlow(sharedPrefs.getBoolean("link_habayeb_debts", false))
+    private val _linkHabayebDebtsState = MutableStateFlow(sharedPrefs.getBoolean(FinanceConstants.KEY_LINK_HABAYEB_DEBTS, false))
     val linkHabayebDebtsState = _linkHabayebDebtsState.asStateFlow()
 
     fun toggleLinkHabayebDebts(enabled: Boolean) {
         _linkHabayebDebtsState.value = enabled
-        sharedPrefs.edit().putBoolean("link_habayeb_debts", enabled).apply()
+        sharedPrefs.edit().putBoolean(FinanceConstants.KEY_LINK_HABAYEB_DEBTS, enabled).apply()
     }
 
     fun hasShownOnboarding(): Boolean {
-        return sharedPrefs.getBoolean("has_shown_onboarding", false)
+        return sharedPrefs.getBoolean(FinanceConstants.KEY_ONBOARDING_SHOWN, false)
     }
 
     fun markOnboardingShown() {
-        sharedPrefs.edit().putBoolean("has_shown_onboarding", true).apply()
+        sharedPrefs.edit().putBoolean(FinanceConstants.KEY_ONBOARDING_SHOWN, true).apply()
     }
 
     val customersUiState: StateFlow<com.example.ui.state.CustomersUiState> = combine(
@@ -158,19 +152,20 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val txsByCustomer = transactions.groupBy { it.customerId }
         val customerStates = customers.map { customer ->
             val custTxs = txsByCustomer[customer.id] ?: emptyList()
-            var owedByThem = 0.0
-            var paymentByThem = 0.0
-            var owedToThem = 0.0
-            var paymentToThem = 0.0
+            var owedByThem = BigDecimal.ZERO
+            var paymentByThem = BigDecimal.ZERO
+            var owedToThem = BigDecimal.ZERO
+            var paymentToThem = BigDecimal.ZERO
             for (tx in custTxs) {
+                val amt = BigDecimal.valueOf(tx.amount)
                 when (tx.type) {
-                    "OWED_BY_THEM" -> owedByThem += tx.amount
-                    "PAYMENT_BY_THEM" -> paymentByThem += tx.amount
-                    "OWED_TO_THEM" -> owedToThem += tx.amount
-                    "PAYMENT_TO_THEM" -> paymentToThem += tx.amount
+                    HabayebTransactionType.OWED_BY_THEM.name -> owedByThem = owedByThem.add(amt)
+                    HabayebTransactionType.PAYMENT_BY_THEM.name -> paymentByThem = paymentByThem.add(amt)
+                    HabayebTransactionType.OWED_TO_THEM.name -> owedToThem = owedToThem.add(amt)
+                    HabayebTransactionType.PAYMENT_TO_THEM.name -> paymentToThem = paymentToThem.add(amt)
                 }
             }
-            val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
+            val netDebt = (owedByThem.subtract(paymentByThem)).subtract(owedToThem.subtract(paymentToThem))
             val lastTxTime = custTxs.maxOfOrNull { it.timestamp } ?: customer.createdAt
             com.example.ui.state.CustomerUiState(
                 id = customer.id,
@@ -179,13 +174,13 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 notes = customer.notes,
                 createdAt = customer.createdAt,
                 totalTransactions = custTxs.size,
-                netDebt = netDebt,
+                netDebt = netDebt.toDouble(),
                 lastTransactionTimestamp = lastTxTime,
                 originalCustomer = customer
             )
         }
-        val totalOwedByThem = customerStates.filter { it.netDebt > 0.0 }.sumOf { it.netDebt }
-        val totalOwedToThem = customerStates.filter { it.netDebt < 0.0 }.sumOf { kotlin.math.abs(it.netDebt) }
+        val totalOwedByThem = customerStates.filter { it.netDebt > 0.0 }.sumOf { it.netDebt }.toBigDecimal()
+        val totalOwedToThem = customerStates.filter { it.netDebt < 0.0 }.sumOf { kotlin.math.abs(it.netDebt) }.toBigDecimal()
 
         com.example.ui.state.CustomersUiState(
             customers = customerStates,
@@ -196,15 +191,15 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }.flowOn(Dispatchers.Default)
      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.ui.state.CustomersUiState())
 
-    val habayebOwedByThemTotalState: StateFlow<Double> = customersUiState
+    val habayebOwedByThemTotalState: StateFlow<BigDecimal> = customersUiState
         .map { it.totalOwedByThem }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
 
-    val habayebOwedToThemTotalState: StateFlow<Double> = customersUiState
+    val habayebOwedToThemTotalState: StateFlow<BigDecimal> = customersUiState
         .map { it.totalOwedToThem }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
 
     fun saveHabayebCustomer(customer: HabayebCustomer, initialAmount: Double, initialType: String, customTimestamp: Long = System.currentTimeMillis() / 1000, initialDetails: String = "") {
         if (initialAmount > 0.0 && isTrialExpired()) {
@@ -358,7 +353,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Backups list delegated to SyncSettingsViewModel
-    val localBackups: StateFlow<List<File>> get() = syncSettingsViewModel?.localBackups ?: MutableStateFlow<List<File>>(emptyList()).asStateFlow()
+    val localBackups: StateFlow<List<File>> = MutableStateFlow<List<File>>(emptyList()).asStateFlow()
 
     // --- Calculations using BigDecimal ---
 
@@ -549,25 +544,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun permanentlyDeleteDeletedItem(item: DeletedItemEntity) {
-        syncSettingsViewModel?.permanentlyDeleteDeletedItem(item)
-    }
-
-    fun permanentlyDeleteMultipleItems(items: List<DeletedItemEntity>) {
-        syncSettingsViewModel?.permanentlyDeleteMultipleItems(items)
-    }
-
-    fun restoreMultipleItems(items: List<DeletedItemEntity>) {
-        syncSettingsViewModel?.restoreMultipleItems(items)
-    }
-
-    fun restoreDeletedItem(item: DeletedItemEntity) {
-        syncSettingsViewModel?.restoreDeletedItem(item)
-    }
-
-    fun emptyTrash() {
-        syncSettingsViewModel?.emptyTrash()
-    }
 
     fun deleteTransaction(tx: TransactionDb) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -709,83 +685,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteAllData() {
-        syncSettingsViewModel?.deleteAllData()
-    }
 
-    fun clearLocalCopyAndWipeMemory(context: Context) {
-        syncSettingsViewModel?.clearLocalCopyAndWipeMemory(context)
-    }
-
-    // --- Backup & Restore (.mzd) delegated to SyncSettingsViewModel ---
-
-    fun getBaseBackupDirectory(): File = syncSettingsViewModel?.getBaseBackupDirectory() ?: File(getApplication<Application>().filesDir, "backups")
-
-    fun getBackupDirectory(): File = syncSettingsViewModel?.getBackupDirectory() ?: File(getApplication<Application>().filesDir, "backups")
-
-    fun refreshLocalBackups() {
-        syncSettingsViewModel?.refreshLocalBackups()
-    }
-
-    fun handleGoogleOAuthCode(code: String, email: String? = null, redirectUri: String = "", onComplete: ((Boolean) -> Unit)? = null) {
-        syncSettingsViewModel?.handleGoogleOAuthCode(code, email, redirectUri, onComplete)
-    }
-
-    fun backupToGoogleDriveDirect(onComplete: ((Boolean) -> Unit)? = null) {
-        syncSettingsViewModel?.backupToGoogleDriveDirect(onComplete)
-    }
-
-    fun restoreFromGoogleDriveDirect(context: Context, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.restoreFromGoogleDriveDirect(context, onComplete)
-    }
-
-    fun googleDriveLogout(onComplete: (() -> Unit)? = null) {
-        syncSettingsViewModel?.googleDriveLogout(onComplete)
-    }
-
-    fun fetchCloudBackupsList() {
-        syncSettingsViewModel?.fetchCloudBackupsList()
-    }
-
-    fun uploadBackupToGoogleDrive(onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.uploadBackupToGoogleDrive(onComplete)
-    }
-
-    fun uploadBackupToGoogleDriveWithFilename(filename: String, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.uploadBackupToGoogleDriveWithFilename(filename, onComplete)
-    }
-
-    fun restoreFromGoogleDriveById(context: Context, fileId: String, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.restoreFromGoogleDriveById(context, fileId, onComplete)
-    }
-
-    fun deleteCloudBackupById(fileId: String, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.deleteCloudBackupById(fileId, onComplete)
-    }
-
-    fun deleteMultipleCloudBackupsByIds(fileIds: List<String>, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.deleteMultipleCloudBackupsByIds(fileIds, onComplete)
-    }
-
-    fun getBackupJsonForClipboard(onComplete: (String) -> Unit) {
-        syncSettingsViewModel?.getBackupJsonForClipboard(onComplete)
-    }
-
-    fun createLocalBackup(context: Context, onComplete: (File?) -> Unit) {
-        syncSettingsViewModel?.createLocalBackup(context, onComplete)
-    }
-
-    fun executeMasterRestore(rawJsonString: String, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) {
-        syncSettingsViewModel?.executeMasterRestore(rawJsonString, context, onComplete)
-    }
-
-    fun restoreFromMzdContent(jsonContent: String, context: Context, onComplete: (Boolean) -> Unit) {
-        syncSettingsViewModel?.restoreFromMzdContent(jsonContent, context, onComplete)
-    }
-
-    fun restoreFromLocalFile(file: File, context: Context, onComplete: (Boolean, AppSettings?) -> Unit) {
-        syncSettingsViewModel?.restoreFromLocalFile(file, context, onComplete)
-    }
 
     // Format utility for prices in Arabic
     fun formatCurrency(amount: BigDecimal, symbol: String = "ر.ي"): String {

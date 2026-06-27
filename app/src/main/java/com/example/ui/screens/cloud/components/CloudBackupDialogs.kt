@@ -21,6 +21,8 @@ import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftRed
 import com.example.ui.viewmodel.FinanceViewModel
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @Composable
 fun CloudOngoingActionDialog(ongoingActionMessage: String) {
     Dialog(onDismissRequest = {}) {
@@ -51,7 +53,7 @@ fun CloudRestoreConfirmDialog(
     context: Context,
     targetId: String,
     cloudBackups: List<CloudBackupFile>,
-    viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     onDismiss: () -> Unit,
     onStartAction: (String) -> Unit,
     onCompleteAction: () -> Unit,
@@ -88,7 +90,7 @@ fun CloudRestoreConfirmDialog(
             Button(
                 onClick = {
                     onStartAction(context.getString(R.string.cloud_progress_restoring))
-                    viewModel.restoreFromGoogleDriveById(context, targetId) { success ->
+                    syncViewModel.restoreFromGoogleDriveById(context, targetId) { success ->
                         onCompleteAction()
                         if (success) {
                             Toast.makeText(context, context.getString(R.string.cloud_toast_restore_success), Toast.LENGTH_LONG).show()
@@ -127,7 +129,7 @@ fun CloudDeleteConfirmDialog(
     context: Context,
     targetId: String,
     cloudBackups: List<CloudBackupFile>,
-    viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     onDismiss: () -> Unit,
     onStartAction: (String) -> Unit,
     onCompleteAction: () -> Unit
@@ -163,7 +165,7 @@ fun CloudDeleteConfirmDialog(
             Button(
                 onClick = {
                     onStartAction(context.getString(R.string.cloud_progress_deleting))
-                    viewModel.deleteCloudBackupById(targetId) { success ->
+                    syncViewModel.deleteCloudBackupById(targetId) { success ->
                         onCompleteAction()
                         if (success) {
                             Toast.makeText(context, context.getString(R.string.cloud_toast_delete_success), Toast.LENGTH_SHORT).show()
@@ -200,7 +202,7 @@ fun CloudDeleteConfirmDialog(
 fun CloudMultiDeleteConfirmDialog(
     context: Context,
     selectedFileIds: List<String>,
-    viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     onDismiss: () -> Unit,
     onStartAction: (String) -> Unit,
     onCompleteAction: (Boolean) -> Unit
@@ -234,7 +236,7 @@ fun CloudMultiDeleteConfirmDialog(
             Button(
                 onClick = {
                     onStartAction(context.getString(R.string.cloud_progress_multi_deleting))
-                    viewModel.deleteMultipleCloudBackupsByIds(selectedFileIds.toList()) { success ->
+                    syncViewModel.deleteMultipleCloudBackupsByIds(selectedFileIds.toList()) { success ->
                         onCompleteAction(success)
                         if (success) {
                             Toast.makeText(context, context.getString(R.string.cloud_toast_multi_delete_success), Toast.LENGTH_SHORT).show()

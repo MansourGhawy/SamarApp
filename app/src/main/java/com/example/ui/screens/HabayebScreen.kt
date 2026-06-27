@@ -361,8 +361,8 @@ fun HabayebScreen(
                 // Item 1: Giant Net Balance Card
                 item {
                     HabayebNetBalanceHeader(
-                        totalOwedByThem = totalOwedByThem,
-                        totalOwedToThem = totalOwedToThem,
+                        totalOwedByThem = totalOwedByThem.toDouble(),
+                        totalOwedToThem = totalOwedToThem.toDouble(),
                         currencySymbol = currencySymbol,
                         isPrivacyMode = isPrivacyModeState.value,
                         onTogglePrivacy = { viewModel.togglePrivacyMode() }
@@ -374,8 +374,8 @@ fun HabayebScreen(
                     HabayebFilterTabs(
                         selectedFilterTab = selectedFilterTab,
                         onFilterTabSelected = { selectedFilterTab = it },
-                        totalOwedByThem = totalOwedByThem,
-                        totalOwedToThem = totalOwedToThem,
+                        totalOwedByThem = totalOwedByThem.toDouble(),
+                        totalOwedToThem = totalOwedToThem.toDouble(),
                         currencySymbol = currencySymbol,
                         haptic = haptic
                     )

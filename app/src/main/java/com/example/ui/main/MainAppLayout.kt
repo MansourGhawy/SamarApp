@@ -25,10 +25,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppLayout(
     viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     settings: AppSettings,
     onExit: () -> Unit
 ) {
@@ -67,7 +70,7 @@ fun MainAppLayout(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) {
-            viewModel.getBackupJsonForClipboard { jsonStr ->
+            syncViewModel.getBackupJsonForClipboard { jsonStr ->
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) {
@@ -94,7 +97,7 @@ fun MainAppLayout(
                         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
                     }
                     if (jsonText.isNotBlank()) {
-                        viewModel.executeMasterRestore(jsonText, context) { success, _ ->
+                        syncViewModel.executeMasterRestore(jsonText, context) { success, _ ->
                             if (success) {
                                 Toast.makeText(context, context.getString(R.string.toast_restore_success), Toast.LENGTH_SHORT).show()
                             } else {
@@ -168,6 +171,7 @@ fun MainAppLayout(
                 MainAppContent(
                     currentScreen = currentScreen,
                     viewModel = viewModel,
+                    syncViewModel = syncViewModel,
                     settings = settings,
                     monthlyLedger = monthlyLedger,
                     totalCash = totalCash,
@@ -203,6 +207,7 @@ fun MainAppLayout(
         BackupRestoreBottomSheet(
             settings = settings,
             viewModel = viewModel,
+            syncViewModel = syncViewModel,
             onExportMzd = {
                 val dateStr = sdfName.format(java.util.Date())
                 safExportLauncher.launch("Mizan_$dateStr.mzd")
@@ -211,7 +216,7 @@ fun MainAppLayout(
                 safRestoreLauncher.launch(arrayOf("application/*"))
             },
             onImportBase64 = { base64JsonText ->
-                viewModel.executeMasterRestore(base64JsonText, context) { success, _ ->
+                syncViewModel.executeMasterRestore(base64JsonText, context) { success, _ ->
                     if (success) {
                         Toast.makeText(context, context.getString(R.string.toast_sync_restore_success), Toast.LENGTH_SHORT).show()
                     } else {

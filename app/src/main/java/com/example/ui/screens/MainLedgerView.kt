@@ -218,7 +218,7 @@ fun MainLedgerView(
     val computedCommitments = remember(commitments, totalCash, linkHabayebDebts, habayebOwedByThemTotal) {
         var remainingCash = totalCash.toDouble()
         if (linkHabayebDebts) {
-            remainingCash += habayebOwedByThemTotal
+            remainingCash += habayebOwedByThemTotal.toDouble()
         }
         commitments.map { fc ->
             val target = fc.targetAmount

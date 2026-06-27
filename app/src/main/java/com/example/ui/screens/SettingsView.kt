@@ -62,10 +62,13 @@ import androidx.core.view.WindowCompat
 import androidx.compose.runtime.SideEffect
 import android.app.Activity
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsView(
     viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     settings: AppSettings,
     onNavigateToSecurity: () -> Unit
 ) {
@@ -110,7 +113,7 @@ fun SettingsView(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.getBackupJsonForClipboard { jsonStr ->
+            syncViewModel.getBackupJsonForClipboard { jsonStr ->
                 coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -138,7 +141,7 @@ fun SettingsView(
                 val inputStream = context.contentResolver.openInputStream(uri)
                 val jsonText = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
                 if (jsonText.isNotBlank()) {
-                    viewModel.executeMasterRestore(jsonText, context) { success, restoredSettings ->
+                    syncViewModel.executeMasterRestore(jsonText, context) { success, restoredSettings ->
                         if (success && restoredSettings != null) {
                             // Reload settings safely using newly restored values
                             currencySymbol = restoredSettings.currencySymbol
@@ -212,7 +215,7 @@ fun SettingsView(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            viewModel.createLocalBackup(context) { }
+            syncViewModel.createLocalBackup(context) { }
         } else {
             Toast.makeText(context, context.getString(R.string.settings_toast_permission_denied_simple), Toast.LENGTH_SHORT).show()
         }
@@ -234,7 +237,7 @@ fun SettingsView(
                 val authCode = account?.serverAuthCode
                 val email = account?.email ?: "account@google.com"
                 if (authCode != null) {
-                    viewModel.handleGoogleOAuthCode(authCode, email) { success ->
+                    syncViewModel.handleGoogleOAuthCode(authCode, email) { success ->
                         if (success) {
                             Toast.makeText(context, context.getString(R.string.settings_gdrive_link_success_pattern, email), Toast.LENGTH_LONG).show()
                         } else {
@@ -434,7 +437,7 @@ fun SettingsView(
                                 Button(
                                     onClick = {
                                         val runBackup = {
-                                            viewModel.createLocalBackup(context) { file ->
+                                            syncViewModel.createLocalBackup(context) { file ->
                                                 if (file != null) {
                                                     com.example.ui.helper.shareBackupFile(context, file)
                                                 }
@@ -480,7 +483,7 @@ fun SettingsView(
                             ) {
                                 Button(
                                     onClick = {
-                                        viewModel.getBackupJsonForClipboard { jsonStr ->
+                                        syncViewModel.getBackupJsonForClipboard { jsonStr ->
                                             clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(jsonStr))
                                             Toast.makeText(context, context.getString(R.string.settings_toast_base64_copied), Toast.LENGTH_SHORT).show()
                                         }
@@ -686,7 +689,7 @@ fun SettingsView(
                                                                         rawCode
                                                                     }
 
-                                                                    viewModel.handleGoogleOAuthCode(finalCode, null, "http://localhost/oauth2callback") { success ->
+                                                                    syncViewModel.handleGoogleOAuthCode(finalCode, null, "http://localhost/oauth2callback") { success ->
                                                                         if (success) {
                                                                             Toast.makeText(context, context.getString(R.string.settings_toast_oauth_success), Toast.LENGTH_LONG).show()
                                                                         } else {
@@ -795,7 +798,7 @@ fun SettingsView(
                                             ) {
                                                 Button(
                                                     onClick = {
-                                                        viewModel.uploadBackupToGoogleDrive { success -> }
+                                                        syncViewModel.uploadBackupToGoogleDrive { success -> }
                                                     },
                                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                                     shape = RoundedCornerShape(12.dp),
@@ -806,7 +809,7 @@ fun SettingsView(
 
                                                 Button(
                                                     onClick = {
-                                                        viewModel.restoreFromGoogleDriveDirect(context) { success ->
+                                                        syncViewModel.restoreFromGoogleDriveDirect(context) { success ->
                                                             if (success) {
                                                                 Toast.makeText(context, context.getString(R.string.settings_toast_gdrive_restore_success), Toast.LENGTH_SHORT).show()
                                                             } else {
@@ -842,7 +845,7 @@ fun SettingsView(
                                             Button(
                                                 onClick = {
                                                     isSyncLoggingOut = true
-                                                    viewModel.googleDriveLogout {
+                                                    syncViewModel.googleDriveLogout {
                                                         isSyncLoggingOut = false
                                                         Toast.makeText(context, context.getString(R.string.settings_toast_gdrive_logout_success), Toast.LENGTH_SHORT).show()
                                                     }
@@ -905,7 +908,7 @@ fun SettingsView(
                             confirmButton = {
                                 TextButton(onClick = {
                                     if (pastedBackupText.isNotBlank()) {
-                                        viewModel.executeMasterRestore(pastedBackupText, context) { success, restoredSettings ->
+                                        syncViewModel.executeMasterRestore(pastedBackupText, context) { success, restoredSettings ->
                                             if (success && restoredSettings != null) {
                                                 currencySymbol = restoredSettings.currencySymbol
                                                 schoolExpenses = restoredSettings.schoolExpensesEnabled
@@ -962,7 +965,7 @@ fun SettingsView(
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
                                         .clickable {
-                                            viewModel.restoreFromLocalFile(file, context) { success, restoredSettings ->
+                                            syncViewModel.restoreFromLocalFile(file, context) { success, restoredSettings ->
                                                 if (success && restoredSettings != null) {
                                                     currencySymbol = restoredSettings.currencySymbol
                                                     schoolExpenses = restoredSettings.schoolExpensesEnabled
@@ -1201,7 +1204,7 @@ fun SettingsView(
         ResetTrapDialog(
             onDismiss = { showTrapDialog = false },
             onConfirmDelete = {
-                viewModel.deleteAllData()
+                syncViewModel.deleteAllData()
                 showTrapDialog = false
             }
         )

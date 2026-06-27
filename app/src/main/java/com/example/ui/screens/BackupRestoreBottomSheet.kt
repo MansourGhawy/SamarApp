@@ -44,11 +44,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupRestoreBottomSheet(
     settings: AppSettings,
     viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     onExportMzd: () -> Unit,
     onImportMzd: () -> Unit,
     onImportBase64: (String) -> Unit,
@@ -57,7 +60,7 @@ fun BackupRestoreBottomSheet(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
-    val googleSyncState by viewModel.googleDriveSyncState.collectAsStateWithLifecycle()
+    val googleSyncState by syncViewModel.googleDriveSyncState.collectAsStateWithLifecycle()
     val storedEmail = remember(googleSyncState) { viewModel.googleDriveSyncHelper.getStoredEmail() }
     val isConnected = !storedEmail.isNullOrEmpty() || googleSyncState is CloudSyncState.Authenticated || googleSyncState is CloudSyncState.Success
 
@@ -94,7 +97,7 @@ fun BackupRestoreBottomSheet(
                 val authCode = account?.serverAuthCode
                 val email = account?.email ?: "account@google.com"
                 if (authCode != null) {
-                    viewModel.handleGoogleOAuthCode(authCode, email) { success ->
+                    syncViewModel.handleGoogleOAuthCode(authCode, email) { success ->
                         if (success) {
                             Toast.makeText(context, context.getString(R.string.backup_toast_linked_success, email), Toast.LENGTH_LONG).show()
                         } else {
@@ -373,7 +376,7 @@ fun BackupRestoreBottomSheet(
                                                             rawCode
                                                         }
 
-                                                        viewModel.handleGoogleOAuthCode(finalCode, null, "http://localhost/oauth2callback") { success ->
+                                                        syncViewModel.handleGoogleOAuthCode(finalCode, null, "http://localhost/oauth2callback") { success ->
                                                             if (success) {
                                                                 Toast.makeText(context, context.getString(R.string.backup_toast_oauth_success), Toast.LENGTH_LONG).show()
                                                             } else {
@@ -470,7 +473,7 @@ fun BackupRestoreBottomSheet(
                                 ) {
                                     Button(
                                         onClick = {
-                                            viewModel.uploadBackupToGoogleDrive { success -> }
+                                            syncViewModel.uploadBackupToGoogleDrive { success -> }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                         shape = RoundedCornerShape(10.dp),
@@ -482,7 +485,7 @@ fun BackupRestoreBottomSheet(
                                     Button(
                                         onClick = {
                                             onConfirmRestoreAction = {
-                                                viewModel.restoreFromGoogleDriveDirect(context) { success ->
+                                                syncViewModel.restoreFromGoogleDriveDirect(context) { success ->
                                                     if (success) {
                                                         Toast.makeText(context, context.getString(R.string.toast_cloud_restore_success), Toast.LENGTH_SHORT).show()
                                                         onDismiss()
@@ -521,7 +524,7 @@ fun BackupRestoreBottomSheet(
                                 Button(
                                     onClick = {
                                         isSyncLoggingOut = true
-                                        viewModel.googleDriveLogout {
+                                        syncViewModel.googleDriveLogout {
                                             isSyncLoggingOut = false
                                             Toast.makeText(context, context.getString(R.string.backup_toast_gdrive_logout_success), Toast.LENGTH_SHORT).show()
                                         }
@@ -607,7 +610,7 @@ fun BackupRestoreBottomSheet(
                         // Copy Encoded Base64
                         OutlinedButton(
                             onClick = {
-                                viewModel.getBackupJsonForClipboard { json ->
+                                syncViewModel.getBackupJsonForClipboard { json ->
                                     coroutineScope.launch(Dispatchers.IO) {
                                         try {
                                             val base64 = android.util.Base64.encodeToString(json.toByteArray(), android.util.Base64.NO_WRAP)
@@ -853,7 +856,7 @@ fun BackupRestoreBottomSheet(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.clearLocalCopyAndWipeMemory(context)
+                        syncViewModel.clearLocalCopyAndWipeMemory(context)
                         Toast.makeText(context, context.getString(R.string.backup_toast_reset_success), Toast.LENGTH_LONG).show()
                         showResetConfirm2 = false
                         onDismiss()

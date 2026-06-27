@@ -13,10 +13,13 @@ import com.example.ui.viewmodel.FinanceViewModel
 import com.example.ui.viewmodel.MonthLedger
 import java.math.BigDecimal
 
+import com.example.ui.viewmodel.SyncSettingsViewModel
+
 @Composable
 fun MainAppContent(
     currentScreen: Screen,
     viewModel: FinanceViewModel,
+    syncViewModel: SyncSettingsViewModel,
     settings: AppSettings,
     monthlyLedger: List<MonthLedger>,
     totalCash: BigDecimal,
@@ -43,7 +46,7 @@ fun MainAppContent(
                     MainLedgerView(
                         viewModel = viewModel,
                         monthlyLedger = monthlyLedger,
-                        totalCash = totalCash,
+                        totalCash = totalCash.toDouble(), // Assuming MainLedgerView hasn't been fully migrated to BigDecimal
                         commitments = commitments,
                         settings = settings,
                         onBackIntercept = {},
@@ -60,6 +63,7 @@ fun MainAppContent(
                 Screen.SETTINGS -> {
                     SettingsView(
                         viewModel = viewModel,
+                        syncViewModel = syncViewModel,
                         settings = settings,
                         onNavigateToSecurity = { onNavigate(Screen.SECURITY) }
                     )
@@ -67,6 +71,7 @@ fun MainAppContent(
                 Screen.TRASH -> {
                     TrashScreen(
                         viewModel = viewModel,
+                        syncViewModel = syncViewModel,
                         onBack = { onNavigate(Screen.HABAYEB) }
                     )
                 }

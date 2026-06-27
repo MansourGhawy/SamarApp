@@ -142,23 +142,23 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
 
         CustomersUiState(
             customers = customerStates,
-            totalOwedByThem = totalOwedByThem,
-            totalOwedToThem = totalOwedToThem,
+            totalOwedByThem = totalOwedByThem.toBigDecimal(),
+            totalOwedToThem = totalOwedToThem.toBigDecimal(),
             isLoading = false
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CustomersUiState())
 
     // Metrics Exposing Flow
-    val habayebOwedByThemTotalState: StateFlow<Double> = customersUiState
+    val habayebOwedByThemTotalState: StateFlow<BigDecimal> = customersUiState
         .map { it.totalOwedByThem }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
 
-    val habayebOwedToThemTotalState: StateFlow<Double> = customersUiState
+    val habayebOwedToThemTotalState: StateFlow<BigDecimal> = customersUiState
         .map { it.totalOwedToThem }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
 
     val habayebNetBalanceState: StateFlow<Double> = combine(
         habayebOwedByThemTotalState,

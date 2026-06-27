@@ -212,6 +212,7 @@ fun MainLedgerView(
 
     val linkHabayebDebts by viewModel.linkHabayebDebtsState.collectAsStateWithLifecycle()
     val habayebOwedByThemTotal by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
+    val habayebOwedToThemTotal by viewModel.habayebOwedToThemTotalState.collectAsStateWithLifecycle()
 
     // Precompute commitments coverage details
     val computedCommitments = remember(commitments, totalCash, linkHabayebDebts, habayebOwedByThemTotal) {
@@ -315,6 +316,8 @@ fun MainLedgerView(
                     linkHabayebDebts = linkHabayebDebts,
                     onLinkHabayebDebtsChange = { viewModel.toggleLinkHabayebDebts(it) },
                     monthlyLedger = monthlyLedger,
+                    habayebOwedByThemTotal = habayebOwedByThemTotal,
+                    habayebOwedToThemTotal = habayebOwedToThemTotal,
                     selectedDayKeysCountText = selectedDayKeysCountText,
                     isSelectAllChecked = isSelectAllChecked
                 )

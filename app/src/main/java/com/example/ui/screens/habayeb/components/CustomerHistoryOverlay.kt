@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -475,18 +476,17 @@ fun CustomerHistoryOverlay(
                             val sign = if (isDebt) "+" else "-"
 
                             Card(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
                                 border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
-                                Row(
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(IntrinsicSize.Min),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .height(IntrinsicSize.Min)
                                 ) {
                                     // 1. Rightmost vertical color indicator (Touches the right border in RTL)
                                     Box(
@@ -494,124 +494,133 @@ fun CustomerHistoryOverlay(
                                             .fillMaxHeight()
                                             .width(4.dp)
                                             .background(indicatorColor)
+                                            .align(Alignment.CenterStart)
                                     )
 
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // 2. Small Avatar/Icon
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(indicatorColor.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = iconEmoji,
-                                            fontSize = 13.sp
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // 3. Middle: transaction details (Title & subtitle/description)
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalAlignment = Alignment.Start
-                                    ) {
-                                        val readableType = when (tx.type) {
-                                            "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by)
-                                            "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by)
-                                            "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to)
-                                            "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to)
-                                            else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
-                                        }
-
-                                        if (tx.description.isNotEmpty()) {
-                                            // الملاحظة التفصيلية للمستخدم تصبح هي العنوان الرئيسي لسهولة القراءة والتمييز
-                                            Text(
-                                                text = tx.description,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            // فاصل عمودي ناعم لمنع تداخل النصوص
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            // نوع المعاملة يصبح فرعياً وناعماً بوزن عادي وحجم أصغر لتجنب تكرار الهيكل البصري
-                                            Text(
-                                                text = readableType,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Normal,
-                                                color = Color(0xFF64748B)
-                                            )
-                                        } else {
-                                            // في حال عدم كتابة تفاصيل، يظهر نوع المعاملة كعنوان رئيسي بحجم ووزن معتدل
-                                            Text(
-                                                text = readableType,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // 4. Far Left: Monetary value and Timestamp
-                                    Column(
-                                        horizontalAlignment = Alignment.End,
-                                        modifier = Modifier.padding(end = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = "$sign${formatCurrency(tx.amount, currencySymbol)}",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = indicatorColor
-                                        )
-                                        Text(
-                                            text = formattedDate,
-                                            fontSize = 9.sp,
-                                            color = Color(0xFF94A3B8)
-                                        )
-                                    }
-
-                                    // Edit & delete options
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                        modifier = Modifier.padding(end = 4.dp)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp, bottom = 10.dp, end = 10.dp, start = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        IconButton(
-                                            onClick = {
-                                                editingTransactionForDialog = tx
-                                                defaultTransactionTypeFromHistory = tx.type
-                                                showAddTransactionDialogFromHistory = customer
-                                            },
-                                            modifier = Modifier.size(24.dp)
+                                        // 2. Small Avatar/Icon
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(indicatorColor.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = stringResource(id = R.string.detail_btn_edit),
-                                                tint = activeThemeColor.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(13.dp)
+                                            Text(
+                                                text = iconEmoji,
+                                                fontSize = 13.sp
                                             )
                                         }
 
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.deleteHabayebTransaction(tx.id)
-                                                Toast.makeText(context, context.getString(R.string.toast_delete_success), Toast.LENGTH_SHORT).show()
-                                            },
-                                            modifier = Modifier.size(24.dp)
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        // 3. Middle: transaction details (Title & subtitle/description)
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.Start
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(id = R.string.detail_btn_delete),
-                                                tint = Color(0xFFEF4444).copy(alpha = 0.7f),
-                                                modifier = Modifier.size(13.dp)
+                                            val readableType = when (tx.type) {
+                                                "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by)
+                                                "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by)
+                                                "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to)
+                                                "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to)
+                                                else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
+                                            }
+
+                                            if (tx.description.isNotEmpty()) {
+                                                // الملاحظة التفصيلية للمستخدم تصبح هي العنوان الرئيسي لسهولة القراءة والتمييز
+                                                Text(
+                                                    text = tx.description,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF1E293B),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                // فاصل عمودي ناعم لمنع تداخل النصوص
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                // نوع المعاملة يصبح فرعياً وناعماً بوزن عادي وحجم أصغر لتجنب تكرار الهيكل البصري
+                                                Text(
+                                                    text = readableType,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Normal,
+                                                    color = Color(0xFF64748B)
+                                                )
+                                            } else {
+                                                // في حال عدم كتابة تفاصيل، يظهر نوع المعاملة كعنوان رئيسي بحجم ووزن معتدل
+                                                Text(
+                                                    text = readableType,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF1E293B),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        // 4. Far Left: Monetary value and Timestamp
+                                        Column(
+                                            horizontalAlignment = Alignment.End,
+                                            modifier = Modifier.wrapContentWidth()
+                                        ) {
+                                            Text(
+                                                text = "$sign${formatCurrency(tx.amount, currencySymbol)}",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = indicatorColor
                                             )
+                                            Text(
+                                                text = formattedDate,
+                                                fontSize = 9.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(4.dp))
+
+                                        // Edit & delete options
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    editingTransactionForDialog = tx
+                                                    defaultTransactionTypeFromHistory = tx.type
+                                                    showAddTransactionDialogFromHistory = customer
+                                                },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = stringResource(id = R.string.detail_btn_edit),
+                                                    tint = activeThemeColor.copy(alpha = 0.7f),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.deleteHabayebTransaction(tx.id)
+                                                    Toast.makeText(context, context.getString(R.string.toast_delete_success), Toast.LENGTH_SHORT).show()
+                                                },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = stringResource(id = R.string.detail_btn_delete),
+                                                    tint = Color(0xFFEF4444).copy(alpha = 0.7f),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }

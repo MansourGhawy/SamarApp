@@ -157,9 +157,15 @@ fun MainLedgerHeader(
     monthlyLedger: List<MonthLedger>,
     selectedDayKeysCountText: String,
     isSelectAllChecked: Boolean,
+    habayebOwedByThemTotal: Double,
+    habayebOwedToThemTotal: Double,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+
+    val netBalance = habayebOwedByThemTotal - habayebOwedToThemTotal
+    val isDeficit = netBalance < 0
+    val absNetBalance = java.math.BigDecimal.valueOf(kotlin.math.abs(netBalance))
 
     Column(
         modifier = modifier
@@ -340,17 +346,22 @@ fun MainLedgerHeader(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp, horizontal = 12.dp),
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = stringResource(id = R.string.ledger_actual_cash),
-                        fontSize = 10.sp,
+                        text = stringResource(id = R.string.ledger_net_balance_title),
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFEF08A)
                     )
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         IconButton(
                             onClick = onTogglePrivacyMode,
                             modifier = Modifier.size(24.dp).padding(end = 6.dp)
@@ -361,13 +372,45 @@ fun MainLedgerHeader(
                                 tint = Color.White.copy(alpha = 0.7f)
                             )
                         }
+                        
                         Text(
-                            text = if (isPrivacyMode) "*****" else formatCurrency(totalCash, currencySymbol),
-                            fontSize = 24.sp,
+                            text = if (isPrivacyMode) "*****" else formatCurrency(absNetBalance, currencySymbol),
+                            fontSize = 26.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Black
                         )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Dynamic Micro-Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isDeficit) Color(0xFFFF7B54).copy(alpha = 0.15f)
+                                    else Color(0xFF10B981).copy(alpha = 0.15f)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (isDeficit) stringResource(id = R.string.ledger_net_deficit_badge)
+                                       else stringResource(id = R.string.ledger_net_surplus_badge),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDeficit) Color(0xFFFFAB91) else Color(0xFFA7F3D0)
+                            )
+                        }
                     }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = if (isDeficit) stringResource(id = R.string.ledger_net_deficit_desc)
+                               else stringResource(id = R.string.ledger_net_surplus_desc),
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 

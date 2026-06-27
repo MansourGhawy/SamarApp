@@ -754,7 +754,7 @@ fun SettingsView(
                                     }
                                     is CloudSyncState.Success, is CloudSyncState.Authenticated -> {
                                         val storedEmail = viewModel.googleDriveSyncHelper.getStoredEmail()
-                                        val email = if (state is CloudSyncState.Authenticated) state.email else (storedEmail ?: "حساب Google متصل")
+                                        val email = if (state is CloudSyncState.Authenticated) state.email else (storedEmail ?: stringResource(R.string.cloud_google_connected))
                                         Column(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalAlignment = Alignment.End,

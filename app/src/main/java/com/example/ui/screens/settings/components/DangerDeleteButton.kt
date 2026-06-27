@@ -17,10 +17,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.SoftRed
 import kotlinx.coroutines.delay
 
@@ -82,7 +84,7 @@ fun DangerDeleteButton(onDeleteConfirmed: () -> Unit) {
         )
 
         Text(
-            text = if (isPressing) "جاري التحقق من الحذف..." else "حذف جميع بيانات السجل (ضغط مطول ⏳)",
+            text = if (isPressing) stringResource(R.string.settings_delete_all_data_progress) else stringResource(R.string.settings_delete_all_data),
             color = SoftRed,
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp,

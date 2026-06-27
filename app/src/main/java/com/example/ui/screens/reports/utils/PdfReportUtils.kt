@@ -23,7 +23,7 @@ import java.util.*
 data class PdfTransaction(
     val date: String,
     val description: String,
-    val amount: Long,
+    val amount: Double,
     val type: String, // "OWED_BY_TEM", "PAYMENT_BY_THEM", "OWED_TO_THEM", "PAYMENT_TO_THEM"
     val timestamp: Long
 )
@@ -31,6 +31,12 @@ data class PdfTransaction(
 // ==========================================
 // UPGRADED DYNAMIC UNIVERSAL PDF GENERATOR (Overloaded for backwards compatibility)
 // ==========================================
+fun formatReportNumber(value: Double): String {
+    val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
+    val formatter = java.text.DecimalFormat("#,##0.00", symbols)
+    return formatter.format(value)
+}
+
 fun generateModernPdfReport(
     context: Context,
     title: String,
@@ -49,8 +55,8 @@ fun generateModernPdfReport(
                 .replace("ر.ي", "")
                 .replace("ريال", "")
                 .replace(" ", "")
-                .filter { it.isDigit() }
-            val amountLong = cleanAmt.toLongOrNull() ?: 0L
+                .filter { it.isDigit() || it == '.' }
+            val amountDouble = cleanAmt.toDoubleOrNull() ?: 0.0
             
             val mappedType = when {
                 typeRaw.contains("PAYMENT_BY_THEM") || typeRaw.contains("استلام دفعة") || typeRaw.contains("سداد دفعة") || typeRaw.contains("تم السداد") || typeRaw.contains("سداد") -> {
@@ -86,7 +92,7 @@ fun generateModernPdfReport(
             PdfTransaction(
                 date = dateStr,
                 description = "",
-                amount = amountLong,
+                amount = amountDouble,
                 type = mappedType,
                 timestamp = parsedTimestamp
             )
@@ -202,9 +208,9 @@ fun generateModernPdfReport(
     val sortedTxs = transactions.sortedBy { it.timestamp }
     val isSupplierMode = transactions.any { it.type == "OWED_TO_THEM" || it.type == "PAYMENT_TO_THEM" }
     
-    var totalOwed = 0L
-    var totalPaid = 0L
-    var runningBalance = 0L
+    var totalOwed = 0.0
+    var totalPaid = 0.0
+    var runningBalance = 0.0
     val processedRows = mutableListOf<List<String>>()
 
     for ((index, tx) in sortedTxs.withIndex()) {
@@ -236,15 +242,15 @@ fun generateModernPdfReport(
         }
 
         // إزالة النصوص الزائدة (له/عليه) من سطور الجدول وإظهار الأرقام فقط للتناسق البصري
-        val balanceStr = "${Math.abs(runningBalance)} ر.ي"
+        val balanceStr = "${formatReportNumber(Math.abs(runningBalance))} ر.ي"
 
         processedRows.add(
             listOf(
                 (index + 1).toString(),
                 formattedDateWithDay,
                 finalDesc,
-                if (isOwed) "${tx.amount} ر.ي" else "-",
-                if (isPaid) "${tx.amount} ر.ي" else "-",
+                if (isOwed) "${formatReportNumber(tx.amount)} ر.ي" else "-",
+                if (isPaid) "${formatReportNumber(tx.amount)} ر.ي" else "-",
                 balanceStr
             )
         )
@@ -297,29 +303,25 @@ fun generateModernPdfReport(
     val leftMargin = 40f
     val centerWidth = (pageWidth / 2).toFloat()
 
-    // 6. رسم الهوية البصرية (Logo) بالمنتصف تماماً وبحلقة دائرية فخمة (60x60) دون تداخل مطلقا
+    // 6. رسم الهوية البصرية (Logo) بالمنتصف تماماً دون أي إطار دائري أو شكل هندسي يفرضه (تحجيم تناسبي دقيق لجمال تام)
     if (logoPath != null) {
         try {
             val file = File(logoPath)
             if (file.exists()) {
                 val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                 if (bitmap != null) {
-                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, 60, 60, true)
-                    val logoX = centerWidth - 30f
-                    val bgPaint = Paint().apply {
-                        color = Color.WHITE
-                        style = Paint.Style.FILL
-                        isAntiAlias = true
-                    }
-                    val framePaint = Paint().apply {
-                        color = Color.parseColor("#E2E8F0")
-                        style = Paint.Style.STROKE
-                        strokeWidth = 1.2f
-                        isAntiAlias = true
-                    }
-                    canvas.drawRoundRect(logoX, currentY, logoX + 60f, currentY + 60f, 30f, 30f, bgPaint)
-                    canvas.drawBitmap(scaledBitmap, logoX, currentY, null)
-                    canvas.drawRoundRect(logoX, currentY, logoX + 60f, currentY + 60f, 30f, 30f, framePaint)
+                    val maxW = 80f
+                    val maxH = 55f
+                    val originalWidth = bitmap.width.toFloat()
+                    val originalHeight = bitmap.height.toFloat()
+                    val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
+                    val finalW = (originalWidth * scale).coerceAtLeast(1f)
+                    val finalH = (originalHeight * scale).coerceAtLeast(1f)
+                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, finalW.toInt(), finalH.toInt(), true)
+                    
+                    val logoX = centerWidth - (finalW / 2f)
+                    val logoY = currentY + ((maxH - finalH) / 2f)
+                    canvas.drawBitmap(scaledBitmap, logoX, logoY, null)
                 }
             }
         } catch (e: Exception) {
@@ -400,19 +402,19 @@ fun generateModernPdfReport(
     paintSummaryLabel.textAlign = Paint.Align.RIGHT
     paintSummaryValue.textAlign = Paint.Align.RIGHT
     canvas.drawText(sumLabelRight, rightMargin - 20f, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("$totalOwed ر.ي", rightMargin - 20f, currentY + 41f, paintSummaryValue)
+    canvas.drawText("${formatReportNumber(totalOwed)} ر.ي", rightMargin - 20f, currentY + 41f, paintSummaryValue)
 
     // ب. المنتصف (إجمالي له)
     paintSummaryLabel.textAlign = Paint.Align.CENTER
     paintSummaryValue.textAlign = Paint.Align.CENTER
     canvas.drawText(sumLabelCenter, centerWidth, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("$totalPaid ر.ي", centerWidth, currentY + 41f, paintSummaryValue)
+    canvas.drawText("${formatReportNumber(totalPaid)} ر.ي", centerWidth, currentY + 41f, paintSummaryValue)
 
     // ج. اليسار (المبلغ المتبقي الحالي)
     paintSummaryLabel.textAlign = Paint.Align.LEFT
     paintSummaryValue.textAlign = Paint.Align.LEFT
     canvas.drawText(sumLabelLeft, leftMargin + 20f, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("$finalNetBalance ر.ي ($netStatus)", leftMargin + 20f, currentY + 41f, paintSummaryValue)
+    canvas.drawText("${formatReportNumber(finalNetBalance)} ر.ي ($netStatus)", leftMargin + 20f, currentY + 41f, paintSummaryValue)
 
     currentY += 80f
 
@@ -646,32 +648,25 @@ fun generateGenericPdfReport(
     val leftMargin = 40f
     val centerWidth = (pageWidth / 2).toFloat()
 
-    // 3. Draw Logo in the absolute center (circular / rounded frame)
+    // 3. Draw Logo in the absolute center (proportional scaling, no circular frame or box)
     if (logoPath != null) {
         try {
             val file = File(logoPath)
             if (file.exists()) {
                 val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                 if (bitmap != null) {
-                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, 50, 50, true)
-                    val logoX = centerWidth - 25f
+                    val maxW = 80f
+                    val maxH = 55f
+                    val originalWidth = bitmap.width.toFloat()
+                    val originalHeight = bitmap.height.toFloat()
+                    val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
+                    val finalW = (originalWidth * scale).coerceAtLeast(1f)
+                    val finalH = (originalHeight * scale).coerceAtLeast(1f)
+                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, finalW.toInt(), finalH.toInt(), true)
                     
-                    val bgPaint = Paint().apply {
-                        color = Color.WHITE
-                        style = Paint.Style.FILL
-                        isAntiAlias = true
-                    }
-                    val framePaint = Paint().apply {
-                        color = Color.parseColor(slateGrayHex)
-                        style = Paint.Style.STROKE
-                        strokeWidth = 1f
-                        isAntiAlias = true
-                    }
-                    
-                    // Center circular/rounded frame
-                    activeCanvas.drawRoundRect(logoX, currentY, logoX + 50f, currentY + 50f, 25f, 25f, bgPaint)
-                    activeCanvas.drawBitmap(scaledBitmap, logoX, currentY, null)
-                    activeCanvas.drawRoundRect(logoX, currentY, logoX + 50f, currentY + 50f, 25f, 25f, framePaint)
+                    val logoX = centerWidth - (finalW / 2f)
+                    val logoY = currentY + ((maxH - finalH) / 2f)
+                    activeCanvas.drawBitmap(scaledBitmap, logoX, logoY, null)
                 }
             }
         } catch (e: Exception) {

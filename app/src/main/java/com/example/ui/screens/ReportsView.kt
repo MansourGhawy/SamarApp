@@ -124,12 +124,12 @@ fun ReportsView(
     fun formatVal(bd: BigDecimal): String {
         return try {
             val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
+            val formatter = java.text.DecimalFormat("#,##0.00", symbols)
             val formatted = formatter.format(bd)
             "$formatted $currencySymbol"
         } catch (e: Exception) {
             val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = java.text.DecimalFormat("#,##0", symbols)
+            val formatter = java.text.DecimalFormat("#,##0.00", symbols)
             val formatted = formatter.format(bd)
             "$formatted $currencySymbol"
         }

@@ -11,9 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 
 @Composable
 fun DeveloperSealFooter(modifier: Modifier = Modifier) {
@@ -40,7 +42,7 @@ fun DeveloperSealFooter(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "تصميم وتطوير م/ منصور قطينه للبرمجيات",
+                text = stringResource(R.string.developer_credit),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -75,7 +77,7 @@ fun DeveloperSealFooter(modifier: Modifier = Modifier) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "تواصل مباشر عبر الواتساب",
+                    text = stringResource(R.string.contact_whatsapp_direct),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White

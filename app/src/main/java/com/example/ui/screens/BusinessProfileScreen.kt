@@ -589,7 +589,7 @@ fun BusinessProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "تقريب وتحريك الصورة:",
+                                text = stringResource(R.string.biz_zoom_and_pan),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF64748B)

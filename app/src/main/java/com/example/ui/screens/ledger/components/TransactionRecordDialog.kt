@@ -27,10 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.CustomCategory
 import com.example.data.local.TransactionDb
 import com.example.ui.screens.CalculatorDialog
-import com.example.ui.screens.CategoryBottomSheet
 import com.example.ui.theme.CoralAccent
 import com.example.ui.theme.EmeraldPrimary
 import kotlinx.coroutines.delay
@@ -41,12 +39,8 @@ fun TransactionRecordDialog(
     txDialogType: String,
     editingTransaction: TransactionDb?,
     currencySymbol: String,
-    schoolExpensesEnabled: Boolean,
-    customCategories: List<CustomCategory>,
     onDismiss: () -> Unit,
     onSave: (id: String?, type: String, category: String, amount: Double, description: String) -> Unit,
-    onSaveCustomCategory: (name: String, tab: String, emoji: String) -> Unit,
-    onDeleteCustomCategory: (CustomCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (!showTxDialog) return
@@ -54,13 +48,12 @@ fun TransactionRecordDialog(
     val context = LocalContext.current
     var numAmount by rememberSaveable(editingTransaction) { mutableStateOf(editingTransaction?.amount?.toString() ?: "") }
     var descriptionStr by rememberSaveable(editingTransaction) { mutableStateOf(editingTransaction?.description ?: "") }
-    var categoryName by rememberSaveable(editingTransaction, txDialogType) {
-        mutableStateOf(editingTransaction?.category ?: if (txDialogType == "INCOME") context.getString(R.string.ledger_category_overall_income) else context.getString(R.string.ledger_category_expense))
+    val categoryName = remember(editingTransaction, txDialogType) {
+        editingTransaction?.category ?: if (txDialogType == "INCOME") context.getString(R.string.ledger_category_overall_income) else context.getString(R.string.ledger_category_expense)
     }
 
     var showCalcPopup by rememberSaveable { mutableStateOf(false) }
     var isSavingTx by remember { mutableStateOf(false) }
-    var showCategoryPickerSheet by remember { mutableStateOf(false) }
 
     val isConfirmButtonEnabled by remember {
         derivedStateOf {
@@ -144,21 +137,6 @@ fun TransactionRecordDialog(
                         }
                     )
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { showCategoryPickerSheet = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (categoryName.isNotBlank()) stringResource(id = R.string.ledger_category_label, categoryName) else stringResource(id = R.string.ledger_choose_category_placeholder),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         },
         confirmButton = {
@@ -193,20 +171,6 @@ fun TransactionRecordDialog(
             }
         }
     )
-
-    if (showCategoryPickerSheet) {
-        CategoryBottomSheet(
-            schoolExpensesEnabled = schoolExpensesEnabled,
-            customCategories = customCategories,
-            onCategorySelected = { name, emoji ->
-                categoryName = "$name $emoji"
-                showCategoryPickerSheet = false
-            },
-            onAddCustomCategory = onSaveCustomCategory,
-            onDeleteCategory = onDeleteCustomCategory,
-            onDismiss = { showCategoryPickerSheet = false }
-        )
-    }
 
     if (showCalcPopup) {
         CalculatorDialog(

@@ -430,7 +430,7 @@ fun BackupRestoreBottomSheet(
                             }
                         }
                         is CloudSyncState.Success, is CloudSyncState.Authenticated -> {
-                            val email = if (state is CloudSyncState.Authenticated) state.email else (storedEmail ?: "حساب Google متصل")
+                            val email = if (state is CloudSyncState.Authenticated) state.email else (storedEmail ?: stringResource(R.string.cloud_google_connected))
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)

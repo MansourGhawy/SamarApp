@@ -35,6 +35,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -159,6 +160,7 @@ fun SearchResultItem(
     nextTx: TransactionDb?,
     formatCurrency: (Double) -> String
 ) {
+    val context = LocalContext.current
     val dayName = DateUtils.getDayOfWeekArabic(tx.timestamp)
     val fullDate = DateUtils.formatDateFull(tx.timestamp)
     val timeStr = DateUtils.formatTime24Or12(tx.timestamp)
@@ -208,7 +210,7 @@ fun SearchResultItem(
         }
 
         if (nextTx != null) {
-            val interval = DateUtils.formatDurationBetween(tx.timestamp, nextTx.timestamp)
+            val interval = DateUtils.formatDurationBetween(tx.timestamp, nextTx.timestamp, context)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -11,11 +11,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.CoralAccent
 import com.example.ui.theme.EmeraldPrimary
 
@@ -51,7 +53,7 @@ fun PasscodeSetupBottomSheet(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "تعيين قفل التطبيق والأمان 🛡️",
+                        text = stringResource(R.string.settings_setup_passcode_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = EmeraldPrimary,
@@ -59,7 +61,7 @@ fun PasscodeSetupBottomSheet(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "قم بإنشاء رمز حماية لخصوصية السجلات والتحويلات المعتمدة",
+                        text = stringResource(R.string.settings_setup_passcode_subtitle),
                         fontSize = 11.sp,
                         color = Color.Gray,
                         textAlign = TextAlign.Center
@@ -80,8 +82,8 @@ fun PasscodeSetupBottomSheet(
                                 tempPasscode = it
                             }
                         },
-                        label = { Text("رمز القفل المكون من 4 أرقام") },
-                        placeholder = { Text("مثال: 1234") },
+                        label = { Text(stringResource(R.string.settings_passcode_field)) },
+                        placeholder = { Text(stringResource(R.string.settings_passcode_placeholder)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number
@@ -98,8 +100,8 @@ fun PasscodeSetupBottomSheet(
                                 tempConfirmPasscode = it
                             }
                         },
-                        label = { Text("تأكيد الرمز السري") },
-                        placeholder = { Text("أعد كتابة الرمز نفسه للتحقق") },
+                        label = { Text(stringResource(R.string.settings_confirm_passcode_field)) },
+                        placeholder = { Text(stringResource(R.string.settings_confirm_passcode_placeholder)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number
@@ -117,7 +119,7 @@ fun PasscodeSetupBottomSheet(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "تنبيه أمني بالغ الأهمية ⚠️:\n\nالتطبيق يحمي خصوصيتك محلياً بالكامل. في حال نسيت رمز القفل وعبارة الاسترداد، لن يتمكن أحد -بما في ذلك المطور- من فك تشفير بياناتك أو استعادتها نهائياً، وستفقد بياناتك للأبد.",
+                            text = stringResource(R.string.settings_security_warning),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             fontWeight = FontWeight.Bold,
@@ -131,15 +133,15 @@ fun PasscodeSetupBottomSheet(
                     OutlinedTextField(
                         value = tempRecoveryPhrase,
                         onValueChange = { tempRecoveryPhrase = it },
-                        label = { Text("مفتاح أمان الاسترداد") },
-                        placeholder = { Text("اكتب مفتاح أمان الاسترداد (مثال: فاطمة أو أحمد)") },
+                        label = { Text(stringResource(R.string.settings_recovery_phrase_field)) },
+                        placeholder = { Text(stringResource(R.string.settings_recovery_phrase_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
                     )
 
                     Text(
-                        text = "قم بحفظ هذه العبارة بدقة لأنها مفتاح أمانك الوحيد.",
+                        text = stringResource(R.string.settings_save_phrase_tip),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         textAlign = TextAlign.Right,
@@ -152,8 +154,8 @@ fun PasscodeSetupBottomSheet(
                     OutlinedTextField(
                         value = tempRecoveryHint,
                         onValueChange = { tempRecoveryHint = it },
-                        label = { Text("تلميح الذاكرة") },
-                        placeholder = { Text("مثال: اسم الزوجة أو صديق الطفولة") },
+                        label = { Text(stringResource(R.string.settings_recovery_hint_field)) },
+                        placeholder = { Text(stringResource(R.string.settings_recovery_hint_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
@@ -169,7 +171,7 @@ fun PasscodeSetupBottomSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "أؤكد حفظي الآمن لمفتاح الاسترداد والرمز السري خارج الهاتف وأتحمل المسؤولية كاملة.",
+                            text = stringResource(R.string.settings_acknowledge_checkbox),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Right,
@@ -206,7 +208,7 @@ fun PasscodeSetupBottomSheet(
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("إلغاء", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.common_cancel), fontWeight = FontWeight.Bold)
                     }
 
                     // Save & Enable Passcode
@@ -223,7 +225,7 @@ fun PasscodeSetupBottomSheet(
                             .height(48.dp),
                         enabled = isValid
                     ) {
-                        Text("حفظ وتغليق القفل 💾", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(stringResource(R.string.settings_save_passcode_btn), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

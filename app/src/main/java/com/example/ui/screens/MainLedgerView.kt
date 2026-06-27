@@ -472,7 +472,6 @@ fun MainLedgerView(
 
             // Bottom spacing past absolute FAB overlays (compressed rhythm)
             item {
-                DeveloperSealFooter()
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
@@ -509,8 +508,6 @@ fun MainLedgerView(
         txDialogType = txDialogType,
         editingTransaction = editingTransaction,
         currencySymbol = settings.currencySymbol,
-        schoolExpensesEnabled = settings.schoolExpensesEnabled,
-        customCategories = customCats,
         onDismiss = { showTxDialog = false },
         onSave = { id, type, category, amount, description ->
             if (editingTransaction != null) {
@@ -528,12 +525,6 @@ fun MainLedgerView(
                     description = description
                 )
             }
-        },
-        onSaveCustomCategory = { name, tab, emoji ->
-            viewModel.saveCustomCategory(name, tab, emoji)
-        },
-        onDeleteCustomCategory = { cat ->
-            viewModel.deleteCustomCategory(cat)
         }
     )
 

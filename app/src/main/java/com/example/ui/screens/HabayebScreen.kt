@@ -102,6 +102,8 @@ import com.example.ui.screens.habayeb.components.CustomerHistoryOverlay
 import com.example.ui.screens.habayeb.components.CustomerItemRow
 import com.example.ui.screens.habayeb.components.AddTransactionPopup
 import com.example.ui.screens.habayeb.components.CalculatorModal
+import com.example.ui.screens.habayeb.components.HabayebNetBalanceHeader
+import com.example.ui.screens.habayeb.components.HabayebFilterTabs
 val activeThemeColor = Color(0xFF3F51B5)    // Royal Indigo
 val activeSubColor = Color(0xFFE8EAF6)       // Pastel Lavender
 val RoyalPurple = activeThemeColor // For compatibility
@@ -519,151 +521,7 @@ fun HabayebScreen(
                     }
                 }
 
-                 if (false) Column(
-                     modifier = Modifier
-                         .fillMaxWidth()
-                         .alpha(collapseProgress.coerceIn(0f, 1f)),
-                     horizontalAlignment = Alignment.CenterHorizontally
-                 ) {
-                     // 2. Big Glassmorphic Net Balance Card (Sleek Slim Edition)
-                     Card(
-                         shape = RoundedCornerShape(20.dp),
-                         colors = CardDefaults.cardColors(
-                             containerColor = Color.White.copy(alpha = 0.14f)
-                         ),
-                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .padding(horizontal = 16.dp, vertical = 4.dp)
-                     ) {
-                         Column(
-                             modifier = Modifier
-                                 .fillMaxWidth()
-                                 .padding(vertical = 8.dp),
-                             horizontalAlignment = Alignment.CenterHorizontally,
-                             verticalArrangement = Arrangement.Center
-                         ) {
-                             Text(
-                                 text = stringResource(id = R.string.habayeb_net_balance),
-                                 color = Color.White.copy(alpha = 0.85f),
-                                 fontSize = 11.sp,
-                                 fontWeight = FontWeight.Bold
-                             )
-                             Spacer(modifier = Modifier.height(4.dp))
-                             val netTotal = totalOwedByThem - totalOwedToThem
-                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                 IconButton(
-                                     onClick = { viewModel.togglePrivacyMode() },
-                                     modifier = Modifier.size(24.dp).padding(end = 6.dp)
-                                 ) {
-                                     Icon(
-                                         imageVector = if (isPrivacyModeState.value) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                         contentDescription = stringResource(id = R.string.habayeb_visibility_toggle),
-                                         tint = Color.White.copy(alpha = 0.7f)
-                                     )
-                                 }
-                                 AutoScaleText(
-                                     text = if (isPrivacyModeState.value) "*****" else formatCurrency(netTotal, currencySymbol),
-                                     baseFontSize = 28.sp,
-                                     color = Color.White,
-                                     fontWeight = FontWeight.Bold,
-                                     textAlign = TextAlign.Center
-                                 )
-                             }
-                         }
-                     }
 
-                     // 3. Compact row of 2 balanced pastel Stats Cards (Super Rich & Thin)
-                     Row(
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .padding(horizontal = 16.dp, vertical = 4.dp),
-                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                         verticalAlignment = Alignment.CenterVertically
-                     ) {
-                         // Right: "لي عند الناس" (Filter Tab 1) - Green Pastel Card
-                         val isTab1Selected = selectedFilterTab == 1
-                         Card(
-                             shape = RoundedCornerShape(12.dp),
-                             colors = CardDefaults.cardColors(
-                                 containerColor = Color(0xFFE8F5E9)
-                             ),
-                             border = BorderStroke(
-                                 width = if (isTab1Selected) 2.dp else 1.dp,
-                                 color = if (isTab1Selected) Color(0xFF10B981) else Color(0xFFA7F3D0)
-                             ),
-                             modifier = Modifier
-                                 .weight(1f)
-                                 .clickable {
-                                     selectedFilterTab = if (isTab1Selected) 0 else 1
-                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                 }
-                         ) {
-                             Column(
-                                 modifier = Modifier
-                                     .fillMaxWidth()
-                                     .padding(vertical = 8.dp),
-                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                 verticalArrangement = Arrangement.Center
-                             ) {
-                                 Text(
-                                     text = stringResource(id = R.string.habayeb_filter_owed_by),
-                                     fontSize = 11.sp,
-                                     fontWeight = FontWeight.Bold,
-                                     color = Color(0xFF047857)
-                                 )
-                                 Spacer(modifier = Modifier.height(2.dp))
-                                 AutoScaleText(
-                                     text = formatCurrency(totalOwedByThem, currencySymbol),
-                                     baseFontSize = 14.sp,
-                                     color = Color(0xFF10B981),
-                                     fontWeight = FontWeight.Bold
-                                 )
-                             }
-                         }
-
-                         // Left: "علي للناس" (Filter Tab 2) - Red Pastel Card
-                         val isTab2Selected = selectedFilterTab == 2
-                         Card(
-                             shape = RoundedCornerShape(12.dp),
-                             colors = CardDefaults.cardColors(
-                                 containerColor = Color(0xFFFFEBEE)
-                             ),
-                             border = BorderStroke(
-                                 width = if (isTab2Selected) 2.dp else 1.dp,
-                                 color = if (isTab2Selected) Color(0xFFEF4444) else Color(0xFFFECACA)
-                             ),
-                             modifier = Modifier
-                                 .weight(1f)
-                                 .clickable {
-                                     selectedFilterTab = if (isTab2Selected) 0 else 2
-                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                 }
-                         ) {
-                             Column(
-                                 modifier = Modifier
-                                     .fillMaxWidth()
-                                     .padding(vertical = 8.dp),
-                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                 verticalArrangement = Arrangement.Center
-                             ) {
-                                 Text(
-                                     text = stringResource(id = R.string.habayeb_filter_owed_to),
-                                     fontSize = 11.sp,
-                                     fontWeight = FontWeight.Bold,
-                                     color = Color(0xFFB91C1C)
-                                 )
-                                 Spacer(modifier = Modifier.height(2.dp))
-                                 AutoScaleText(
-                                     text = formatCurrency(totalOwedToThem, currencySymbol),
-                                     baseFontSize = 14.sp,
-                                     color = Color(0xFFEF4444),
-                                     fontWeight = FontWeight.Bold
-                                 )
-                             }
-                         }
-                     }
-                 }
              }
          } // Close Floating Header Card
 
@@ -677,155 +535,25 @@ fun HabayebScreen(
             ) {
                 // Item 1: Giant Net Balance Card
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = activeThemeColor
-                            ),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = stringResource(id = R.string.habayeb_net_balance),
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                val netTotal = totalOwedByThem - totalOwedToThem
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = { viewModel.togglePrivacyMode() },
-                                        modifier = Modifier.size(20.dp).padding(end = 4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isPrivacyModeState.value) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = stringResource(id = R.string.habayeb_visibility_toggle),
-                                            tint = Color.White.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(netTotal, currencySymbol),
-                                        baseFontSize = 20.sp,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    HabayebNetBalanceHeader(
+                        totalOwedByThem = totalOwedByThem,
+                        totalOwedToThem = totalOwedToThem,
+                        currencySymbol = currencySymbol,
+                        isPrivacyMode = isPrivacyModeState.value,
+                        onTogglePrivacy = { viewModel.togglePrivacyMode() }
+                    )
                 }
 
                 // Item 2: Compact Row of 2 Interactive Filter Tabs
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Right: "لي عند الناس" (Filter Tab 1) - Green Pastel Card
-                        val isTab1Selected = selectedFilterTab == 1
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isTab1Selected) Color(0xFFFEE2E2) else Color(0xFFFFEBEE)
-                            ),
-                            border = BorderStroke(
-                                width = if (isTab1Selected) 1.5.dp else 1.dp,
-                                color = if (isTab1Selected) Color(0xFFEF4444) else Color(0xFFFECACA)
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    selectedFilterTab = if (isTab1Selected) 0 else 1
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = stringResource(id = R.string.habayeb_filter_owed_by),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFB91C1C)
-                                    )
-                                    Spacer(modifier = Modifier.height(1.dp))
-                                    AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(totalOwedByThem, currencySymbol),
-                                        baseFontSize = 13.sp,
-                                        color = Color(0xFFEF4444),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-
-                        // Left: "علي للناس" (Filter Tab 2) - Green Pastel Card
-                        val isTab2Selected = selectedFilterTab == 2
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isTab2Selected) Color(0xFFD1FAE5) else Color(0xFFE8F5E9)
-                            ),
-                            border = BorderStroke(
-                                width = if (isTab2Selected) 1.5.dp else 1.dp,
-                                color = if (isTab2Selected) Color(0xFF10B981) else Color(0xFFA7F3D0)
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    selectedFilterTab = if (isTab2Selected) 0 else 2
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = stringResource(id = R.string.habayeb_filter_owed_to),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF047857)
-                                    )
-                                    Spacer(modifier = Modifier.height(1.dp))
-                                    AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(totalOwedToThem, currencySymbol),
-                                        baseFontSize = 13.sp,
-                                        color = Color(0xFF10B981),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    HabayebFilterTabs(
+                        selectedFilterTab = selectedFilterTab,
+                        onFilterTabSelected = { selectedFilterTab = it },
+                        totalOwedByThem = totalOwedByThem,
+                        totalOwedToThem = totalOwedToThem,
+                        currencySymbol = currencySymbol,
+                        haptic = haptic
+                    )
                 }
 
              item {

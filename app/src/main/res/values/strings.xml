@@ -101,6 +101,12 @@
     <string name="habayeb_select_all">تحديد الكل</string>
     <string name="habayeb_search_label">البحث</string>
     <string name="habayeb_net_balance">إجمالي الرصيد الصافي</string>
+    <string name="habayeb_net_title_assets">إجمالي الرصيد الصافي (مستحق لي ↗️)</string>
+    <string name="habayeb_net_title_liabilities">إجمالي الرصيد الصافي (مطلوب مني ↘️)</string>
+    <string name="habayeb_net_title_balanced">إجمالي الرصيد الصافي (متعادل ⚖️)</string>
+    <string name="habayeb_net_badge_assets">المبلغ بالصافي لصالحك بالكامل ✨</string>
+    <string name="habayeb_net_badge_liabilities">المبلغ بالصافي التزام/دين للناس عليك ⚠️</string>
+    <string name="habayeb_net_badge_balanced">جميع الحسابات متساوية ومتوازنة بالتمام 🤝</string>
     <string name="habayeb_visibility_toggle">عرض المبالغ</string>
     <string name="habayeb_owed_by_them">لي عند الناس</string>
     <string name="habayeb_owed_to_them">علي للناس</string>
@@ -530,6 +536,12 @@
     <string name="settings_save_passcode_btn">حفظ وتغليق القفل 💾</string>
     <string name="settings_permissions_dialog_title">طلب صلاحيات النسخ الاحتياطي ⚙️💾</string>
     <string name="settings_permissions_dialog_desc">لتفعيل نظام التخزين والمزامنة التلقائي وحفظ ملفات (.mzd) في ذاكرة الهاتف العامة (Documents/Mizan_Backups)، يتطلب التطبيق الحصول صراحة على الصلاحيات التالية لتفادي فشل الحفظ أو الحظر:</string>
+    <string name="settings_permissions_storage_label">صلاحية الوصول ومساحة التخزين لإنشاء الأرشيف</string>
+    <string name="settings_permissions_manage_files_label">إدارة ملفات الجهاز (لتخطي حماية الأندرويد 11+)</string>
+    <string name="settings_permissions_notifications_label">صلاحية الإشعارات لتلقي تنبيهات نجاح/فشل المزامنة</string>
+    <string name="settings_permissions_fallback_note">ملاحظة: في حال لم تمنح هذه الصلاحيات، سيظل التطبيق قادراً على حفظ البيانات مؤقتاً داخل التخزين الداخلي الآمن للبرنامج.</string>
+    <string name="settings_permissions_grant_btn">منح الصلاحيات 🔓</string>
+    <string name="settings_permissions_internal_storage_btn">استخدام التخزين المؤقت</string>
     <string name="settings_trap_dialog_title">إجراء بالغ الخطورة! ⚠️</string>
     <string name="settings_trap_dialog_desc">هل أنت متأكد تماماً من مسح كافة السجلات؟ هذا الإجراء سيمحي كل شيء نهائياً من الصندوق واليوميات والالتزامات ولا يمكن تدارك أو استرجاع المعلومات مجدداً.</string>
     <string name="settings_trap_dialog_cancel">تراجع، حافظ على بياناتي 🛡️</string>
@@ -539,6 +551,8 @@
     <string name="settings_security_gate_error">الرمز أو العبارة غير متطابقة مسبقاً! ❌</string>
     <string name="settings_security_gate_confirm">تحقق ومتابعة</string>
     <string name="settings_security_gate_cancel">إلغاء الإجراء</string>
+    <string name="settings_security_gate_label">رمز القفل أو عبارة الاسترداد</string>
+    <string name="settings_security_gate_placeholder">أدخل بيانات التحقق...</string>
     <string name="settings_toast_cloud_syncing">جاري رفع وتأمين السحاب... ☁️</string>
     <string name="settings_toast_synced_desc">تمت المزامنة وحفظ النسخة ☁️</string>
     <string name="settings_toast_permission_manage_files">الرجاء تفعيل صلاحية \'إدارة جميع الملفات\' للتمكن من حفظ النسخ في مجلد Documents المالي الموحد.</string>
@@ -880,4 +894,12 @@
     <string name="habayeb_customers_count">%d زبائن</string>
     <string name="habayeb_last_modified">آخر تعديل: %s</string>
     <string name="habayeb_category_other">أخرى</string>
+    <string name="contact_whatsapp_direct">تواصل مباشر عبر الواتساب</string>
+    <string name="biz_zoom_and_pan">تقريب وتحريك الصورة:</string>
+    <string name="cloud_google_connected">حساب Google متصل</string>
+    <string name="date_diff_over_month">منذ أكثر من شهر</string>
+    <string name="date_diff_days_pattern">بفارق %1$d يوماً</string>
+    <string name="date_diff_one_day">بفارق يوم واحد</string>
+    <string name="date_diff_hours_pattern">بفارق %1$d ساعة</string>
+    <string name="date_diff_very_close">متقاربان جداً</string>
 </resources>

@@ -7,11 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.R
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftRed
 
@@ -37,7 +39,7 @@ fun ResetTrapDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "إجراء بالغ الخطورة! ⚠️",
+                    text = stringResource(R.string.settings_trap_dialog_title),
                     color = SoftRed,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -48,7 +50,7 @@ fun ResetTrapDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "هل أنت متأكد تماماً من مسح كافة السجلات؟ هذا الإجراء سيمحي كل شيء نهائياً من الصندوق واليوميات والالتزامات ولا يمكن تدارك أو استرجاع المعلومات مجدداً.",
+                    text = stringResource(R.string.settings_trap_dialog_desc),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
@@ -67,7 +69,7 @@ fun ResetTrapDialog(
                         .height(52.dp)
                 ) {
                     Text(
-                        text = "تراجع، حافظ على بياناتي 🛡️",
+                        text = stringResource(R.string.settings_trap_dialog_cancel),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -82,7 +84,7 @@ fun ResetTrapDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "نعم، امسح كل سجلاتي نهائياً",
+                        text = stringResource(R.string.settings_trap_dialog_confirm),
                         color = Color.LightGray,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Light,

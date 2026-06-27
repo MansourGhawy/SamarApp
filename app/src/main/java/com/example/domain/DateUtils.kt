@@ -47,18 +47,18 @@ object DateUtils {
         return "$monthPart $yearPart"
     }
 
-    fun formatDurationBetween(newerSec: Long, olderSec: Long): String {
+    fun formatDurationBetween(newerSec: Long, olderSec: Long, context: android.content.Context? = null): String {
         val diffSec = (newerSec - olderSec).coerceAtLeast(0)
         val days = diffSec / (24 * 3600)
         val remainingAfterDays = diffSec % (24 * 3600)
         val hours = remainingAfterDays / 3600
 
         return when {
-            days > 30 -> "منذ أكثر من شهر"
-            days > 1 -> "بفارق $days يوماً"
-            days == 1L -> "بفارق يوم واحد"
-            hours > 1 -> "بفارق $hours ساعة"
-            else -> "متقاربان جداً"
+            days > 30 -> context?.getString(com.example.R.string.date_diff_over_month) ?: "منذ أكثر من شهر"
+            days > 1 -> context?.getString(com.example.R.string.date_diff_days_pattern, days) ?: "بفارق $days يوماً"
+            days == 1L -> context?.getString(com.example.R.string.date_diff_one_day) ?: "بفارق يوم واحد"
+            hours > 1 -> context?.getString(com.example.R.string.date_diff_hours_pattern, hours) ?: "بفارق $hours ساعة"
+            else -> context?.getString(com.example.R.string.date_diff_very_close) ?: "متقاربان جداً"
         }
     }
 }

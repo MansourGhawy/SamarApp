@@ -14,11 +14,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.R
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftRed
 
@@ -31,6 +33,7 @@ fun SecurityGateDialog(
     var securityGateInput by remember { mutableStateOf("") }
     var securityGateError by remember { mutableStateOf("") }
     val haptic = LocalHapticFeedback.current
+    val errorMsg = stringResource(R.string.settings_security_gate_error)
 
     Dialog(
         onDismissRequest = onDismiss
@@ -57,7 +60,7 @@ fun SecurityGateDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Security,
-                        contentDescription = "التحقق الأمني",
+                        contentDescription = stringResource(R.string.settings_security_gate_title),
                         tint = EmeraldPrimary,
                         modifier = Modifier.size(28.dp)
                     )
@@ -66,7 +69,7 @@ fun SecurityGateDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "بوابة التحقق الأمني 🛡️",
+                    text = stringResource(R.string.settings_security_gate_title),
                     color = EmeraldPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -77,7 +80,7 @@ fun SecurityGateDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "لتأكيد هويتك وحماية خصوصية التطبيق، الرجاء إدخال الرمز السري الحالي المكون من 4 أرقام أو عبارة الاسترداد الخاصة بك للمتابعة.",
+                    text = stringResource(R.string.settings_security_gate_desc),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -92,8 +95,8 @@ fun SecurityGateDialog(
                         securityGateInput = it
                         securityGateError = ""
                     },
-                    label = { Text("رمز القفل أو عبارة الاسترداد") },
-                    placeholder = { Text("أدخل بيانات التحقق...") },
+                    label = { Text(stringResource(R.string.settings_security_gate_label)) },
+                    placeholder = { Text(stringResource(R.string.settings_security_gate_placeholder)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -129,7 +132,7 @@ fun SecurityGateDialog(
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("إلغاء الإجراء", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(stringResource(R.string.settings_security_gate_cancel), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
                     // Confirm button
@@ -139,7 +142,7 @@ fun SecurityGateDialog(
                                 onVerifySuccess()
                             } else {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                securityGateError = "الرمز أو العبارة غير متطابقة مسبقاً! ❌"
+                                securityGateError = errorMsg
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
@@ -149,7 +152,7 @@ fun SecurityGateDialog(
                             .height(48.dp),
                         enabled = securityGateInput.isNotBlank()
                     ) {
-                        Text("تحقق ومتابعة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(stringResource(R.string.settings_security_gate_confirm), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

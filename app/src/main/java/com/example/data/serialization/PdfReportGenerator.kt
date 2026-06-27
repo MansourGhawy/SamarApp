@@ -96,16 +96,18 @@ object PdfReportGenerator {
                 if (logoFile.exists()) {
                     val rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath)
                     if (rawBitmap != null) {
-                        val scaledLogo = Bitmap.createScaledBitmap(rawBitmap, 45, 45, true)
-                        canvas.drawBitmap(scaledLogo, 35f, 40f, null)
-
-                        val framePaint = Paint().apply {
-                            color = Color.parseColor(primaryColorHex)
-                            style = Paint.Style.STROKE
-                            strokeWidth = 1f
-                            isAntiAlias = true
-                        }
-                        canvas.drawRoundRect(33f, 38f, 82f, 87f, 4f, 4f, framePaint)
+                        val maxW = 45f
+                        val maxH = 45f
+                        val originalWidth = rawBitmap.width.toFloat()
+                        val originalHeight = rawBitmap.height.toFloat()
+                        val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
+                        val finalW = (originalWidth * scale).coerceAtLeast(1f)
+                        val finalH = (originalHeight * scale).coerceAtLeast(1f)
+                        val scaledLogo = Bitmap.createScaledBitmap(rawBitmap, finalW.toInt(), finalH.toInt(), true)
+                        
+                        val logoX = 35f + ((maxW - finalW) / 2f)
+                        val logoY = 40f + ((maxH - finalH) / 2f)
+                        canvas.drawBitmap(scaledLogo, logoX, logoY, null)
                     }
                 }
             } catch (e: Exception) {

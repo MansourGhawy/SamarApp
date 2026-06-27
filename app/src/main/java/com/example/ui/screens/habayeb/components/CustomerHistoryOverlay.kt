@@ -74,7 +74,6 @@ import com.example.R
 import com.example.data.local.HabayebCustomer
 import com.example.data.local.HabayebTransaction
 import com.example.data.serialization.PdfReportGenerator
-import com.example.ui.screens.AutoScaleText
 import com.example.ui.screens.formatCurrency
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
@@ -270,7 +269,10 @@ fun CustomerHistoryOverlay(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             // Mini Avatar Circle
                             Box(
                                 modifier = Modifier
@@ -295,7 +297,9 @@ fun CustomerHistoryOverlay(
                                         text = activeCustomer.name,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B)
+                                        color = Color(0xFF1E293B),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     IconButton(
@@ -322,15 +326,19 @@ fun CustomerHistoryOverlay(
                             }
                         }
 
+                        Spacer(modifier = Modifier.width(12.dp))
+
                         // Net balance summary on left side in RTL (right end visually)
-                        Column(horizontalAlignment = Alignment.End) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.wrapContentWidth(Alignment.End)
+                        ) {
                             Text(
                                 text = stringResource(id = R.string.habayeb_remaining_balance),
                                 fontSize = 11.sp,
                                 color = Color.Gray,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
                             
                             val textBalanceColor = when {
                                 netDebt > 0.0 -> Color(0xFFDC2626) // Red
@@ -343,20 +351,19 @@ fun CustomerHistoryOverlay(
                                 else -> stringResource(id = R.string.habayeb_status_balanced)
                             }
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "($stateLabel) ",
-                                    fontSize = 9.sp,
-                                    color = textBalanceColor,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                AutoScaleText(
-                                    text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
-                                    baseFontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textBalanceColor
-                                )
-                            }
+                            Text(
+                                text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = textBalanceColor
+                            )
+                            
+                            Text(
+                                text = if (netDebt != 0.0) "($stateLabel)" else stateLabel,
+                                fontSize = 11.sp,
+                                color = textBalanceColor,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }

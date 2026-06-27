@@ -333,11 +333,6 @@
     <string name="ledger_title">ميزان الدار</string>
     <string name="ledger_subtitle">صمام أمان التدبير المالي</string>
     <string name="ledger_actual_cash">المبلغ المتاح الفعلي</string>
-    <string name="ledger_net_balance_title">إجمالي الرصيد الصافي</string>
-    <string name="ledger_net_deficit_badge">↙ مطلوب عليك</string>
-    <string name="ledger_net_surplus_badge">↗ مستحق لك</string>
-    <string name="ledger_net_deficit_desc">أنت مدين بمبلغ صافي للآخرين</string>
-    <string name="ledger_net_surplus_desc">لديك مستحقات صافية عند الآخرين</string>
     <string name="ledger_visibility_desc">عرض المبالغ</string>
     <string name="ledger_link_debts">تضمين الديون المستحقة 🔗</string>
     <string name="ledger_commitments_ratio">نسبة تغطية الالتزامات</string>

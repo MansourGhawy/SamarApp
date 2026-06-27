@@ -145,17 +145,7 @@ fun MainLedgerView(
 
     // Floating commitment dialog
     var showCommitmentsListSheet by remember { mutableStateOf(false) }
-    val commitmentsScaleFraction = remember { Animatable(0f) }
-    LaunchedEffect(showCommitmentsListSheet) {
-        if (showCommitmentsListSheet) {
-            commitmentsScaleFraction.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(350, easing = FastOutSlowInEasing)
-            )
-        } else {
-            commitmentsScaleFraction.snapTo(0f)
-        }
-    }
+    
     var reorderCommitmentTarget by remember { mutableStateOf<FixedCommitment?>(null) }
     var showCommitmentDialog by remember { mutableStateOf(false) }
     var editingCommitment by remember { mutableStateOf<FixedCommitment?>(null) }
@@ -405,443 +395,93 @@ fun MainLedgerView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Compact Header + Total Cash + Coverage Ratio
+// استدعاء مكون الهيدر ومؤشرات الكاش والتغطية المفرز
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                        .background(EmeraldPrimary)
-                        .statusBarsPadding()
-                        .padding(bottom = 4.dp)
-                ) {
-                    val topRowHeight = if (isDaySelectionMode) {
-                        52.dp
-                    } else {
-                        (46 * (1f - collapseFraction)).dp
-                    }
-                    val topRowAlpha = if (isDaySelectionMode) 1f else (1f - collapseFraction)
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(topRowHeight)
-                            .alpha(topRowAlpha)
-                    ) {
-                        if (isDaySelectionMode) {
-                            // High-fidelity Multi-Select Days Selection Header Row
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Cancel button & Select All label/button
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            isDaySelectionMode = false
-                                            selectedDayKeys.clear()
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        },
-                                        modifier = Modifier
-                                            .size(34.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.15f))
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = stringResource(id = R.string.common_cancel),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                    }
-
-                                    TextButton(
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            val allKeys = monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
-                                            if (selectedDayKeys.size == allKeys.size) {
-                                                selectedDayKeys.clear()
-                                            } else {
-                                                selectedDayKeys.clear()
-                                                selectedDayKeys.addAll(allKeys)
-                                            }
-                                        },
-                                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-                                        modifier = Modifier.height(34.dp)
-                                    ) {
-                                        val allKeys = monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
-                                        Text(
-                                            text = if (selectedDayKeys.size == allKeys.size) stringResource(id = R.string.ledger_cancel_all) else stringResource(id = R.string.ledger_select_all),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-
-                                // Center text: Selection status
-                                val selectedCountText = when (selectedDayKeys.size) {
-                                    1 -> stringResource(id = R.string.ledger_selected_days_count_1)
-                                    2 -> stringResource(id = R.string.ledger_selected_days_count_2)
-                                    else -> stringResource(id = R.string.ledger_selected_days_count_more, selectedDayKeys.size)
-                                }
-                                Text(
-                                    text = selectedCountText,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
-
-                                // Right portion: Delete Button
-                                IconButton(
-                                    onClick = {
-                                        if (selectedDayKeys.isNotEmpty()) {
-                                            showDeleteDaysDialog = true
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.15f))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = stringResource(id = R.string.ledger_bulk_delete_days_desc),
-                                        tint = if (selectedDayKeys.isEmpty()) Color.White.copy(alpha = 0.4f) else Color(0xFFFF8A80),
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            }
-                        } else {
-                            // Header Box (RTL-optimized & symmetric) - Centering the title perfectly to prevent any leaning/biasing
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 2.dp)
-                            ) {
-                                val infiniteTransition = rememberInfiniteTransition(label = "HeaderTransition")
-
-                                Row(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterStart),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Menu item (☰)
-                                    IconButton(
-                                        onClick = { onMenuClick() },
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.15f))
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Menu,
-                                            contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-
-                                }
-
-                                // Center portion: App name & description styled as a premium light subtitle - Mathematically centered in the Box
-                                Column(
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .padding(top = 12.dp, bottom = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = stringResource(id = R.string.ledger_title),
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Black,
-                                        letterSpacing = 0.5.sp,
-                                        color = Color.White
-                                    )
-                                    Spacer(modifier = Modifier.height(1.dp))
-                                    Text(
-                                        text = stringResource(id = R.string.ledger_subtitle),
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Light,
-                                        color = Color(0xFFB2DFDB)
-                                    )
-                                }
-
-                                // Left portion: Modern Search Button to avoid any overlay completely
-                                IconButton(
-                                    onClick = { showSearch = true },
-                                    modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.15f))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = stringResource(id = R.string.habayeb_search_label),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Total Cash Center - Upgraded Luxury Glassmorphic layout (Tighter padding and sizes)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Glassmorphic Card Container
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White.copy(alpha = 0.12f))
-                                .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp))
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp, horizontal = 12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = stringResource(id = R.string.ledger_actual_cash),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFEF08A) // Glowing soft gold
-                                )
-                                Spacer(modifier = Modifier.height(1.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
-                                    IconButton(
-                                        onClick = { viewModel.togglePrivacyMode() },
-                                        modifier = Modifier.size(24.dp).padding(end = 6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = stringResource(id = R.string.ledger_visibility_desc),
-                                            tint = Color.White.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Text(
-                                        text = if (isPrivacyMode) "*****" else viewModel.formatCurrency(totalCash, settings.currencySymbol),
-                                        fontSize = 24.sp,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                }
-                            }
-                        }
-
-                        // Redundant local capital bar removed as requested.
-
-                        // Coverage Bar (More compact spacing)
-                        if (commitments.isNotEmpty()) {
-                            val totalTarget = commitments.sumOf { it.targetAmount }
-                            val totalAllocated = computedCommitments.sumOf { it.second }
-                            val percentFloat = if (totalTarget > 0.0) {
-                                (totalAllocated / totalTarget).toFloat().coerceIn(0f, 1f)
+                val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
+                
+                // حساب نسب التقدم لتمريرها مباشرة لتجنب التكرار داخل المكون
+                val totalTarget = commitments.sumOf { it.targetAmount }
+                val totalAllocated = computedCommitments.sumOf { it.second }
+                val percentFloat = if (totalTarget > 0.0) {
+                    (totalAllocated / totalTarget).toFloat().coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+                
+                val cashPercentFloat = remember(commitments, totalCash) {
+                    if (totalTarget > 0.0) {
+                        var remainingCash = totalCash.toDouble()
+                        val allocated = commitments.sumOf { fc ->
+                            val needed = (fc.targetAmount - fc.currentProgress).coerceAtLeast(0.0)
+                            if (remainingCash >= needed) {
+                                remainingCash -= needed
+                                needed
+                            } else if (remainingCash > 0) {
+                                val temp = remainingCash
+                                remainingCash = 0.0
+                                temp
                             } else {
-                                0f
-                            }
-
-                            val cashPercentFloat = remember(commitments, totalCash) {
-                                if (totalTarget > 0.0) {
-                                    var remainingCash = totalCash.toDouble()
-                                    val allocated = commitments.sumOf { fc ->
-                                        val needed = (fc.targetAmount - fc.currentProgress).coerceAtLeast(0.0)
-                                        if (remainingCash >= needed) {
-                                            remainingCash -= needed
-                                            needed
-                                        } else if (remainingCash > 0) {
-                                            val temp = remainingCash
-                                            remainingCash = 0.0
-                                            temp
-                                        } else {
-                                            0.0
-                                        }
-                                    }
-                                    ((commitments.sumOf { it.currentProgress } + allocated) / totalTarget).toFloat().coerceIn(0f, 1f)
-                                } else {
-                                    0f
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(2.dp))
-                            
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 1.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(id = R.string.ledger_link_debts),
-                                    color = Color.White.copy(alpha = 0.95f),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(end = 4.dp)
-                                )
-                                Switch(
-                                    checked = linkHabayebDebts,
-                                    onCheckedChange = { viewModel.toggleLinkHabayebDebts(it) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFF3E8FF),
-                                        checkedTrackColor = Color(0xFF8B5CF6),
-                                        uncheckedThumbColor = Color(0xFFE2E8F0),
-                                        uncheckedTrackColor = Color.White.copy(alpha = 0.15f)
-                                    ),
-                                    modifier = Modifier.height(18.dp).scale(0.7f)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(Color(0xFF00E676).copy(alpha = 0.2f))
-                                        .border(1.dp, Color(0xFF00E676), RoundedCornerShape(5.dp))
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "${(percentFloat * 100).toInt()}%",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF00E676)
-                                    )
-                                }
-                                Text(
-                                    text = stringResource(id = R.string.ledger_commitments_ratio),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White.copy(alpha = 0.95f)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(1.dp))
-                            
-                            val neonGradient = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF00E676), // Neon green
-                                    Color(0xFF00B0FF)  // Neon light blue
-                                )
-                            )
-
-                            Box(modifier = Modifier.fillMaxWidth().height(4.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(Color.White.copy(alpha = 0.2f))
-                                )
-                                if (linkHabayebDebts && percentFloat > 0f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(percentFloat)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(2.dp))
-                                            .background(Color(0xFFC4B5FD))
-                                    )
-                                }
-                                val frontPercent = if (linkHabayebDebts) cashPercentFloat else percentFloat
-                                if (frontPercent > 0f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(frontPercent)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(2.dp))
-                                            .background(neonGradient)
-                                    )
-                                }
+                                0.0
                             }
                         }
+                        ((commitments.sumOf { it.currentProgress } + allocated) / totalTarget).toFloat().coerceIn(0f, 1f)
+                    } else {
+                        0f
                     }
                 }
+
+                MainLedgerHeader(
+                    collapseFraction = collapseFraction,
+                    isPrivacyMode = isPrivacyMode,
+                    isDaySelectionMode = isDaySelectionMode,
+                    selectedDayKeys = selectedDayKeys,
+                    monthlyLedger = monthlyLedger,
+                    totalCash = totalCash,
+                    currencySymbol = settings.currencySymbol,
+                    commitments = commitments,
+                    linkHabayebDebts = linkHabayebDebts,
+                    percentFloat = percentFloat,
+                    cashPercentFloat = cashPercentFloat,
+                    onTogglePrivacyMode = { viewModel.togglePrivacyMode() },
+                    onToggleLinkHabayebDebts = { viewModel.toggleLinkHabayebDebts(it) },
+                    onMenuClick = { onMenuClick() },
+                    onSearchClick = { showSearch = true },
+                    onCancelDaySelection = {
+                        isDaySelectionMode = false
+                        selectedDayKeys.clear()
+                    },
+                    onSelectAllDaysClick = {
+                        val allKeys = monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
+                        if (selectedDayKeys.size == allKeys.size) {
+                            selectedDayKeys.clear()
+                        } else {
+                            selectedDayKeys.clear()
+                            selectedDayKeys.addAll(allKeys)
+                        }
+                    },
+                    onBulkDeleteDaysClick = { showDeleteDaysDialog = true },
+                    formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) }
+                )
             }
 
             // Commitments Summary Cards - Row 1 of the 2x2 Grid block
+// استدعاء مكون ملخص الالتزامات المفرز
             if (commitments.isNotEmpty()) {
                 item {
-                    val totalRemainingCommitments = computedCommitments.sumOf { it.third }
-                    val allocatedFromCashTotal = computedCommitments.sumOf {
-                        val needed = (it.first.targetAmount - it.first.currentProgress).coerceAtLeast(0.0)
-                        needed - it.third
-                    }
-                    val netAmount = (totalCash.toDouble() - allocatedFromCashTotal).coerceAtLeast(0.0)
+                    CommitmentsSummaryCards(
+                        commitments = commitments,
+                        computedCommitments = computedCommitments,
+                        totalCash = totalCash,
+                        currencySymbol = settings.currencySymbol,
+                        formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) }
+                    )
+                }
+            }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 5.dp), // perfectly balanced 5dp vertical margin padding to align with Row 1
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Card 1: Net Amount Capsule matching Row 1 style & size
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(50.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFEDF7ED)) // Light Pastel Green
-                                .border(
-                                    1.dp,
-                                    Color(0xFFC8E6C9), // Soft green boundary
-                                    RoundedCornerShape(12.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.ledger_net_prefix, viewModel.formatCurrency(java.math.BigDecimal.valueOf(netAmount), settings.currencySymbol)),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2E7D32), // Clear green readability
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        // Card 2: Remaining Commitments Capsule matching Row 1 style & size
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(50.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFFDEDED)) // Light Pastel Red
-                                .border(
-                                    1.dp,
-                                    Color(0xFFFFCDD2), // Soft red boundary
-                                    RoundedCornerShape(12.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.ledger_remaining_commitments, viewModel.formatCurrency(java.math.BigDecimal.valueOf(totalRemainingCommitments), settings.currencySymbol)),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC62828), // Clear red readability
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+            // Budget Advice Banner based on daily comparison
+            item {
+                Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                    BudgetAdviceBanner(diffExp)
                 }
             }
 
@@ -1083,324 +723,70 @@ fun MainLedgerView(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-        // Floating action buttons (Dual floating configuration) - Compressed & modern
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 90.dp, start = 12.dp, end = 12.dp) // Elevated to float over bottom Pill Navigation Dock
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Delete selection items floating banner if active
-            if (isSelectionMode && selectedTxIds.isNotEmpty()) {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            viewModel.deleteTransactionsBulk(selectedTxIds.toList(), context.getString(R.string.ledger_delete_selected_warning, selectedTxIds.size))
-                            delay(200)
-                            clearSelection()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftRed),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .height(46.dp)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.ledger_delete_selected_warning, selectedTxIds.size), modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        stringResource(id = R.string.ledger_delete_selected_warning, selectedTxIds.size),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
+// استدعاء اللوحة العائمة السفلية المفرزة
+        LedgerBottomDock(
+            isSelectionMode = isSelectionMode,
+            selectedTxIdsCount = selectedTxIds.size,
+            onDeleteSelectedTransactions = {
+                scope.launch {
+                    viewModel.deleteTransactionsBulk(
+                        selectedTxIds.toList(), 
+                        context.getString(R.string.ledger_delete_selected_warning, selectedTxIds.size)
                     )
+                    delay(200)
+                    clearSelection()
                 }
-            }
+            },
+            onGoalsClick = { showCommitmentsListSheet = true },
+            onAddIncomeClick = {
+                editingTransaction = null
+                txDialogType = "INCOME"
+                showTxDialog = true
+            },
+            onAddExpenseClick = {
+                editingTransaction = null
+                txDialogType = "EXPENSE"
+                showTxDialog = true
+            },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )}
 
-            if (!isSelectionMode) {
-                // Breathe/Pulsing Glow Effect for Goals & Commitments
-                val pulsingTransition = rememberInfiniteTransition(label = "CommitmentPulsingTransition")
-                val scalePulse by pulsingTransition.animateFloat(
-                    initialValue = 0.98f,
-                    targetValue = 1.02f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2000, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "ScalePulse"
-                )
-                val borderGlow by pulsingTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 0.8f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2000, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "BorderGlow"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            scaleX = scalePulse
-                            scaleY = scalePulse
-                            transformOrigin = TransformOrigin(0.5f, 1.0f)
-                        }
-                        .clip(CircleShape)
-                        .background(Color(0xFFF1F8E9)) // Soft olive-green tint
-                        .border(
-                            width = 1.dp,
-                            color = Color(0xFF33691E).copy(alpha = borderGlow), // Pulsing olive-green border
-                            shape = CircleShape
-                        )
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showCommitmentsListSheet = true
-                        }
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.ledger_goals_and_commitments),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1B5E20) // Deep Dark Olive/Green text
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(0.95f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Add Income Button (Add Finance) - Sleek Pill style
-                Button(
-                    onClick = {
-                        editingTransaction = null
-                        txDialogType = "INCOME"
-                        showTxDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftGreen),
-                    shape = RoundedCornerShape(24.dp), // Modern Full-Pill Curve
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp) // Sleek, compressed button height
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.ledger_add_income), tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(id = R.string.ledger_add_income), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-
-                // Add Expense Button (Record Platform Expense) - Sleek Pill style
-                Button(
-                    onClick = {
-                        editingTransaction = null
-                        txDialogType = "EXPENSE"
-                        showTxDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = CoralAccent),
-                    shape = RoundedCornerShape(24.dp), // Modern Full-Pill Curve
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp) // Sleek, compressed button height
-                ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(id = R.string.ledger_add_expense), tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(id = R.string.ledger_add_expense), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            }
-        }
-    }
-
-    // Modal dialog for Recording Income / Expenses
+ // استدعاء نافذة إضافة وتعديل المعاملات المفرزة
     if (showTxDialog) {
-        var numAmount by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(editingTransaction?.amount?.toString() ?: "") }
-        var descriptionStr by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(editingTransaction?.description ?: "") }
-        var categoryName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(editingTransaction?.category ?: if (txDialogType == "INCOME") context.getString(R.string.ledger_category_overall_income) else context.getString(R.string.ledger_category_expense)) }
-        var categoryEmoji by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
-
-        var showCalcPopup by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-        var isSavingTx by remember { mutableStateOf(false) }
-        var showCategoryPickerSheet by remember { mutableStateOf(false) }
-
-        // Optimize recomposition using derivedStateOf
-        val isConfirmButtonEnabled by remember {
-            derivedStateOf {
-                !isSavingTx && (numAmount.toDoubleOrNull() ?: 0.0) > 0.0
-            }
-        }
-
-        val focusRequester = remember { FocusRequester() }
-        val descriptionFocusRequester = remember { FocusRequester() }
-        val focusManager = LocalFocusManager.current
-        val softwareKeyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-
-        // Autofocus amount on launch
-        LaunchedEffect(Unit) {
-            delay(300)
-            try {
-                focusRequester.requestFocus()
-                softwareKeyboardController?.show()
-            } catch (e: Exception) {}
-        }
-
-        AlertDialog(
-            onDismissRequest = { showTxDialog = false },
-            title = {
-                Text(
-                    text = if (editingTransaction != null) stringResource(id = R.string.ledger_edit_transaction_title) else if (txDialogType == "INCOME") stringResource(id = R.string.ledger_add_income_title) else stringResource(id = R.string.ledger_add_expense_title),
-                    fontWeight = FontWeight.Bold,
-                    color = EmeraldPrimary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    // Autofocus Amount TF
-                    OutlinedTextField(
-                        value = numAmount,
-                        onValueChange = { numAmount = it },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { descriptionFocusRequester.requestFocus() }
-                        ),
-                        label = { Text(stringResource(id = R.string.ledger_amount_label, settings.currencySymbol)) },
-                        singleLine = true,
-                        leadingIcon = {
-                            IconButton(onClick = { showCalcPopup = true }) {
-                                Icon(Icons.Default.Calculate, contentDescription = stringResource(id = R.string.habayeb_calculator), tint = CoralAccent)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Description text input
-                    OutlinedTextField(
-                        value = descriptionStr,
-                        onValueChange = { descriptionStr = it },
-                        label = { Text(stringResource(id = R.string.ledger_desc_label_placeholder)) },
-                        singleLine = false,
-                        maxLines = 3,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(descriptionFocusRequester),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                softwareKeyboardController?.hide()
-                            }
+        val customCats by viewModel.customCategoriesState.collectAsStateWithLifecycle()
+        TransactionRecordDialog(
+            editingTransaction = editingTransaction,
+            txDialogType = txDialogType,
+            currencySymbol = settings.currencySymbol,
+            schoolExpensesEnabled = settings.schoolExpensesEnabled,
+            customCategories = customCats,
+            onDismiss = { showTxDialog = false },
+            onSaveTransaction = { amount, description, category ->
+                if (editingTransaction != null) {
+                    viewModel.updateTransaction(
+                        editingTransaction!!.copy(
+                            amount = amount,
+                            description = description,
+                            category = category
                         )
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Category choosing button (replaces dropdown) - Removed for expenses as requested
-                    if (txDialogType == "INCOME" && editingTransaction != null) {
-                        Button(
-                            onClick = { showCategoryPickerSheet = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                if (categoryName.isNotBlank()) stringResource(id = R.string.ledger_category_label, categoryName) else stringResource(id = R.string.ledger_choose_category_placeholder),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                } else {
+                    viewModel.addTransaction(
+                        type = txDialogType,
+                        category = category,
+                        amount = amount,
+                        description = description
+                    )
                 }
+                showTxDialog = false
             },
-            confirmButton = {
-                Button(
-                    enabled = isConfirmButtonEnabled,
-                    onClick = {
-                        if (isSavingTx) return@Button
-                        isSavingTx = true
-
-                        val amtParsed = numAmount.toDoubleOrNull() ?: 0.0
-                        if (amtParsed > 0) {
-                            if (editingTransaction != null) {
-                                val tx = editingTransaction!!.copy(
-                                    amount = amtParsed,
-                                    description = descriptionStr,
-                                    category = categoryName
-                                )
-                                viewModel.updateTransaction(tx)
-                            } else {
-                                viewModel.addTransaction(
-                                    type = txDialogType,
-                                    category = categoryName,
-                                    amount = amtParsed,
-                                    description = descriptionStr
-                                )
-                            }
-                            showTxDialog = false
-                        } else {
-                            isSavingTx = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text(stringResource(id = R.string.ledger_save_tx_btn))
-                }
+            onAddCustomCategory = { name, tab, emoji ->
+                viewModel.saveCustomCategory(name, tab, emoji)
             },
-            dismissButton = {
-                TextButton(onClick = { showTxDialog = false }) {
-                    Text(stringResource(id = R.string.common_cancel), color = Color.Gray)
-                }
+            onDeleteCustomCategory = { cat ->
+                viewModel.deleteCustomCategory(cat)
             }
         )
-
-        if (showCategoryPickerSheet) {
-            val customCats by viewModel.customCategoriesState.collectAsStateWithLifecycle()
-            CategoryBottomSheet(
-                schoolExpensesEnabled = settings.schoolExpensesEnabled,
-                customCategories = customCats,
-                onCategorySelected = { name, emoji ->
-                    categoryName = "$name $emoji"
-                    showCategoryPickerSheet = false
-                },
-                onAddCustomCategory = { name, emoji, tab ->
-                    viewModel.saveCustomCategory(name, tab, emoji)
-                },
-                onDeleteCategory = { cat ->
-                    viewModel.deleteCustomCategory(cat)
-                },
-                onDismiss = { showCategoryPickerSheet = false }
-            )
-        }
-
-        // Custom Calculator popup trigger
-        if (showCalcPopup) {
-            CalculatorDialog(
-                onDismiss = { showCalcPopup = false },
-                onValueConfirmed = { calcResult ->
-                    numAmount = calcResult.toString()
-                    showCalcPopup = false
-                }
-            )
-        }
     }
 
     if (showSearch) {
@@ -1413,411 +799,50 @@ fun MainLedgerView(
         )
     }
 
-    // Modal dialog for Fixed commitments
-    // Commitments List Popup Dialog
+// استدعاء نافذة قائمة الالتزامات والأهداف المالية المفرزة
     if (showCommitmentsListSheet) {
-        Dialog(onDismissRequest = { showCommitmentsListSheet = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp)
-                    .graphicsLayer(
-                        scaleX = commitmentsScaleFraction.value,
-                        scaleY = commitmentsScaleFraction.value,
-                        alpha = commitmentsScaleFraction.value,
-                        transformOrigin = TransformOrigin(0.5f, 1f)
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconButton(
-                                onClick = { 
-                                    editingCommitment = null
-                                    showCommitmentDialog = true 
-                                },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFFEF3C7))
-                            ) {
-                                Icon(Icons.Default.Add, stringResource(id = R.string.ledger_add_commitment_title), tint = Color(0xFFD97706))
-                            }
-                            IconButton(
-                                onClick = {
-                                    val builder = StringBuilder()
-                                    builder.append(context.getString(R.string.ledger_commitment_box_title))
-                                    var idx = 1
-                                    commitments.forEach { fc ->
-                                        builder.append(context.getString(R.string.ledger_commitment_share_format, idx, fc.name, viewModel.formatDoubleCurrency(fc.targetAmount, settings.currencySymbol)))
-                                        idx++
-                                    }
-                                    
-                                    val totalReq = commitments.sumOf { it.targetAmount }
-                                    val totalRemaining = computedCommitments.sumOf { it.third }
-                                    
-                                    builder.append(context.getString(R.string.ledger_commitment_total_req, viewModel.formatDoubleCurrency(totalReq, settings.currencySymbol)))
-                                    builder.append(context.getString(R.string.ledger_commitment_total_current, viewModel.formatCurrency(totalCash, settings.currencySymbol)))
-                                    builder.append(context.getString(R.string.ledger_commitment_total_remaining, viewModel.formatDoubleCurrency(totalRemaining, settings.currencySymbol)))
-                                    
-                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(android.content.Intent.EXTRA_TEXT, builder.toString())
-                                    }
-                                    try {
-                                        shareIntent.setPackage("com.whatsapp")
-                                        context.startActivity(shareIntent)
-                                    } catch (e: Exception) {
-                                        shareIntent.setPackage(null)
-                                        context.startActivity(android.content.Intent.createChooser(shareIntent, context.getString(R.string.ledger_share_via)))
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFE5F6FD))
-                            ) {
-                                Icon(Icons.Default.Share, stringResource(id = R.string.ledger_whatsapp_whatsapp), tint = Color(0xFF0369A1), modifier = Modifier.size(20.dp))
-                            }
-                        }
-                        
-                        Text(
-                            text = stringResource(id = R.string.ledger_goals_and_commitments),
-                            fontWeight = FontWeight.ExtraBold,
-                            color = EmeraldPrimary,
-                            fontSize = 16.sp
-                        )
-                    }
-                    
-                    if (commitments.isEmpty()) {
-                        Text(
-                            text = stringResource(id = R.string.ledger_commitment_empty_state),
-                            fontSize = 13.sp,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 32.dp)
-                        )
-                    } else {
-                        val totalTargetSum = commitments.sumOf { it.targetAmount }
-                        val totalAllocatedSum = computedCommitments.sumOf { it.second }
-                        val coveredCount = computedCommitments.count { it.third <= 0.0 }
-                        
-                        Text(
-                            text = stringResource(
-                                id = R.string.ledger_commitment_coverage_status,
-                                coveredCount.toString(),
-                                commitments.size,
-                                viewModel.formatDoubleCurrency(totalAllocatedSum, settings.currencySymbol),
-                                viewModel.formatDoubleCurrency(totalTargetSum, settings.currencySymbol)
-                            ),
-                            fontSize = 11.sp,
-                            color = if (totalAllocatedSum >= totalTargetSum) SoftGreen else Color.Gray,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        )
-                        
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxHeight(0.6f)
-                        ) {
-                            itemsIndexed(computedCommitments) { index, (fc, allocated, remaining) ->
-                                val isCovered = remaining <= 0.0
-                                
-                                Card(
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // Left side actions & state
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                var dragOffset by remember { mutableFloatStateOf(0f) }
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(24.dp)
-                                                        .clip(CircleShape)
-                                                        .clickable {
-                                                            reorderCommitmentTarget = fc
-                                                        }
-                                                        .pointerInput(Unit) {
-                                                            detectDragGestures(
-                                                                onDragStart = { _ -> dragOffset = 0f },
-                                                                onDrag = { _, dragAmount ->
-                                                                    dragOffset += dragAmount.y
-                                                                    if (dragOffset > 70f) {
-                                                                        dragOffset = 0f
-                                                                        val pos = index + 2 // index+1 is next, but the user views indices starting at 1, so moving down means position = index+2
-                                                                        if (pos <= commitments.size) {
-                                                                            viewModel.reorderCommitment(fc, pos)
-                                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                        }
-                                                                    } else if (dragOffset < -70f) {
-                                                                        dragOffset = 0f
-                                                                        val pos = index // Moving up means position = index
-                                                                        if (pos >= 1) {
-                                                                            viewModel.reorderCommitment(fc, pos)
-                                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                        }
-                                                                    }
-                                                                },
-                                                                onDragEnd = { dragOffset = 0f }
-                                                            )
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(Icons.Default.Menu, stringResource(id = R.string.ledger_reorder_apply), tint = Color.Gray, modifier = Modifier.size(16.dp))
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        editingCommitment = fc
-                                                        showCommitmentDialog = true
-                                                    },
-                                                    modifier = Modifier.size(24.dp)
-                                                ) {
-                                                    Icon(Icons.Default.Edit, stringResource(id = R.string.ledger_edit_commitment_title), tint = EmeraldPrimary, modifier = Modifier.size(16.dp))
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        viewModel.deleteCommitment(fc.name)
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    },
-                                                    modifier = Modifier.size(24.dp)
-                                                ) {
-                                                    Icon(Icons.Default.Delete, stringResource(id = R.string.ledger_commitment_delete), tint = SoftRed, modifier = Modifier.size(16.dp))
-                                                }
-                                            }
-
-                                            Column(horizontalAlignment = Alignment.Start) {
-                                                if (isCovered) {
-                                                    Text(stringResource(id = R.string.ledger_commitment_completed), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = SoftGreen)
-                                                } else {
-                                                    Text("-${viewModel.formatDoubleCurrency(remaining, settings.currencySymbol)}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = SoftRed)
-                                                    if (allocated > 0.0) {
-                                                        Text(stringResource(id = R.string.ledger_commitment_covered_amount, viewModel.formatDoubleCurrency(allocated, settings.currencySymbol)), fontSize = 9.sp, color = SoftGreen)
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Right side Name/Check
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                ) {
-                                                    val neededToComplete = (fc.targetAmount - fc.currentProgress).coerceAtLeast(0.0)
-                                                    val canAffordButNotCovered = !isCovered && totalCash.toDouble() >= neededToComplete
-                                                    if (canAffordButNotCovered) {
-                                                        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                                                        val alphaAnim by infiniteTransition.animateFloat(
-                                                            initialValue = 0.2f,
-                                                            targetValue = 1.0f,
-                                                            animationSpec = infiniteRepeatable(
-                                                                animation = tween(800, easing = LinearEasing),
-                                                                repeatMode = RepeatMode.Reverse
-                                                            ),
-                                                            label = "alpha"
-                                                        )
-                                                        Text("🟢", modifier = Modifier.alpha(alphaAnim), fontSize = 10.sp)
-                                                    }
-                                                    Text(fc.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EmeraldPrimary)
-                                                }
-                                                Text(stringResource(id = R.string.ledger_commitment_target_prefix, viewModel.formatDoubleCurrency(fc.targetAmount, settings.currencySymbol)), fontSize = 10.sp, color = Color.Gray)
-                                            }
-                                            Checkbox(
-                                                checked = isCovered,
-                                                onCheckedChange = { checked ->
-                                                    viewModel.saveCommitment(fc.name, fc.targetAmount, if (checked) fc.targetAmount else 0.0)
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                },
-                                                colors = CheckboxDefaults.colors(checkedColor = SoftGreen, checkmarkColor = Color.White),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                commitmentsScaleFraction.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = tween(250, easing = FastOutSlowInEasing)
-                                )
-                                showCommitmentsListSheet = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(id = R.string.ledger_done_btn), fontSize = 14.sp)
-                    }
-                }
-            }
-        }
+        CommitmentsListDialog(
+            commitments = commitments,
+            computedCommitments = computedCommitments,
+            totalCash = totalCash,
+            currencySymbol = settings.currencySymbol,
+            onDismiss = { showCommitmentsListSheet = false },
+            onAddCommitmentClick = {
+                editingCommitment = null
+                showCommitmentDialog = true
+            },
+            onEditCommitmentClick = { fc ->
+                editingCommitment = fc
+                showCommitmentDialog = true
+            },
+            onDeleteCommitment = { name -> viewModel.deleteCommitment(name) },
+            onReorderCommitmentClick = { fc -> reorderCommitmentTarget = fc },
+            onReorderCommitmentSwipe = { fc, pos -> viewModel.reorderCommitment(fc, pos) },
+            onSaveCommitmentProgress = { name, target, progress ->
+                viewModel.saveCommitment(name, target, progress)
+            },
+            formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) },
+            formatDoubleCurrency = { value, symbol -> viewModel.formatDoubleCurrency(value, symbol) }
+        )
     }
 
+// استدعاء نافذة إضافة وتعديل الالتزام الفردي المفرزة
     if (showCommitmentDialog) {
-        val nameFocus = remember { FocusRequester() }
-        val targetFocus = remember { FocusRequester() }
-        val progressFocus = remember { FocusRequester() }
-        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-
-        val initialName = editingCommitment?.name ?: ""
-        val initialTarget = editingCommitment?.targetAmount?.let { if (it > 0) it.toInt().toString() else "" } ?: ""
-        val initialProgress = editingCommitment?.currentProgress?.let { if (it > 0) it.toInt().toString() else "" } ?: ""
-
-        var obligationName by androidx.compose.runtime.saveable.rememberSaveable(editingCommitment) { mutableStateOf(initialName) }
-        var targetAmtStr by androidx.compose.runtime.saveable.rememberSaveable(editingCommitment) { mutableStateOf(initialTarget) }
-        var progressAmtStr by androidx.compose.runtime.saveable.rememberSaveable(editingCommitment) { mutableStateOf(initialProgress) }
-
-        LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(300)
-            try {
-                if (editingCommitment == null) {
-                    nameFocus.requestFocus()
-                } else {
-                    targetFocus.requestFocus()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        AlertDialog(
-            onDismissRequest = { 
+        CommitmentEditDialog(
+            editingCommitment = editingCommitment,
+            onDismiss = {
                 showCommitmentDialog = false
                 editingCommitment = null
             },
-            title = {
-                Text(
-                    text = if (editingCommitment != null) stringResource(id = R.string.ledger_edit_commitment_title) else stringResource(id = R.string.ledger_add_commitment_title),
-                    fontWeight = FontWeight.Bold,
-                    color = EmeraldPrimary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            onSaveCommitment = { name, target, progress ->
+                viewModel.saveCommitment(name, target, progress)
+                showCommitmentDialog = false
+                editingCommitment = null
             },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    OutlinedTextField(
-                        value = obligationName,
-                        onValueChange = { if (editingCommitment == null) obligationName = it },
-                        enabled = (editingCommitment == null),
-                        label = { Text(stringResource(id = R.string.ledger_commitment_name_label)) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(nameFocus),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { targetFocus.requestFocus() }),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                    )
- 
-                    Spacer(modifier = Modifier.height(12.dp))
- 
-                    OutlinedTextField(
-                        value = targetAmtStr,
-                        onValueChange = { targetAmtStr = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { progressFocus.requestFocus() }),
-                        label = { Text(stringResource(id = R.string.ledger_commitment_target_amount_label)) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(targetFocus),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                    )
- 
-                    Spacer(modifier = Modifier.height(12.dp))
- 
-                    OutlinedTextField(
-                        value = progressAmtStr,
-                        onValueChange = { progressAmtStr = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        label = { Text(stringResource(id = R.string.ledger_commitment_current_progress_label)) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(progressFocus),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val tar = targetAmtStr.toDoubleOrNull() ?: 0.0
-                        val prg = progressAmtStr.toDoubleOrNull() ?: 0.0
-                        if (obligationName.isNotBlank() && tar > 0) {
-                            viewModel.saveCommitment(obligationName, tar, prg)
-                            showCommitmentDialog = false
-                            editingCommitment = null
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text(stringResource(id = R.string.ledger_save_commitment_btn))
-                }
-            },
-            dismissButton = {
-                Row {
-                    if (editingCommitment != null) {
-                        TextButton(onClick = {
-                            viewModel.deleteCommitment(editingCommitment!!.name)
-                            showCommitmentDialog = false
-                            editingCommitment = null
-                        }) {
-                            Text(stringResource(id = R.string.ledger_commitment_delete), color = SoftRed)
-                        }
-                    }
-                    TextButton(onClick = { 
-                        showCommitmentDialog = false
-                        editingCommitment = null
-                    }) {
-                        Text(stringResource(id = R.string.common_cancel), color = Color.Gray)
-                    }
-                }
+            onDeleteCommitment = { name ->
+                viewModel.deleteCommitment(name)
+                showCommitmentDialog = false
+                editingCommitment = null
             }
         )
     }
@@ -1904,239 +929,20 @@ fun MainLedgerView(
     }
 
     // Interactive Custom Pop-up Dialog for Day Transactions (Chronological order)
+ // استدعاء نافذة تفاصيل المعاملات اليومية المفرزة
     if (activeDayKey != null && activeDayLedger != null) {
-        AlertDialog(
-            onDismissRequest = { activeDayKey = null },
-            title = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.ledger_daily_record),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EmeraldPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${activeDayLedger.dayOfWeek}، " + stringResource(id = R.string.ledger_days_prefix, activeDayLedger.dayNumber, activeDayLedger.fullDate),
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                }
+        ActiveDayTransactionsDialog(
+            activeDayLedger = activeDayLedger,
+            currencySymbol = settings.currencySymbol,
+            onDismiss = { activeDayKey = null },
+            onDeleteTransaction = { txId -> viewModel.deleteTransactionById(txId) },
+            onEditTransaction = { tx ->
+                editingTransaction = tx
+                txDialogType = tx.type
+                showTxDialog = true
             },
-            text = {
-                // Chronological order sorted automatically by time
-                val sortedTxs = remember(activeDayLedger.transactions) {
-                    activeDayLedger.transactions.sortedBy { it.timestamp }
-                }
-
-                if (sortedTxs.isEmpty()) {
-                    LaunchedEffect(Unit) {
-                        activeDayKey = null
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 350.dp)
-                ) {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        items(sortedTxs, key = { it.id }) { tx ->
-                            // Subtle alternating gentle color gradient tints
-                            val itemBg = if (tx.type == "INCOME") {
-                                Color(0xFFF3FAF5) // Soft positive green tint
-                            } else {
-                                Color(0xFFFFF7F7) // Soft negative pink/coral tint
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(itemBg)
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Left: Actions and Amount
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    // Quick Deletion
-                                    IconButton(
-                                        modifier = Modifier.size(28.dp),
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            viewModel.deleteTransactionById(tx.id)
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = stringResource(id = R.string.ledger_commitment_delete),
-                                            tint = SoftRed,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-
-                                    // Quick Editing
-                                    IconButton(
-                                        modifier = Modifier.size(28.dp),
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            editingTransaction = tx
-                                            txDialogType = tx.type
-                                            showTxDialog = true
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = stringResource(id = R.string.ledger_edit_transaction_title),
-                                            tint = EmeraldPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(4.dp))
-
-                                    Column(horizontalAlignment = Alignment.Start) {
-                                        Text(
-                                            text = (if (tx.type == "INCOME") "+" else "-") +
-                                                    viewModel.formatDoubleCurrency(tx.amount, settings.currencySymbol),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = if (tx.type == "INCOME") SoftGreen else SoftRed
-                                        )
-                                        Text(
-                                            text = DateUtils.formatTime24Or12(tx.timestamp),
-                                            fontSize = 9.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                }
-
-                                // Right: Details and Emoji Category badge
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = tx.description.ifBlank { stringResource(id = R.string.ledger_unspecified_description) },
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            textAlign = TextAlign.Right
-                                        )
-                                        if (tx.category.isNotBlank() && tx.category != stringResource(id = R.string.ledger_category_expense)) {
-                                            Text(
-                                                text = tx.category,
-                                                fontSize = 9.sp,
-                                                color = Color.Gray,
-                                                textAlign = TextAlign.Right
-                                            )
-                                        }
-                                    }
-
-                                    val parsedEmoji = extractEmoji(tx.category, if (tx.type == "INCOME") "💰" else "🛒")
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(getEmojiBgColor(parsedEmoji), RoundedCornerShape(8.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = parsedEmoji, fontSize = 14.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = Color(0xFFF1F1EF))
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Daily totals inside Dialog
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.ledger_daily_totals_title),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Gray
-                        )
-                        Text(
-                            text = (if (activeDayLedger.netAmount.compareTo(java.math.BigDecimal.ZERO) >= 0) "+" else "") +
-                                    viewModel.formatCurrency(activeDayLedger.netAmount, settings.currencySymbol),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (activeDayLedger.netAmount.compareTo(java.math.BigDecimal.ZERO) >= 0) SoftGreen else SoftRed
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { activeDayKey = null },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text(stringResource(id = R.string.ledger_done_close_btn))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    val builder = StringBuilder()
-                    val income = activeDayLedger.transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
-                    val expense = activeDayLedger.transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                    builder.append(context.getString(R.string.ledger_daily_record_share_title, activeDayLedger.dayOfWeek, activeDayLedger.fullDate))
-                    builder.append(context.getString(R.string.ledger_share_total_income, viewModel.formatDoubleCurrency(income, settings.currencySymbol)))
-                    builder.append(context.getString(R.string.ledger_share_total_expense, viewModel.formatDoubleCurrency(expense, settings.currencySymbol)))
-                    builder.append("___________________\n\n")
-                    
-                    val txs = activeDayLedger.transactions.sortedBy { it.timestamp }
-                    if (txs.isEmpty()) {
-                       builder.append(context.getString(R.string.ledger_no_txs_today))
-                    } else {
-                       txs.forEach { tx ->
-                           val icon = if (tx.type == "INCOME") "🟢 (+)" else "🔴 (-)"
-                           builder.append(context.getString(R.string.ledger_share_tx_format, icon, tx.category, viewModel.formatDoubleCurrency(tx.amount, settings.currencySymbol)))
-                           if (tx.description.isNotBlank()) {
-                               builder.append(context.getString(R.string.ledger_share_tx_desc, tx.description))
-                           }
-                       }
-                    }
-
-                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_TEXT, builder.toString())
-                    }
-                    try {
-                        // Directly target WhatsApp
-                        shareIntent.setPackage("com.whatsapp")
-                        context.startActivity(shareIntent)
-                    } catch (e: android.content.ActivityNotFoundException) {
-                        try {
-                            shareIntent.setPackage("com.whatsapp.w4b") // Try WhatsApp Business
-                            context.startActivity(shareIntent)
-                        } catch (e2: android.content.ActivityNotFoundException) {
-                            // Fallback to normal share picker
-                            shareIntent.setPackage(null)
-                            context.startActivity(android.content.Intent.createChooser(shareIntent, context.getString(R.string.ledger_share_via)))
-                        }
-                    }
-                }) {
-                    Text(stringResource(id = R.string.ledger_whatsapp_whatsapp), color = Color(0xFF25D366), fontWeight = FontWeight.Bold)
-                }
-            }
+            formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) },
+            formatDoubleCurrency = { value, symbol -> viewModel.formatDoubleCurrency(value, symbol) }
         )
     }
 

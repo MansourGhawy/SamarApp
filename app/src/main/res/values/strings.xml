@@ -833,6 +833,9 @@
     <string name="gdrive_error_backups_not_found">⚠️ لم يتم العثور على أي نسخ احتياطية (.mzd) في حسابك السحابي.</string>
 
     <!-- Security and Database Integrity Warnings (رسائل أمن ونزاهة البيانات) -->
+    <string name="settings_signature_unavailable">غير متوفر</string>
+    <string name="settings_signature_desc_sha1">نسخ بصمة SHA-1</string>
+    <string name="settings_signature_desc_sha256">نسخ بصمة SHA-256</string>
     <string name="security_err_db_integrity_compromised">تحذير أمني: تم رصد محاولة تلاعب بسلامة هيكل البيانات المحلي! 🛡️</string>
     <string name="security_err_sandbox_violation">حدث انتهاك أمني في بيئة القفل المحمية للتطبيق. ⚠️</string>
     <string name="security_err_migration_critical">خطأ حرج في ترحيل قاعدة البيانات! تم حماية البيانات الأصيلة من الفقد المدمر وتم إيقاف العملية محاسبياً.</string>
@@ -874,4 +877,7 @@
     <string name="habayeb_bulk_delete_title">تأكيد الحذف الجماعي الآمن</string>
     <string name="habayeb_bulk_delete_confirm">هل أنت متأكد من حذف الحسابات المختارة (%d) مع جميع سجلاتها المالية نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="habayeb_attachment_included">تم إرفاق الملف</string>
+    <string name="habayeb_customers_count">%d زبائن</string>
+    <string name="habayeb_last_modified">آخر تعديل: %s</string>
+    <string name="habayeb_category_other">أخرى</string>
 </resources>

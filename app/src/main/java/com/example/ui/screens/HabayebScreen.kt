@@ -123,11 +123,11 @@ fun getInitialColor(name: String): Color {
     return PastelColors[hash % PastelColors.size]
 }
 
-fun formatYemeniRial(amount: Double): String {
+fun formatCurrency(amount: Double, currencySymbol: String): String {
     val absVal = kotlin.math.abs(amount)
     val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
     val formatter = java.text.DecimalFormat("#,##0", symbols)
-    return "${formatter.format(absVal)} ر.ي"
+    return "${formatter.format(absVal)} $currencySymbol"
 }
 
 @Composable
@@ -563,7 +563,7 @@ fun HabayebScreen(
                                      )
                                  }
                                  AutoScaleText(
-                                     text = if (isPrivacyModeState.value) "*****" else formatYemeniRial(netTotal),
+                                     text = if (isPrivacyModeState.value) "*****" else formatCurrency(netTotal, currencySymbol),
                                      baseFontSize = 28.sp,
                                      color = Color.White,
                                      fontWeight = FontWeight.Bold,
@@ -614,7 +614,7 @@ fun HabayebScreen(
                                  )
                                  Spacer(modifier = Modifier.height(2.dp))
                                  AutoScaleText(
-                                     text = formatYemeniRial(totalOwedByThem),
+                                     text = formatCurrency(totalOwedByThem, currencySymbol),
                                      baseFontSize = 14.sp,
                                      color = Color(0xFF10B981),
                                      fontWeight = FontWeight.Bold
@@ -655,7 +655,7 @@ fun HabayebScreen(
                                  )
                                  Spacer(modifier = Modifier.height(2.dp))
                                  AutoScaleText(
-                                     text = formatYemeniRial(totalOwedToThem),
+                                     text = formatCurrency(totalOwedToThem, currencySymbol),
                                      baseFontSize = 14.sp,
                                      color = Color(0xFFEF4444),
                                      fontWeight = FontWeight.Bold
@@ -719,7 +719,7 @@ fun HabayebScreen(
                                         )
                                     }
                                     AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatYemeniRial(netTotal),
+                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(netTotal, currencySymbol),
                                         baseFontSize = 20.sp,
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
@@ -774,7 +774,7 @@ fun HabayebScreen(
                                     )
                                     Spacer(modifier = Modifier.height(1.dp))
                                     AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatYemeniRial(totalOwedByThem),
+                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(totalOwedByThem, currencySymbol),
                                         baseFontSize = 13.sp,
                                         color = Color(0xFFEF4444),
                                         fontWeight = FontWeight.Bold
@@ -817,7 +817,7 @@ fun HabayebScreen(
                                     )
                                     Spacer(modifier = Modifier.height(1.dp))
                                     AutoScaleText(
-                                        text = if (isPrivacyModeState.value) "*****" else formatYemeniRial(totalOwedToThem),
+                                        text = if (isPrivacyModeState.value) "*****" else formatCurrency(totalOwedToThem, currencySymbol),
                                         baseFontSize = 13.sp,
                                         color = Color(0xFF10B981),
                                         fontWeight = FontWeight.Bold
@@ -846,7 +846,7 @@ fun HabayebScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${filteredCustomers.size} زبائن",
+                        text = stringResource(id = R.string.habayeb_customers_count, filteredCustomers.size),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF8B5CF6)
@@ -970,6 +970,7 @@ fun HabayebScreen(
                             isMultiSelectActive = isMultiSelectActive,
                             activeThemeColor = activeThemeColor,
                             activeSubColor = activeSubColor,
+                            currencySymbol = currencySymbol,
                             haptic = haptic,
                             onCustomerClick = {
                                 if (isMultiSelectActive) {
@@ -1048,7 +1049,8 @@ fun HabayebScreen(
                     showAddTransactionDialogForCustomer = customer
                 },
                 activeThemeColor = activeThemeColor,
-                activeSubColor = activeSubColor
+                activeSubColor = activeSubColor,
+                currencySymbol = currencySymbol
             )
         }
 
@@ -1070,118 +1072,27 @@ fun HabayebScreen(
 
         // 4. MULTI-DELETE / SINGLE DELETE CONFIRMATION DIALOG
         if (showDeleteConfirmDialog) {
-            val isSingleDelete = customerToDelete != null
-            AlertDialog(
-                onDismissRequest = { 
+            com.example.ui.screens.habayeb.components.DeleteConfirmDialog(
+                customerToDelete = customerToDelete,
+                selectedCustomerIds = selectedCustomerIds.toList(),
+                viewModel = viewModel,
+                onDismiss = {
                     showDeleteConfirmDialog = false
-                    customerToDelete = null 
+                    customerToDelete = null
                 },
-                title = { 
-                    Text(
-                        text = if (isSingleDelete) stringResource(id = R.string.habayeb_delete_account_title) else stringResource(id = R.string.habayeb_bulk_delete_title), 
-                        fontWeight = FontWeight.Bold, 
-                        fontSize = 16.sp
-                    ) 
-                },
-                text = { 
-                    Text(
-                        text = if (isSingleDelete) {
-                            stringResource(id = R.string.habayeb_delete_account_confirm, customerToDelete?.name ?: "")
-                        } else {
-                            stringResource(id = R.string.habayeb_bulk_delete_confirm, selectedCustomerIds.size)
-                        }, 
-                        fontSize = 13.sp, 
-                        color = Color.Gray
-                    ) 
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (isSingleDelete) {
-                                customerToDelete?.let {
-                                    viewModel.deleteHabayebCustomer(it.id)
-                                    Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                                }
-                                customerToDelete = null
-                            } else {
-                                viewModel.deleteMultipleHabayebCustomers(selectedCustomerIds.toList())
-                                selectedCustomerIds.clear()
-                                isMultiSelectActive = false
-                                Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                            }
-                            showDeleteConfirmDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                    ) {
-                        Text(stringResource(id = R.string.habayeb_delete_yes), color = Color.White)
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { 
-                            showDeleteConfirmDialog = false
-                            customerToDelete = null
-                        }
-                    ) {
-                        Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
-                    }
+                onSuccessBulkDelete = {
+                    selectedCustomerIds.clear()
+                    isMultiSelectActive = false
                 }
             )
         }
 
         if (showEditCustomerDialog && editingCustomerForDialog != null) {
-            val customer = editingCustomerForDialog!!
-            var editedNameStr by remember(customer.name) { mutableStateOf(customer.name) }
-            val focusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-            }
-            AlertDialog(
-                onDismissRequest = { showEditCustomerDialog = false },
-                title = {
-                    Text(stringResource(id = R.string.habayeb_edit_name_title), fontWeight = FontWeight.Bold)
-                },
-                text = {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .imePadding()
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        OutlinedTextField(
-                            value = editedNameStr,
-                            onValueChange = { editedNameStr = it },
-                            label = { Text(stringResource(id = R.string.habayeb_account_name)) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = activeThemeColor,
-                                focusedLabelColor = activeThemeColor,
-                                cursorColor = activeThemeColor
-                            )
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (editedNameStr.isNotBlank()) {
-                                viewModel.updateHabayebCustomerName(customer.id, editedNameStr.trim())
-                                Toast.makeText(context, context.getString(R.string.habayeb_toast_update_success), Toast.LENGTH_SHORT).show()
-                            }
-                            showEditCustomerDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = activeThemeColor)
-                    ) {
-                        Text(stringResource(id = R.string.habayeb_save_edit), color = Color.White)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEditCustomerDialog = false }) {
-                        Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
-                    }
-                }
+            com.example.ui.screens.habayeb.components.EditCustomerDialog(
+                customer = editingCustomerForDialog!!,
+                viewModel = viewModel,
+                activeThemeColor = activeThemeColor,
+                onDismiss = { showEditCustomerDialog = false }
             )
         }
 

@@ -74,7 +74,7 @@ import com.example.data.local.HabayebCustomer
 import com.example.data.local.HabayebTransaction
 import com.example.data.serialization.PdfReportGenerator
 import com.example.ui.screens.AutoScaleText
-import com.example.ui.screens.formatYemeniRial
+import com.example.ui.screens.formatCurrency
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -87,7 +87,8 @@ fun CustomerHistoryOverlay(
     onDismiss: () -> Unit,
     onAddTransaction: (HabayebCustomer, String) -> Unit,
     activeThemeColor: Color,
-    activeSubColor: Color
+    activeSubColor: Color,
+    currencySymbol: String
 ) {
     val customers by viewModel.habayebCustomersState.collectAsStateWithLifecycle()
     val activeCustomer = customers.find { it.id == customer.id } ?: customer
@@ -349,7 +350,7 @@ fun CustomerHistoryOverlay(
                                     fontWeight = FontWeight.Bold
                                 )
                                 AutoScaleText(
-                                    text = formatYemeniRial(kotlin.math.abs(netDebt)),
+                                    text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
                                     baseFontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textBalanceColor
@@ -411,7 +412,7 @@ fun CustomerHistoryOverlay(
                                         } catch (e: Exception) {
                                             ""
                                         }
-                                        "$txDate: ${formatYemeniRial(tx.amount)}"
+                                        "$txDate: ${formatCurrency(tx.amount, currencySymbol)}"
                                     }
                                     putExtra(android.content.Intent.EXTRA_TEXT, textBody)
                                     type = "text/plain"
@@ -564,7 +565,7 @@ fun CustomerHistoryOverlay(
                                         modifier = Modifier.padding(end = 6.dp)
                                     ) {
                                         Text(
-                                            text = "$sign${formatYemeniRial(tx.amount)}",
+                                            text = "$sign${formatCurrency(tx.amount, currencySymbol)}",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = indicatorColor

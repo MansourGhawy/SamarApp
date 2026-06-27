@@ -648,7 +648,7 @@ fun AddTransactionPopup(
                         if (presetMainTxId != null) {
                             viewModel.addTransaction(
                                 type = "INCOME",
-                                category = "أخرى",
+                                category = context.getString(R.string.habayeb_category_other),
                                 amount = amount,
                                 description = "${context.getString(R.string.habayeb_pdf_tx_payment_by)}: ${customer.name}${if (descStr.isNotBlank()) " - " + descStr.trim() else ""}",
                                 timestamp = dateMillis / 1000,

@@ -74,7 +74,7 @@ fun TransactionRecordDialog(
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
-        delay(300)
+        delay(150)
         try {
             focusRequester.requestFocus()
             softwareKeyboardController?.show()
@@ -145,21 +145,19 @@ fun TransactionRecordDialog(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                if (txDialogType == "INCOME" && editingTransaction != null) {
-                    Button(
-                        onClick = { showCategoryPickerSheet = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (categoryName.isNotBlank()) stringResource(id = R.string.ledger_category_label, categoryName) else stringResource(id = R.string.ledger_choose_category_placeholder),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                Button(
+                    onClick = { showCategoryPickerSheet = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (categoryName.isNotBlank()) stringResource(id = R.string.ledger_category_label, categoryName) else stringResource(id = R.string.ledger_choose_category_placeholder),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         },

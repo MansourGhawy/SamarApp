@@ -66,7 +66,8 @@ import android.app.Activity
 @Composable
 fun SettingsView(
     viewModel: FinanceViewModel,
-    settings: AppSettings
+    settings: AppSettings,
+    onNavigateToSecurity: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -101,20 +102,6 @@ fun SettingsView(
     var showPasteDialog by remember { mutableStateOf(false) }
     var pastedBackupText by remember { mutableStateOf("") }
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
-
-    // Security Passcode Setup Sheet states
-    var showPasscodeSetupSheet by remember { mutableStateOf(false) }
-    var tempPasscode by remember { mutableStateOf("") }
-    var tempConfirmPasscode by remember { mutableStateOf("") }
-    var tempRecoveryPhrase by remember { mutableStateOf("") }
-    var tempRecoveryHint by remember { mutableStateOf("") }
-    var tempCheckAcknowledged by remember { mutableStateOf(false) }
-
-    // Identity Verification Gate states
-    var showSecurityGateDialog by remember { mutableStateOf(false) }
-    var securityGateInput by remember { mutableStateOf("") }
-    var securityGateError by remember { mutableStateOf("") }
-    var securityGateAction by remember { mutableStateOf("") } // "TOGGLE_OFF", "CHANGE_PASSCODE", "CHANGE_RECOVERY"
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -343,400 +330,61 @@ fun SettingsView(
 
         // 1. General Preferences Card (تخصيص الرموز والعملة)
         item {
-            ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_currency_title),
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF075E54),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = currencySymbol,
-                        onValueChange = {
-                            currencySymbol = it
-                            saveAllSettings()
-                        },
-                        label = { Text(stringResource(R.string.settings_currency_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                    )
+            GeneralSettingsCard(
+                currencySymbol = currencySymbol,
+                onCurrencySymbolChange = {
+                    currencySymbol = it
+                    saveAllSettings()
                 }
-            }
+            )
         }
 
         // Card for custom Signature Fingerprint (بصمة وتوقيع التطبيق المعتمدة)
         item {
-            val contextForSig = LocalContext.current
-            val clipboardSigManager = androidx.compose.ui.platform.LocalClipboardManager.current
-            val sha1Fingerprint = remember {
-                try {
-                    val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        contextForSig.packageManager.getPackageInfo(
-                            contextForSig.packageName,
-                            android.content.pm.PackageManager.PackageInfoFlags.of(android.content.pm.PackageManager.GET_SIGNATURES.toLong())
-                        )
-                    } else {
-                        @Suppress("DEPRECATION")
-                        contextForSig.packageManager.getPackageInfo(
-                            contextForSig.packageName,
-                            android.content.pm.PackageManager.GET_SIGNATURES
-                        )
-                    }
-                    val signatures = @Suppress("DEPRECATION") packageInfo.signatures
-                    if (signatures != null && signatures.isNotEmpty()) {
-                        val md = java.security.MessageDigest.getInstance("SHA-1")
-                        val publicKey = md.digest(signatures[0].toByteArray())
-                        publicKey.joinToString(":") { String.format("%02X", it) }
-                    } else {
-                        "غير متوفر"
-                    }
-                } catch (e: Exception) {
-                    "غير متوفر"
-                }
-            }
-            val sha256Fingerprint = remember {
-                try {
-                    val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        contextForSig.packageManager.getPackageInfo(
-                            contextForSig.packageName,
-                            android.content.pm.PackageManager.PackageInfoFlags.of(android.content.pm.PackageManager.GET_SIGNATURES.toLong())
-                        )
-                    } else {
-                        @Suppress("DEPRECATION")
-                        contextForSig.packageManager.getPackageInfo(
-                            contextForSig.packageName,
-                            android.content.pm.PackageManager.GET_SIGNATURES
-                        )
-                    }
-                    val signatures = @Suppress("DEPRECATION") packageInfo.signatures
-                    if (signatures != null && signatures.isNotEmpty()) {
-                        val md = java.security.MessageDigest.getInstance("SHA-256")
-                        val publicKey = md.digest(signatures[0].toByteArray())
-                        publicKey.joinToString(":") { String.format("%02X", it) }
-                    } else {
-                        "غير متوفر"
-                    }
-                } catch (e: Exception) {
-                    "غير متوفر"
-                }
-            }
-
-            ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF0F766E).copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = Color(0xFF0F766E),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-
-                        Text(
-                            text = stringResource(R.string.settings_signature_title),
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F766E),
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringResource(R.string.settings_signature_desc),
-                        fontSize = 11.sp,
-                        color = Color(0xFF4B5563),
-                        textAlign = TextAlign.Right,
-                        modifier = Modifier.fillMaxWidth(),
-                        lineHeight = 16.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Divider(color = Color.LightGray.copy(alpha = 0.4f))
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // SHA-1 field
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    clipboardSigManager.setText(AnnotatedString(sha1Fingerprint))
-                                    Toast.makeText(contextForSig, contextForSig.getString(R.string.settings_sha1_copied), Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "نسخ بصمة SHA-1",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-
-                            Text(
-                                text = stringResource(R.string.settings_sha1_label),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF374151)
-                            )
-                        }
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp)
-                                .background(Color(0xFFF3F4F6), RoundedCornerShape(6.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = sha1Fingerprint,
-                                fontSize = 10.sp,
-                                color = Color(0xFF1F2937),
-                                textAlign = TextAlign.Left,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // SHA-256 field
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    clipboardSigManager.setText(AnnotatedString(sha256Fingerprint))
-                                    Toast.makeText(contextForSig, contextForSig.getString(R.string.settings_sha256_copied), Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "نسخ بصمة SHA-256",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-
-                            Text(
-                                text = stringResource(R.string.settings_sha256_label),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF374151)
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp)
-                                .background(Color(0xFFF3F4F6), RoundedCornerShape(6.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = sha256Fingerprint,
-                                fontSize = 10.sp,
-                                color = Color(0xFF1F2937),
-                                textAlign = TextAlign.Left,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            }
+            SignatureCard()
         }
 
-        // 2. Security & Protection Card (بطاقة الأمن والحماية) - New Luxurious Feature
+        // 2. Security & Protection Action Button (زر بوابة الأمن والحماية)
         item {
-            ElevatedCard(
+            OutlinedButton(
+                onClick = onNavigateToSecurity,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, Color(0xFF075E54).copy(alpha = 0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color(0xFF0F766E).copy(alpha = 0.05f)
+                )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.End
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = settings.isPasscodeEnabled,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    // Open setup Sheet as normal
-                                    tempPasscode = ""
-                                    tempConfirmPasscode = ""
-                                    tempRecoveryPhrase = ""
-                                    tempRecoveryHint = ""
-                                    tempCheckAcknowledged = false
-                                    showPasscodeSetupSheet = true
-                                } else {
-                                    if (settings.isPasscodeEnabled) {
-                                        // Identity Verification Gate!
-                                        securityGateInput = ""
-                                        securityGateError = ""
-                                        securityGateAction = "TOGGLE_OFF"
-                                        showSecurityGateDialog = true
-                                    } else {
-                                        // Turn off screen lock and clear security tokens
-                                        val updated = settings.copy(
-                                            isPasscodeEnabled = false,
-                                            passcodeHash = null,
-                                            recoveryPhraseHash = null
-                                        )
-                                        viewModel.saveSettings(updated)
-                                        Toast.makeText(context, context.getString(R.string.settings_app_lock_disabled), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF075E54)
-                            )
+                    Icon(
+                        imageVector = Icons.Default.ArrowBackIosNew,
+                        contentDescription = "الدخول",
+                        tint = Color(0xFF075E54),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.drawer_security_label),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color(0xFF075E54)
                         )
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_app_lock_label),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = Color(0xFF075E54)
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = "الأمن والحماية",
-                                tint = Color(0xFF075E54),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = settings.isPasscodeEnabled,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant)
-                            )
-                            
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            // Change Passcode
-                            OutlinedButton(
-                                onClick = {
-                                    if (settings.isPasscodeEnabled) {
-                                        securityGateInput = ""
-                                        securityGateError = ""
-                                        securityGateAction = "CHANGE_PASSCODE"
-                                        showSecurityGateDialog = true
-                                    } else {
-                                        tempPasscode = ""
-                                        tempConfirmPasscode = ""
-                                        tempRecoveryPhrase = ""
-                                        tempRecoveryHint = ""
-                                        tempCheckAcknowledged = false
-                                        showPasscodeSetupSheet = true
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(stringResource(R.string.settings_change_passcode), fontSize = 12.sp, color = Color(0xFF075E54))
-                                }
-                            }
-
-                            // Modify Recovery Action
-                            OutlinedButton(
-                                onClick = {
-                                    if (settings.isPasscodeEnabled) {
-                                        securityGateInput = ""
-                                        securityGateError = ""
-                                        securityGateAction = "CHANGE_RECOVERY"
-                                        showSecurityGateDialog = true
-                                    } else {
-                                        tempPasscode = ""
-                                        tempConfirmPasscode = ""
-                                        tempRecoveryPhrase = ""
-                                        tempRecoveryHint = ""
-                                        tempCheckAcknowledged = false
-                                        showPasscodeSetupSheet = true
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(stringResource(R.string.settings_update_recovery), fontSize = 12.sp, color = Color(0xFF075E54))
-                                }
-                            }
-                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = "الأمن والحماية",
+                            tint = Color(0xFF075E54),
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }
@@ -1528,26 +1176,6 @@ fun SettingsView(
         }
     }
 
-    // Modal Passcode Lock & Recovery Setup Sheet
-    if (showPasscodeSetupSheet) {
-        PasscodeSetupBottomSheet(
-            onDismiss = { showPasscodeSetupSheet = false },
-            onSavePasscode = { passcode, recoveryPhrase, recoveryHint ->
-                val pHash = com.example.domain.HashUtils.hashString(passcode)
-                val rHash = com.example.domain.HashUtils.hashString(recoveryPhrase.trim())
-                val updated = settings.copy(
-                    isPasscodeEnabled = true,
-                    passcodeHash = pHash,
-                    recoveryPhraseHash = rHash,
-                    recoveryHint = recoveryHint.trim().takeIf { it.isNotBlank() }
-                )
-                viewModel.saveSettings(updated)
-                showPasscodeSetupSheet = false
-                Toast.makeText(context, "تم تفعيل قفل التطبيق والأمان بنجاح 🛡️", Toast.LENGTH_SHORT).show()
-            }
-        )
-    }
-
     if (showBackupPermissionExplanationDialog) {
         BackupPermissionExplanationDialog(
             onDismiss = { showBackupPermissionExplanationDialog = false },
@@ -1576,31 +1204,6 @@ fun SettingsView(
                 viewModel.deleteAllData()
                 showTrapDialog = false
             }
-        )
-    }
-
-    // Identity Verification Gate Dialog Box
-    if (showSecurityGateDialog) {
-        SecurityGateDialog(
-            onDismiss = { showSecurityGateDialog = false },
-            onVerifySuccess = {
-                showSecurityGateDialog = false
-                when (securityGateAction) {
-                    "TOGGLE_OFF" -> {
-                        val updated = settings.copy(
-                            isPasscodeEnabled = false,
-                            passcodeHash = null,
-                            recoveryPhraseHash = null
-                        )
-                        viewModel.saveSettings(updated)
-                        Toast.makeText(context, "تم إيقاف ميزة قفل التطبيق والأمان 🔓", Toast.LENGTH_SHORT).show()
-                    }
-                    "CHANGE_PASSCODE", "CHANGE_RECOVERY" -> {
-                        showPasscodeSetupSheet = true
-                    }
-                }
-            },
-            verifyCredentials = { input -> viewModel.verifyCredentials(input) }
         )
     }
 }

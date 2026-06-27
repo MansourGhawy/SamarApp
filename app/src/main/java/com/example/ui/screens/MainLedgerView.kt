@@ -35,6 +35,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.key
 import com.example.ui.components.CircularRevealShape
+import com.example.ui.components.DeveloperSealFooter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -238,62 +239,20 @@ fun MainLedgerView(
         }
     }
 
-    if (showDeleteDaysDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDaysDialog = false },
-            title = {
-                Text(
-                    text = stringResource(id = R.string.ledger_bulk_delete_days_title),
-                    fontWeight = FontWeight.Bold,
-                    color = SoftRed,
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(id = R.string.ledger_bulk_delete_days_msg),
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDaysDialog = false
-                        scope.launch {
-                            val txsToDelete = mutableListOf<String>()
-                            monthlyLedger.forEach { ml ->
-                                ml.days.forEach { day ->
-                                    val dayKey = "${ml.monthKey}_${day.dayNumber}"
-                                    if (selectedDayKeys.contains(dayKey)) {
-                                        day.transactions.forEach { tx ->
-                                            txsToDelete.add(tx.id)
-                                        }
-                                    }
-                                }
-                            }
-                            txsToDelete.forEach { txId ->
-                                val tx = monthlyLedger.flatMap { ml -> ml.days.flatMap { it.transactions } }.find { it.id == txId }
-                            }
-                            viewModel.deleteTransactionsBulk(txsToDelete, context.getString(R.string.ledger_bulk_delete_days_desc))
-                            selectedDayKeys.clear()
-                            isDaySelectionMode = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftRed)
-                ) {
-                    Text(stringResource(id = R.string.ledger_bulk_delete_days_confirm_btn), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDaysDialog = false }) {
-                    Text(stringResource(id = R.string.common_cancel), color = Color.Gray, fontSize = 12.sp)
-                }
-            }
-        )
-    }
+    DeleteDaysConfirmDialog(
+        showDeleteDaysDialog = showDeleteDaysDialog,
+        onDismiss = { showDeleteDaysDialog = false },
+        monthlyLedger = monthlyLedger,
+        selectedDayKeys = selectedDayKeys,
+        viewModel = viewModel,
+        scope = scope,
+        context = context,
+        onSuccess = {
+            selectedDayKeys.clear()
+            isDaySelectionMode = false
+            showDeleteDaysDialog = false
+        }
+    )
 
     Box(modifier = Modifier.fillMaxSize().background(IvoryBackground)) {
         // High-fidelity pinned collapsible top header when scrolled - Redesigned Clock to Top-Right
@@ -455,141 +414,44 @@ fun MainLedgerView(
                     val dayKey = "${monthLedger.monthKey}_${dayLedger.dayNumber}"
                     val isDaySelected = selectedDayKeys.contains(dayKey)
 
-                    // Alternating gentle cash flow background colors (beautiful light gradients)
-                    val cardBrush = if (isDaySelected) {
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(Color(0xFFE6F4EA), Color(0xFFD1FAE5)) // gentle emerald tint when selected
-                        )
-                    } else if (dayLedger.netAmount.compareTo(java.math.BigDecimal.ZERO) >= 0) {
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(Color(0xFFF3FAF5), Color.White)
-                        )
-                    } else {
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(Color(0xFFFFF7F7), Color.White)
-                        )
-                    }
-
-                    // Tidy minimal Day Card wrapper with gorgeous borders
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        border = if (isDaySelected) {
-                            androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF10B981))
-                        } else {
-                            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEC))
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 2.dp)
-                            .combinedClickable(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (isDaySelectionMode) {
-                                        if (selectedDayKeys.contains(dayKey)) {
-                                            selectedDayKeys.remove(dayKey)
-                                            if (selectedDayKeys.isEmpty()) {
-                                                isDaySelectionMode = false
-                                            }
-                                        } else {
-                                            selectedDayKeys.add(dayKey)
-                                        }
-                                    } else {
-                                        activeDayKey = dayKey
+                    DayCard(
+                        dayLedger = dayLedger,
+                        dayKey = dayKey,
+                        isDaySelected = isDaySelected,
+                        isDaySelectionMode = isDaySelectionMode,
+                        haptic = haptic,
+                        currencySymbol = settings.currencySymbol,
+                        formatCurrency = { amt, sym -> viewModel.formatCurrency(amt, sym) },
+                        onDayClick = {
+                            if (isDaySelectionMode) {
+                                if (selectedDayKeys.contains(it)) {
+                                    selectedDayKeys.remove(it)
+                                    if (selectedDayKeys.isEmpty()) {
+                                        isDaySelectionMode = false
                                     }
-                                },
-                                onLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (!isDaySelectionMode && !isSelectionMode) {
-                                        isDaySelectionMode = true
-                                        selectedDayKeys.add(dayKey)
-                                    } else if (isDaySelectionMode) {
-                                        if (selectedDayKeys.contains(dayKey)) {
-                                            selectedDayKeys.remove(dayKey)
-                                            if (selectedDayKeys.isEmpty()) {
-                                                isDaySelectionMode = false
-                                            }
-                                        } else {
-                                            selectedDayKeys.add(dayKey)
-                                        }
-                                    }
+                                } else {
+                                    selectedDayKeys.add(it)
                                 }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(cardBrush)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Left: Net balance indicator & sleek interactive detail label
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text(
-                                    text = (if (dayLedger.netAmount.compareTo(java.math.BigDecimal.ZERO) > 0) "+" else "") +
-                                            viewModel.formatCurrency(dayLedger.netAmount, settings.currencySymbol),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 13.sp,
-                                    color = if (dayLedger.netAmount.compareTo(java.math.BigDecimal.ZERO) >= 0) SoftGreen else SoftRed
-                                )
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color.Gray.copy(alpha = 0.05f))
-                                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                                ) {
-                                    Text(stringResource(id = R.string.ledger_details_label), fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                                    Text("📑", fontSize = 11.sp)
-                                }
+                            } else {
+                                activeDayKey = it
                             }
-
-                            // Right: Day title and Date description along with circular Selection indicator (Checkbox)
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(
-                                        text = stringResource(id = R.string.ledger_days_prefix, dayLedger.dayNumber, dayLedger.dayOfWeek),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = dayLedger.fullDate,
-                                        fontSize = 9.sp,
-                                        color = Color.Gray.copy(alpha = 0.7f)
-                                    )
-                                }
-
-                                if (isDaySelectionMode) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isDaySelected) Color(0xFF10B981) else Color.White)
-                                            .border(1.5.dp, Color(0xFF10B981), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (isDaySelected) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
+                        },
+                        onDayLongClick = {
+                            if (!isDaySelectionMode && !isSelectionMode) {
+                                isDaySelectionMode = true
+                                selectedDayKeys.add(it)
+                            } else if (isDaySelectionMode) {
+                                if (selectedDayKeys.contains(it)) {
+                                    selectedDayKeys.remove(it)
+                                    if (selectedDayKeys.isEmpty()) {
+                                        isDaySelectionMode = false
                                     }
+                                } else {
+                                    selectedDayKeys.add(it)
                                 }
                             }
                         }
-                    }
+                    )
                 }
                 } // End of if (!isCollapsed)
 
@@ -609,7 +471,10 @@ fun MainLedgerView(
             }
 
             // Bottom spacing past absolute FAB overlays (compressed rhythm)
-            item { Spacer(modifier = Modifier.height(80.dp)) }
+            item {
+                DeveloperSealFooter()
+                Spacer(modifier = Modifier.height(80.dp))
+            }
         }
 
         // Floating action buttons (Dual floating configuration) - Compressed & modern
@@ -728,78 +593,16 @@ fun MainLedgerView(
         }
     )
 
-    if (reorderCommitmentTarget != null) {
-        var targetPositionStr by remember { mutableStateOf("") }
-        var errorMsg by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { reorderCommitmentTarget = null },
-            title = {
-                Text(
-                    stringResource(id = R.string.ledger_reorder_target_title, reorderCommitmentTarget?.name ?: ""),
-                    fontWeight = FontWeight.Bold,
-                    color = EmeraldPrimary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(stringResource(id = R.string.ledger_reorder_position_label, commitments.size), fontSize = 13.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    val focusRequester = remember { FocusRequester() }
-                    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-                    LaunchedEffect(focusRequester) {
-                        delay(500)
-                        focusRequester.requestFocus()
-                        keyboardController?.show()
-                    }
-                    OutlinedTextField(
-                        value = targetPositionStr,
-                        onValueChange = { 
-                            targetPositionStr = it
-                            errorMsg = ""
-                        },
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        isError = errorMsg.isNotEmpty()
-                    )
-                    if (errorMsg.isNotEmpty()) {
-                        Text(errorMsg, color = SoftRed, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val pos = targetPositionStr.toIntOrNull()
-                        if (pos == null || pos < 1 || pos > commitments.size) {
-                            errorMsg = context.getString(R.string.ledger_reorder_position_error)
-                        } else {
-                            viewModel.reorderCommitment(reorderCommitmentTarget!!, pos)
-                            reorderCommitmentTarget = null
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text(stringResource(id = R.string.ledger_reorder_apply), color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { reorderCommitmentTarget = null }) {
-                    Text(stringResource(id = R.string.common_cancel), color = Color.Gray)
-                }
-            }
-        )
-    }
+    ReorderCommitmentDialog(
+        reorderCommitmentTarget = reorderCommitmentTarget,
+        commitmentsSize = commitments.size,
+        onDismiss = { reorderCommitmentTarget = null },
+        onApplyReorder = { target, position ->
+            viewModel.reorderCommitment(target, position)
+            reorderCommitmentTarget = null
+        },
+        context = context
+    )
 
     if (showActivationDialog) {
         DeviceActivationDialog(

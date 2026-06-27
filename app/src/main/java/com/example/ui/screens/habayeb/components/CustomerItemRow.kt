@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.example.R
 import com.example.ui.screens.AutoScaleText
-import com.example.ui.screens.formatYemeniRial
+import com.example.ui.screens.formatCurrency
 
 // Pastel Colors for Initials
 val PastelColors = listOf(
@@ -73,6 +73,7 @@ fun CustomerItemRow(
     isMultiSelectActive: Boolean,
     activeThemeColor: Color,
     activeSubColor: Color,
+    currencySymbol: String,
     haptic: HapticFeedback,
     onCustomerClick: () -> Unit,
     onCustomerLongClick: () -> Unit,
@@ -154,7 +155,7 @@ fun CustomerItemRow(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = stringResource(id = R.string.detail_smart_yesterday).replace("أمس", "آخر تعديل") + ": $formattedDate",
+                            text = stringResource(id = R.string.habayeb_last_modified, formattedDate),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,
                             color = HabayebTextSecondary
@@ -170,7 +171,7 @@ fun CustomerItemRow(
                     val netDebt = customer.netDebt
                     if (netDebt > 0.0) {
                         AutoScaleText(
-                            text = formatYemeniRial(netDebt),
+                            text = formatCurrency(netDebt, currencySymbol),
                             baseFontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFEF4444)
@@ -184,7 +185,7 @@ fun CustomerItemRow(
                         )
                     } else if (netDebt < 0.0) {
                         AutoScaleText(
-                            text = formatYemeniRial(netDebt),
+                            text = formatCurrency(netDebt, currencySymbol),
                             baseFontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF10B981)

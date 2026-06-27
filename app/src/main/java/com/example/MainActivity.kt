@@ -231,12 +231,8 @@ fun MainAppLayout(
         }
     }
 
-    var showCustomizationSheet by remember { mutableStateOf(false) }
-    var longPressedTab by remember { mutableStateOf<Screen?>(null) }
-
     var showExitConfirmDialog by remember { mutableStateOf(false) }
 
-    var showSecuritySheet by remember { mutableStateOf(false) }
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -413,12 +409,12 @@ fun MainAppLayout(
                     )
                     
                     DrawerItem(
-                        selected = false,
+                        selected = currentScreen == Screen.SECURITY,
                         icon = Icons.Default.Lock,
                         label = stringResource(id = R.string.drawer_security_label),
                         onClick = {
+                            currentScreen = Screen.SECURITY
                             scope.launch { drawerState.close() }
-                            showSecuritySheet = true
                         }
                     )
                     
@@ -589,304 +585,80 @@ fun MainAppLayout(
                                 onBack = { currentScreen = Screen.HABAYEB }
                             )
                         }
+                        Screen.SECURITY -> {
+                            com.example.ui.screens.SecurityScreen(
+                                settings = settings,
+                                viewModel = viewModel,
+                                onBack = { currentScreen = Screen.LEDGER }
+                            )
+                        }
                     }
                 }
 
                 // --- FLOATING BOTTOM NAVIGATION DOCK ---
-                // Parse dynamic order from DataStore
-                val tabOrderList = remember(tabOrderStr) {
-                    tabOrderStr.split(",").mapNotNull {
-                        try {
-                            Screen.valueOf(it.trim())
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }.filter { it == Screen.HABAYEB || it == Screen.LEDGER }
+                val items = remember(context) {
+                    listOf(
+                        Triple(Screen.HABAYEB, Icons.Default.People, context.getString(R.string.nav_habayeb_plain)),
+                        Triple(Screen.LEDGER, Icons.Default.AccountBalanceWallet, context.getString(R.string.nav_ledger_plain))
+                    )
                 }
-
-                val finalTabOrder = remember(tabOrderList) {
-                    if (tabOrderList.isEmpty()) {
-                        listOf(Screen.LEDGER, Screen.HABAYEB)
-                    } else {
-                        tabOrderList
-                    }
-                }
-
-                val items = remember(finalTabOrder, context) {
-                    finalTabOrder.map { screen ->
-                        when (screen) {
-                            Screen.HABAYEB -> Triple(Screen.HABAYEB, Icons.Default.People, context.getString(R.string.nav_habayeb_plain))
-                            Screen.LEDGER -> Triple(Screen.LEDGER, Icons.Default.AccountBalanceWallet, context.getString(R.string.nav_ledger_plain))
-                            else -> Triple(Screen.HABAYEB, Icons.Default.People, context.getString(R.string.nav_habayeb_plain))
-                        }
-                    }
-                }
-
-                val hapticFeedback = LocalHapticFeedback.current
 
                 // Only visible on primary tabs: HABAYEB, LEDGER
                 if (currentScreen == Screen.HABAYEB || currentScreen == Screen.LEDGER) {
                     Card(
-                        shape = RoundedCornerShape(50), // pill-shape (50% layout radius)
+                        shape = RoundedCornerShape(24.dp), // elegant modern pill shape
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)), // extremely thin elegant slate border
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(horizontal = 16.dp, vertical = 20.dp)
-                            .fillMaxWidth(0.92f) // beautiful negative space margins
-                            .height(64.dp)
+                            .padding(horizontal = 24.dp, vertical = 20.dp)
+                            .fillMaxWidth(0.85f) // slender elegant width
+                            .height(50.dp) // sleek 50dp height
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             items.forEach { (screen, icon, label) ->
                                 val isSelected = currentScreen == screen
-                                val tintColor = if (isSelected) Color(0xFF1E3A8A) else Color(0xFF94A3B8)
-                                val isDefaultStart = screen.name == defaultStartDest
+                                val activeColor = Color(0xFF1E3A8A)
+                                val inactiveColor = Color(0xFF94A3B8)
                                 
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .combinedClickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = {
-                                                currentScreen = screen
-                                            },
-                                            onLongClick = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                longPressedTab = screen
-                                                showCustomizationSheet = true
-                                            }
-                                        ),
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
+                                        .clickable {
+                                            currentScreen = screen
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // Soft animated scale & transparency
-                                    val iconSizeState by animateDpAsState(
-                                        targetValue = if (isSelected) 22.dp else 25.dp,
-                                        animationSpec = tween(250),
-                                        label = "iconSize"
-                                    )
-                                    val textScaleState by animateFloatAsState(
-                                        targetValue = if (isSelected) 1f else 0.8f,
-                                        animationSpec = tween(250),
-                                        label = "textScale"
-                                    )
-
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.padding(4.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = label,
-                                                tint = tintColor,
-                                                modifier = Modifier.size(iconSizeState)
-                                            )
-                                            if (isDefaultStart) {
-                                                // Subtle modern indicator badge at active/inactive top-right
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(5.dp)
-                                                        .align(Alignment.TopEnd)
-                                                        .background(Color(0xFFF59E0B), shape = CircleShape)
-                                                )
-                                            }
-                                        }
-                                        
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = label,
+                                            tint = if (isSelected) activeColor else inactiveColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                         if (isSelected) {
-                                            Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = label,
-                                                fontSize = 9.5.sp,
+                                                fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = tintColor,
-                                                textAlign = TextAlign.Center,
-                                                modifier = Modifier.graphicsLayer {
-                                                    scaleX = textScaleState
-                                                    scaleY = textScaleState
-                                                }
+                                                color = activeColor,
+                                                maxLines = 1
                                             )
-                                        } else {
-                                            // Modern feedback dot below inactive default start screen
-                                            if (isDefaultStart) {
-                                                Spacer(modifier = Modifier.height(3.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(4.dp)
-                                                        .background(Color(0xFF10B981), shape = CircleShape)
-                                                )
-                                            }
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-
-                // --- CUSTOMIZATION MODAL BOTTOM SHEET ---
-                if (showCustomizationSheet) {
-                    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-                    ModalBottomSheet(
-                        onDismissRequest = { showCustomizationSheet = false },
-                        sheetState = sheetState,
-                        containerColor = Color.White,
-                        dragHandle = { BottomSheetDefaults.DragHandle() }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp)
-                                .navigationBarsPadding(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.customization_sheet_title),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF3F51B5),
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = stringResource(id = R.string.customization_sheet_desc),
-                                fontSize = 12.sp,
-                                color = Color.Gray,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            finalTabOrder.forEachIndexed { index, screen ->
-                                val isDefault = screen.name == defaultStartDest
-                                val label = when (screen) {
-                                    Screen.HABAYEB -> stringResource(id = R.string.nav_habayeb_plain)
-                                    Screen.LEDGER -> stringResource(id = R.string.nav_ledger_plain)
-                                    else -> screen.name
-                                }
-                                val icon = when (screen) {
-                                    Screen.HABAYEB -> Icons.Default.People
-                                    Screen.LEDGER -> Icons.Default.AccountBalanceWallet
-                                    else -> Icons.Default.Home
-                                }
-
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isDefault) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
-                                    ),
-                                    border = if (isDefault) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF3F51B5)) else null
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = null,
-                                                tint = if (isDefault) Color(0xFF3F51B5) else Color(0xFF64748B),
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Column {
-                                                Text(
-                                                    text = label,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isDefault) Color(0xFF1E3A8A) else Color(0xFF0F172A)
-                                                )
-                                                if (isDefault) {
-                                                    Text(
-                                                        text = stringResource(id = R.string.customization_default_launch_page),
-                                                        fontSize = 10.sp,
-                                                        color = Color(0xFF2563EB),
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            IconButton(
-                                                onClick = {
-                                                    viewModel.saveDefaultStart(screen.name)
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    Toast.makeText(context, context.getString(R.string.customization_toast_default_selected, label), Toast.LENGTH_SHORT).show()
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Star,
-                                                    contentDescription = stringResource(id = R.string.customization_set_default),
-                                                    tint = if (isDefault) Color(0xFFF59E0B) else Color(0xFFCBD5E1),
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-
-                                            IconButton(
-                                                enabled = index > 0,
-                                                onClick = {
-                                                    val mutable = finalTabOrder.toMutableList()
-                                                    val item = mutable.removeAt(index)
-                                                    mutable.add(index - 1, item)
-                                                    viewModel.saveTabOrder(mutable.joinToString(",") { it.name })
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowUpward,
-                                                    contentDescription = stringResource(id = R.string.customization_move_up),
-                                                    tint = if (index > 0) Color(0xFF3F51B5) else Color(0xFFCBD5E1),
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-
-                                            IconButton(
-                                                enabled = index < finalTabOrder.size - 1,
-                                                onClick = {
-                                                    val mutable = finalTabOrder.toMutableList()
-                                                    val item = mutable.removeAt(index)
-                                                    mutable.add(index + 1, item)
-                                                    viewModel.saveTabOrder(mutable.joinToString(",") { it.name })
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowDownward,
-                                                    contentDescription = stringResource(id = R.string.customization_move_down),
-                                                    tint = if (index < finalTabOrder.size - 1) Color(0xFF3F51B5) else Color(0xFFCBD5E1),
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { showCustomizationSheet = false },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().height(48.dp)
-                            ) {
-                                Text(stringResource(id = R.string.customization_save_changes), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }
@@ -1014,14 +786,6 @@ fun MainAppLayout(
                 }
             }
         }
-    }
-
-    if (showSecuritySheet) {
-        SecurityBottomSheet(
-            settings = settings,
-            viewModel = viewModel,
-            onDismiss = { showSecuritySheet = false }
-        )
     }
 
     if (showBackupRestoreSheet) {

@@ -372,12 +372,7 @@ fun MainLedgerView(
                 )
             }
 
-            // Budget Advice Banner based on daily comparison
-            item {
-                Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-                    BudgetAdviceBanner(diffExp)
-                }
-            }
+
 
             // Quick Navigation Widgets removed for clean floating bottom dock interface.
 

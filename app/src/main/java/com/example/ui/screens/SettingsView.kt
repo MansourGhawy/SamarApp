@@ -51,6 +51,7 @@ import com.example.data.local.AppSettings
 import com.example.data.CloudSyncState
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FinanceViewModel
+import com.example.ui.screens.settings.components.*
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1529,668 +1530,77 @@ fun SettingsView(
 
     // Modal Passcode Lock & Recovery Setup Sheet
     if (showPasscodeSetupSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showPasscodeSetupSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "تعيين قفل التطبيق والأمان 🛡️",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldPrimary,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "قم بإنشاء رمز حماية لخصوصية السجلات والتحويلات المعتمدة",
-                            fontSize = 11.sp,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Passcode Outlined Text Field
-                        OutlinedTextField(
-                            value = tempPasscode,
-                            onValueChange = {
-                                if (it.length <= 4 && it.all { char -> char.isDigit() }) {
-                                    tempPasscode = it
-                                }
-                            },
-                            label = { Text("رمز القفل المكون من 4 أرقام") },
-                            placeholder = { Text("مثال: 1234") },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                        )
-
-                        // Confirm Passcode Outlined Text Field
-                        OutlinedTextField(
-                            value = tempConfirmPasscode,
-                            onValueChange = {
-                                if (it.length <= 4 && it.all { char -> char.isDigit() }) {
-                                    tempConfirmPasscode = it
-                                }
-                            },
-                            label = { Text("تأكيد الرمز السري") },
-                            placeholder = { Text("أعد كتابة الرمز نفسه للتحقق") },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                        )
-
-                        // Warnings Box (صندوق تحذيري جذاب بلون متباين دافئ)
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = "تنبيه أمني بالغ الأهمية ⚠️:\n\nالتطبيق يحمي خصوصيتك محلياً بالكامل. في حال نسيت رمز القفل وعبارة الاسترداد، لن يتمكن أحد -بما في ذلك المطور- من فك تشفير بياناتك أو استعادتها نهائياً، وستفقد بياناتك للأبد.",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Right,
-                                modifier = Modifier.padding(12.dp),
-                                lineHeight = 16.sp
-                            )
-                        }
-
-                        // Recovery Phrase Outlined Text Field
-                        OutlinedTextField(
-                            value = tempRecoveryPhrase,
-                            onValueChange = { tempRecoveryPhrase = it },
-                            label = { Text("مفتاح أمان الاسترداد") },
-                            placeholder = { Text("اكتب مفتاح أمان الاسترداد (مثال: فاطمة أو أحمد)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                        )
-
-                        Text(
-                            text = "قم بحفظ هذه العبارة بدقة لأنها مفتاح أمانك الوحيد.",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Right,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Recovery Hint Outlined Text Field
-                        OutlinedTextField(
-                            value = tempRecoveryHint,
-                            onValueChange = { tempRecoveryHint = it },
-                            label = { Text("تلميح الذاكرة") },
-                            placeholder = { Text("مثال: اسم الزوجة أو صديق الطفولة") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
-                        )
-
-                        // Acknowledge Checkbox
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { tempCheckAcknowledged = !tempCheckAcknowledged }
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "أؤكد حفظي الآمن لمفتاح الاسترداد والرمز السري خارج الهاتف وأتحمل المسؤولية كاملة.",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Right,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(end = 8.dp)
-                            )
-                            Checkbox(
-                                checked = tempCheckAcknowledged,
-                                onCheckedChange = { tempCheckAcknowledged = it },
-                                colors = CheckboxDefaults.colors(checkedColor = CoralAccent)
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    val isValid = tempPasscode.length == 4 && 
-                                  tempConfirmPasscode == tempPasscode && 
-                                  tempRecoveryPhrase.isNotBlank() && 
-                                  tempCheckAcknowledged
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 24.dp, top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Cancel Button
-                        OutlinedButton(
-                            onClick = { showPasscodeSetupSheet = false },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                        ) {
-                            Text("إلغاء", fontWeight = FontWeight.Bold)
-                        }
-
-                        // Save & Enable Passcode
-                        Button(
-                            onClick = {
-                                if (isValid) {
-                                    val pHash = com.example.domain.HashUtils.hashString(tempPasscode)
-                                    val rHash = com.example.domain.HashUtils.hashString(tempRecoveryPhrase.trim())
-                                    val updated = settings.copy(
-                                        isPasscodeEnabled = true,
-                                        passcodeHash = pHash,
-                                        recoveryPhraseHash = rHash,
-                                        recoveryHint = tempRecoveryHint.trim().takeIf { it.isNotBlank() }
-                                    )
-                                    viewModel.saveSettings(updated)
-                                    showPasscodeSetupSheet = false
-                                    Toast.makeText(context, "تم تفعيل قفل التطبيق والأمان بنجاح 🛡️", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            enabled = isValid
-                        ) {
-                            Text("حفظ وتغليق القفل 💾", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-                }
+        PasscodeSetupBottomSheet(
+            onDismiss = { showPasscodeSetupSheet = false },
+            onSavePasscode = { passcode, recoveryPhrase, recoveryHint ->
+                val pHash = com.example.domain.HashUtils.hashString(passcode)
+                val rHash = com.example.domain.HashUtils.hashString(recoveryPhrase.trim())
+                val updated = settings.copy(
+                    isPasscodeEnabled = true,
+                    passcodeHash = pHash,
+                    recoveryPhraseHash = rHash,
+                    recoveryHint = recoveryHint.trim().takeIf { it.isNotBlank() }
+                )
+                viewModel.saveSettings(updated)
+                showPasscodeSetupSheet = false
+                Toast.makeText(context, "تم تفعيل قفل التطبيق والأمان بنجاح 🛡️", Toast.LENGTH_SHORT).show()
             }
-        }
+        )
     }
 
     if (showBackupPermissionExplanationDialog) {
-        AlertDialog(
-            onDismissRequest = { showBackupPermissionExplanationDialog = false },
-            title = {
-                Text(
-                    "طلب صلاحيات النسخ الاحتياطي ⚙️💾",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color(0xFF1E293B),
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        "لتفعيل نظام التخزين والمزامنة التلقائي وحفظ ملفات (.mzd) في ذاكرة الهاتف العامة (Documents/Mizan_Backups)، يتطلب التطبيق الحصول صراحة على الصلاحيات التالية لتفادي فشل الحفظ أو الحظر:",
-                        fontSize = 12.sp,
-                        color = Color(0xFF475569),
-                        lineHeight = 18.sp,
-                        textAlign = TextAlign.Right,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("صلاحية الوصول ومساحة التخزين لإنشاء الأرشيف", fontSize = 11.sp, color = Color(0xFF334155), textAlign = TextAlign.Right)
-                        Icon(Icons.Default.Folder, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(16.dp))
-                    }
-                    
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("إدارة ملفات الجهاز (لتخطي حماية الأندرويد 11+)", fontSize = 11.sp, color = Color(0xFF334155), textAlign = TextAlign.Right)
-                            Icon(Icons.Default.SettingsSuggest, contentDescription = null, tint = Color(0xFF0EA5E9), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("صلاحية الإشعارات لتلقي تنبيهات نجاح/فشل المزامنة", fontSize = 11.sp, color = Color(0xFF334155), textAlign = TextAlign.Right)
-                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "ملاحظة: في حال لم تمنح هذه الصلاحيات، سيظل التطبيق قادراً على حفظ البيانات مؤقتاً داخل التخزين الداخلي الآمن للبرنامج.",
-                        fontSize = 11.sp,
-                        color = Color(0xFF64748B),
-                        lineHeight = 16.sp,
-                        textAlign = TextAlign.Right,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+        BackupPermissionExplanationDialog(
+            onDismiss = { showBackupPermissionExplanationDialog = false },
+            onGrantPermissions = {
+                val permissions = mutableListOf<String>()
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+                    permissions.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showBackupPermissionExplanationDialog = false
-                        val permissions = mutableListOf<String>()
-                        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
-                            permissions.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        }
-                        permissions.add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                            permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        multiplePermissionsLauncher.launch(permissions.toTypedArray())
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text("منح الصلاحيات 🔓", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                permissions.add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
                 }
+                multiplePermissionsLauncher.launch(permissions.toTypedArray())
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showBackupPermissionExplanationDialog = false
-                        onPermissionGrantedCallback?.invoke()
-                    }
-                ) {
-                    Text("استخدام التخزين المؤقت", fontSize = 12.sp, color = Color(0xFF64748B))
-                }
+            onUseInternalStorage = {
+                onPermissionGrantedCallback?.invoke()
             }
         )
     }
 
     // Visual Deception Reset Double Confirmation Dialog Box
     if (showTrapDialog) {
-        Dialog(
-            onDismissRequest = { showTrapDialog = false }
-        ) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "إجراء بالغ الخطورة! ⚠️",
-                        color = SoftRed,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "هل أنت متأكد تماماً من مسح كافة السجلات؟ هذا الإجراء سيمحي كل شيء نهائياً من الصندوق واليوميات والالتزامات ولا يمكن تدارك أو استرجاع المعلومات مجدداً.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Soft Primary Safety Button
-                    Button(
-                        onClick = { showTrapDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Text(
-                            text = "تراجع، حافظ على بياناتي 🛡️",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Tiny Unshaded Reset Button
-                    TextButton(
-                        onClick = {
-                            viewModel.deleteAllData()
-                            showTrapDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "نعم، امسح كل سجلاتي نهائياً",
-                            color = Color.LightGray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Light,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+        ResetTrapDialog(
+            onDismiss = { showTrapDialog = false },
+            onConfirmDelete = {
+                viewModel.deleteAllData()
+                showTrapDialog = false
             }
-        }
+        )
     }
 
     // Identity Verification Gate Dialog Box
     if (showSecurityGateDialog) {
-        Dialog(
-            onDismissRequest = { showSecurityGateDialog = false }
-        ) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(EmeraldPrimary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Security,
-                            contentDescription = "التحقق الأمني",
-                            tint = EmeraldPrimary,
-                            modifier = Modifier.size(28.dp)
+        SecurityGateDialog(
+            onDismiss = { showSecurityGateDialog = false },
+            onVerifySuccess = {
+                showSecurityGateDialog = false
+                when (securityGateAction) {
+                    "TOGGLE_OFF" -> {
+                        val updated = settings.copy(
+                            isPasscodeEnabled = false,
+                            passcodeHash = null,
+                            recoveryPhraseHash = null
                         )
+                        viewModel.saveSettings(updated)
+                        Toast.makeText(context, "تم إيقاف ميزة قفل التطبيق والأمان 🔓", Toast.LENGTH_SHORT).show()
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "بوابة التحقق الأمني 🛡️",
-                        color = EmeraldPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "لتأكيد هويتك وحماية خصوصية التطبيق، الرجاء إدخال الرمز السري الحالي المكون من 4 أرقام أو عبارة الاسترداد الخاصة بك للمتابعة.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    OutlinedTextField(
-                        value = securityGateInput,
-                        onValueChange = { 
-                            securityGateInput = it
-                            securityGateError = ""
-                        },
-                        label = { Text("رمز القفل أو عبارة الاسترداد") },
-                        placeholder = { Text("أدخل بيانات التحقق...") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
-                    )
-
-                    if (securityGateError.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = securityGateError,
-                            color = SoftRed,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Cancel button
-                        OutlinedButton(
-                            onClick = { showSecurityGateDialog = false },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                        ) {
-                            Text("إلغاء الإجراء", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-
-                        // Confirm button
-                        Button(
-                            onClick = {
-                                if (viewModel.verifyCredentials(securityGateInput)) {
-                                    showSecurityGateDialog = false
-                                    when (securityGateAction) {
-                                        "TOGGLE_OFF" -> {
-                                            val updated = settings.copy(
-                                                isPasscodeEnabled = false,
-                                                passcodeHash = null,
-                                                recoveryPhraseHash = null
-                                            )
-                                            viewModel.saveSettings(updated)
-                                            Toast.makeText(context, "تم إيقاف ميزة قفل التطبيق والأمن 🔓", Toast.LENGTH_SHORT).show()
-                                        }
-                                        "CHANGE_PASSCODE", "CHANGE_RECOVERY" -> {
-                                            tempPasscode = ""
-                                            tempConfirmPasscode = ""
-                                            tempRecoveryPhrase = ""
-                                            tempRecoveryHint = ""
-                                            tempCheckAcknowledged = false
-                                            showPasscodeSetupSheet = true
-                                        }
-                                    }
-                                } else {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    securityGateError = "الرمز أو العبارة غير متطابقة مسبقاً! ❌"
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            enabled = securityGateInput.isNotBlank()
-                        ) {
-                            Text("تحقق ومتابعة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
+                    "CHANGE_PASSCODE", "CHANGE_RECOVERY" -> {
+                        showPasscodeSetupSheet = true
                     }
                 }
-            }
-        }
-    }
-
-
-}
-
-// Redesigned continuous progress-driven long-press delete button: Styled beautifully as a soft Red Outlined Box
-@Composable
-fun DangerDeleteButton(onDeleteConfirmed: () -> Unit) {
-    val haptic = LocalHapticFeedback.current
-    var isPressing by remember { mutableStateOf(false) }
-
-    val progress by animateFloatAsState(
-        targetValue = if (isPressing) 1f else 0f,
-        animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
-        label = "DeleteProgress"
-    )
-
-    LaunchedEffect(isPressing) {
-        if (isPressing) {
-            while (isPressing) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                delay(120)
-            }
-        }
-    }
-
-    LaunchedEffect(progress) {
-        if (progress == 1f) {
-            isPressing = false
-            onDeleteConfirmed()
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, SoftRed, RoundedCornerShape(12.dp))
-            .background(SoftRed.copy(alpha = 0.04f))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressing = true
-                        tryAwaitRelease()
-                        isPressing = false
-                    },
-                    onTap = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
-                )
             },
-        contentAlignment = Alignment.Center
-    ) {
-        // Internal slide filler on hold
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(progress)
-                .align(Alignment.CenterStart)
-                .background(SoftRed.copy(alpha = 0.16f))
+            verifyCredentials = { input -> viewModel.verifyCredentials(input) }
         )
-
-        Text(
-            text = if (isPressing) "جاري التحقق من الحذف..." else "حذف جميع بيانات السجل (ضغط مطول ⏳)",
-            color = SoftRed,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun QuadBackupItem(
-    title: String,
-    description: String,
-    accentColor: Color,
-    icon: @Composable () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F7F6))
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(accentColor.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        icon()
-                    }
-                    Text(
-                        text = title,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF075E54)
-                    )
-                }
-            }
-            Text(
-                text = description,
-                fontSize = 10.sp,
-                color = Color(0xFF5A625E),
-                textAlign = TextAlign.Right,
-                modifier = Modifier.fillMaxWidth(),
-                lineHeight = 14.sp
-            )
-            content()
-        }
     }
 }

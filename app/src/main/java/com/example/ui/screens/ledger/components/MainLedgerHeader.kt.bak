@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.local.FixedCommitment
-import com.example.domain.MonthLedger
+import com.example.data.local.MonthLedger
 import com.example.ui.theme.EmeraldPrimary
 import java.math.BigDecimal
 

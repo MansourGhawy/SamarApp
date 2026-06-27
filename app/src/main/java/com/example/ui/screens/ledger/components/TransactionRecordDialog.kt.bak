@@ -39,11 +39,11 @@ fun TransactionRecordDialog(
     txDialogType: String,
     currencySymbol: String,
     schoolExpensesEnabled: Boolean,
-    customCategories: List<CustomCategory>,
+    customCategories: List<CustomCategoryDb>,
     onDismiss: () -> Unit,
     onSaveTransaction: (amount: Double, description: String, category: String) -> Unit,
     onAddCustomCategory: (name: String, tab: String, emoji: String) -> Unit,
-    onDeleteCustomCategory: (CustomCategory) -> Unit,
+    onDeleteCustomCategory: (CustomCategoryDb) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

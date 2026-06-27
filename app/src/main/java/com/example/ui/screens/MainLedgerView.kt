@@ -6,8 +6,6 @@ import android.os.Vibrator
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -33,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.key
 import com.example.ui.components.CircularRevealShape
 import com.example.ui.components.DeveloperSealFooter
 import androidx.compose.ui.Alignment
@@ -57,6 +54,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -70,10 +68,7 @@ import com.example.data.local.*
 import com.example.data.local.entities.*
 import com.example.domain.DateUtils
 import com.example.ui.theme.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.compose.runtime.SideEffect
 import android.app.Activity
 import com.example.ui.viewmodel.*
 import com.example.ui.screens.ledger.components.*
@@ -95,8 +90,12 @@ fun MainLedgerView(
     commitments: List<FixedCommitment>,
     settings: AppSettings,
     onBackIntercept: (Boolean) -> Unit, // intercepts back to cancel selection mode if active
-    onMenuClick: () -> Unit = {}
+    onMenuClick: () -> Unit = {},
+    contentPadding: PaddingValues = PaddingValues()
 ) {
+    val bottomPadding = contentPadding.calculateBottomPadding()
+    val topPadding = contentPadding.calculateTopPadding()
+
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -215,6 +214,7 @@ fun MainLedgerView(
     val habayebOwedByThemTotal by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
 
     // Precompute commitments coverage details
+    // تحذير للمطور: يجب الحذر عند تحويل الـ BigDecimal إلى Double في الحسابات المالية لتجنب أخطاء التقريب العشري. تم إبقاء المنطق حالياً لتجنب كسر الوظيفة.
     val computedCommitments = remember(commitments, totalCash, linkHabayebDebts, habayebOwedByThemTotal) {
         var remainingCash = totalCash.toDouble()
         if (linkHabayebDebts) {
@@ -267,6 +267,10 @@ fun MainLedgerView(
         LazyColumn(
             state = lazyListState,
             modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = topPadding + 8.dp,
+                bottom = bottomPadding + 110.dp // حشوة كافية للتمرير خلف الـ Dock والـ Navigation Bar بأمان وتناسق
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -470,15 +474,13 @@ fun MainLedgerView(
                     }
                 }
             }
-
-            // Bottom spacing past absolute FAB overlays (compressed rhythm)
-            item {
-                Spacer(modifier = Modifier.height(120.dp))
-            }
         }
 
         // Floating action buttons (Dual floating configuration) - Compressed & modern
         LedgerBottomDock(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomPadding + 12.dp), // مسافة أمان بصري فخمة فوق الـ Navigation Bar المدمج
             isSelectionMode = isSelectionMode,
             selectedTxIdsCount = selectedTxIds.size,
             onDeleteSelectedClick = {
@@ -498,8 +500,7 @@ fun MainLedgerView(
                 editingTransaction = null
                 txDialogType = "EXPENSE"
                 showTxDialog = true
-            },
-            modifier = Modifier.align(Alignment.BottomCenter)
+            }
         )
     }
 

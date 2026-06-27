@@ -145,7 +145,6 @@ fun MainLedgerView(
 
     // Floating commitment dialog
     var showCommitmentsListSheet by remember { mutableStateOf(false) }
-    
     var reorderCommitmentTarget by remember { mutableStateOf<FixedCommitment?>(null) }
     var showCommitmentDialog by remember { mutableStateOf(false) }
     var editingCommitment by remember { mutableStateOf<FixedCommitment?>(null) }
@@ -157,6 +156,7 @@ fun MainLedgerView(
     var showSearch by remember { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResultsState.collectAsStateWithLifecycle()
+    val customCats by viewModel.customCategoriesState.collectAsStateWithLifecycle()
 
     // Reactive active day resolver helper
     val activeDayLedger = remember(activeDayKey, monthlyLedger) {
@@ -297,97 +297,12 @@ fun MainLedgerView(
 
     Box(modifier = Modifier.fillMaxSize().background(IvoryBackground)) {
         // High-fidelity pinned collapsible top header when scrolled - Redesigned Clock to Top-Right
-        if (collapseFraction > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .zIndex(10f)
-                    .background(EmeraldPrimary)
-                    .statusBarsPadding()
-                    .height(48.dp)
-                    .alpha(collapseFraction)
-            ) {
-                // Centered App Name
-                Text(
-                    text = stringResource(id = R.string.ledger_title),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Start components - القائمة الجانبية وساعة السجل (Menu and History)
-                    IconButton(
-                        onClick = { onMenuClick() },
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Left Corner (RTL end component): Search and Habayeb shortcuts in a Row
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Search shortcut
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showSearch = true
-                        },
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(id = R.string.habayeb_search_label),
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    // Habayeb Wallet shortcut
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            isHabayebActive = true
-                        },
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountBalanceWallet,
-                            contentDescription = stringResource(id = R.string.habayeb_title),
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
+        PinnedMainLedgerHeader(
+            collapseFraction = collapseFraction,
+            onMenuClick = onMenuClick,
+            onSearchClick = { showSearch = true },
+            onHabayebClick = { isHabayebActive = true }
+        )
 
         LazyColumn(
             state = lazyListState,
@@ -395,63 +310,28 @@ fun MainLedgerView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-// استدعاء مكون الهيدر ومؤشرات الكاش والتغطية المفرز
+            // Compact Header + Total Cash + Coverage Ratio
             item {
                 val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
-                
-                // حساب نسب التقدم لتمريرها مباشرة لتجنب التكرار داخل المكون
-                val totalTarget = commitments.sumOf { it.targetAmount }
-                val totalAllocated = computedCommitments.sumOf { it.second }
-                val percentFloat = if (totalTarget > 0.0) {
-                    (totalAllocated / totalTarget).toFloat().coerceIn(0f, 1f)
-                } else {
-                    0f
+                val allKeys = remember(monthlyLedger) {
+                    monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
                 }
-                
-                val cashPercentFloat = remember(commitments, totalCash) {
-                    if (totalTarget > 0.0) {
-                        var remainingCash = totalCash.toDouble()
-                        val allocated = commitments.sumOf { fc ->
-                            val needed = (fc.targetAmount - fc.currentProgress).coerceAtLeast(0.0)
-                            if (remainingCash >= needed) {
-                                remainingCash -= needed
-                                needed
-                            } else if (remainingCash > 0) {
-                                val temp = remainingCash
-                                remainingCash = 0.0
-                                temp
-                            } else {
-                                0.0
-                            }
-                        }
-                        ((commitments.sumOf { it.currentProgress } + allocated) / totalTarget).toFloat().coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
+                val selectedDayKeysCountText = when (selectedDayKeys.size) {
+                    1 -> stringResource(id = R.string.ledger_selected_days_count_1)
+                    2 -> stringResource(id = R.string.ledger_selected_days_count_2)
+                    else -> stringResource(id = R.string.ledger_selected_days_count_more, selectedDayKeys.size)
                 }
+                val isSelectAllChecked = selectedDayKeys.size == allKeys.size && allKeys.isNotEmpty()
 
                 MainLedgerHeader(
                     collapseFraction = collapseFraction,
-                    isPrivacyMode = isPrivacyMode,
                     isDaySelectionMode = isDaySelectionMode,
                     selectedDayKeys = selectedDayKeys,
-                    monthlyLedger = monthlyLedger,
-                    totalCash = totalCash,
-                    currencySymbol = settings.currencySymbol,
-                    commitments = commitments,
-                    linkHabayebDebts = linkHabayebDebts,
-                    percentFloat = percentFloat,
-                    cashPercentFloat = cashPercentFloat,
-                    onTogglePrivacyMode = { viewModel.togglePrivacyMode() },
-                    onToggleLinkHabayebDebts = { viewModel.toggleLinkHabayebDebts(it) },
-                    onMenuClick = { onMenuClick() },
-                    onSearchClick = { showSearch = true },
                     onCancelDaySelection = {
                         isDaySelectionMode = false
                         selectedDayKeys.clear()
                     },
-                    onSelectAllDaysClick = {
-                        val allKeys = monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
+                    onSelectAllDays = {
                         if (selectedDayKeys.size == allKeys.size) {
                             selectedDayKeys.clear()
                         } else {
@@ -459,23 +339,37 @@ fun MainLedgerView(
                             selectedDayKeys.addAll(allKeys)
                         }
                     },
-                    onBulkDeleteDaysClick = { showDeleteDaysDialog = true },
-                    formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) }
+                    onDeleteSelectedDays = {
+                        if (selectedDayKeys.isNotEmpty()) {
+                            showDeleteDaysDialog = true
+                        }
+                    },
+                    onMenuClick = onMenuClick,
+                    onSearchClick = { showSearch = true },
+                    totalCash = totalCash,
+                    isPrivacyMode = isPrivacyMode,
+                    onTogglePrivacyMode = { viewModel.togglePrivacyMode() },
+                    currencySymbol = settings.currencySymbol,
+                    formatCurrency = { value, sym -> viewModel.formatCurrency(value, sym) },
+                    commitments = commitments,
+                    computedCommitments = computedCommitments,
+                    linkHabayebDebts = linkHabayebDebts,
+                    onLinkHabayebDebtsChange = { viewModel.toggleLinkHabayebDebts(it) },
+                    monthlyLedger = monthlyLedger,
+                    selectedDayKeysCountText = selectedDayKeysCountText,
+                    isSelectAllChecked = isSelectAllChecked
                 )
             }
 
             // Commitments Summary Cards - Row 1 of the 2x2 Grid block
-// استدعاء مكون ملخص الالتزامات المفرز
-            if (commitments.isNotEmpty()) {
-                item {
-                    CommitmentsSummaryCards(
-                        commitments = commitments,
-                        computedCommitments = computedCommitments,
-                        totalCash = totalCash,
-                        currencySymbol = settings.currencySymbol,
-                        formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) }
-                    )
-                }
+            item {
+                CommitmentsSummaryCards(
+                    commitments = commitments,
+                    computedCommitments = computedCommitments,
+                    totalCash = totalCash,
+                    currencySymbol = settings.currencySymbol,
+                    formatCurrency = { value, sym -> viewModel.formatCurrency(value, sym) }
+                )
             }
 
             // Budget Advice Banner based on daily comparison
@@ -723,21 +617,18 @@ fun MainLedgerView(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-// استدعاء اللوحة العائمة السفلية المفرزة
+        // Floating action buttons (Dual floating configuration) - Compressed & modern
         LedgerBottomDock(
             isSelectionMode = isSelectionMode,
             selectedTxIdsCount = selectedTxIds.size,
-            onDeleteSelectedTransactions = {
+            onDeleteSelectedClick = {
                 scope.launch {
-                    viewModel.deleteTransactionsBulk(
-                        selectedTxIds.toList(), 
-                        context.getString(R.string.ledger_delete_selected_warning, selectedTxIds.size)
-                    )
+                    viewModel.deleteTransactionsBulk(selectedTxIds.toList(), context.getString(R.string.ledger_delete_selected_warning, selectedTxIds.size))
                     delay(200)
                     clearSelection()
                 }
             },
-            onGoalsClick = { showCommitmentsListSheet = true },
+            onShowCommitmentsClick = { showCommitmentsListSheet = true },
             onAddIncomeClick = {
                 editingTransaction = null
                 txDialogType = "INCOME"
@@ -749,45 +640,42 @@ fun MainLedgerView(
                 showTxDialog = true
             },
             modifier = Modifier.align(Alignment.BottomCenter)
-        )}
-
- // استدعاء نافذة إضافة وتعديل المعاملات المفرزة
-    if (showTxDialog) {
-        val customCats by viewModel.customCategoriesState.collectAsStateWithLifecycle()
-        TransactionRecordDialog(
-            editingTransaction = editingTransaction,
-            txDialogType = txDialogType,
-            currencySymbol = settings.currencySymbol,
-            schoolExpensesEnabled = settings.schoolExpensesEnabled,
-            customCategories = customCats,
-            onDismiss = { showTxDialog = false },
-            onSaveTransaction = { amount, description, category ->
-                if (editingTransaction != null) {
-                    viewModel.updateTransaction(
-                        editingTransaction!!.copy(
-                            amount = amount,
-                            description = description,
-                            category = category
-                        )
-                    )
-                } else {
-                    viewModel.addTransaction(
-                        type = txDialogType,
-                        category = category,
-                        amount = amount,
-                        description = description
-                    )
-                }
-                showTxDialog = false
-            },
-            onAddCustomCategory = { name, tab, emoji ->
-                viewModel.saveCustomCategory(name, tab, emoji)
-            },
-            onDeleteCustomCategory = { cat ->
-                viewModel.deleteCustomCategory(cat)
-            }
         )
     }
+
+    // Modal dialog for Recording Income / Expenses
+    TransactionRecordDialog(
+        showTxDialog = showTxDialog,
+        txDialogType = txDialogType,
+        editingTransaction = editingTransaction,
+        currencySymbol = settings.currencySymbol,
+        schoolExpensesEnabled = settings.schoolExpensesEnabled,
+        customCategories = customCats,
+        onDismiss = { showTxDialog = false },
+        onSave = { id, type, category, amount, description ->
+            if (editingTransaction != null) {
+                val tx = editingTransaction!!.copy(
+                    amount = amount,
+                    description = description,
+                    category = category
+                )
+                viewModel.updateTransaction(tx)
+            } else {
+                viewModel.addTransaction(
+                    type = type,
+                    category = category,
+                    amount = amount,
+                    description = description
+                )
+            }
+        },
+        onSaveCustomCategory = { name, tab, emoji ->
+            viewModel.saveCustomCategory(name, tab, emoji)
+        },
+        onDeleteCustomCategory = { cat ->
+            viewModel.deleteCustomCategory(cat)
+        }
+    )
 
     if (showSearch) {
         SearchLedgerDialog(
@@ -799,53 +687,51 @@ fun MainLedgerView(
         )
     }
 
-// استدعاء نافذة قائمة الالتزامات والأهداف المالية المفرزة
-    if (showCommitmentsListSheet) {
-        CommitmentsListDialog(
-            commitments = commitments,
-            computedCommitments = computedCommitments,
-            totalCash = totalCash,
-            currencySymbol = settings.currencySymbol,
-            onDismiss = { showCommitmentsListSheet = false },
-            onAddCommitmentClick = {
-                editingCommitment = null
-                showCommitmentDialog = true
-            },
-            onEditCommitmentClick = { fc ->
-                editingCommitment = fc
-                showCommitmentDialog = true
-            },
-            onDeleteCommitment = { name -> viewModel.deleteCommitment(name) },
-            onReorderCommitmentClick = { fc -> reorderCommitmentTarget = fc },
-            onReorderCommitmentSwipe = { fc, pos -> viewModel.reorderCommitment(fc, pos) },
-            onSaveCommitmentProgress = { name, target, progress ->
-                viewModel.saveCommitment(name, target, progress)
-            },
-            formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) },
-            formatDoubleCurrency = { value, symbol -> viewModel.formatDoubleCurrency(value, symbol) }
-        )
-    }
+    // Commitments List Popup Dialog
+    CommitmentsListDialog(
+        showCommitmentsListSheet = showCommitmentsListSheet,
+        commitments = commitments,
+        computedCommitments = computedCommitments,
+        totalCash = totalCash,
+        currencySymbol = settings.currencySymbol,
+        formatCurrency = { amt, sym -> viewModel.formatCurrency(amt, sym) },
+        formatDoubleCurrency = { amt, sym -> viewModel.formatDoubleCurrency(amt, sym) },
+        onDismissRequest = { showCommitmentsListSheet = false },
+        onAddCommitmentClick = {
+            editingCommitment = null
+            showCommitmentDialog = true
+        },
+        onEditCommitmentClick = { fc ->
+            editingCommitment = fc
+            showCommitmentDialog = true
+        },
+        onDeleteCommitment = { name -> viewModel.deleteCommitment(name) },
+        onReorderCommitment = { fc, pos -> viewModel.reorderCommitment(fc, pos) },
+        onCheckedChange = { fc, checked ->
+            viewModel.saveCommitment(fc.name, fc.targetAmount, if (checked) fc.targetAmount else 0.0)
+        },
+        onSetReorderTarget = { reorderCommitmentTarget = it }
+    )
 
-// استدعاء نافذة إضافة وتعديل الالتزام الفردي المفرزة
-    if (showCommitmentDialog) {
-        CommitmentEditDialog(
-            editingCommitment = editingCommitment,
-            onDismiss = {
-                showCommitmentDialog = false
-                editingCommitment = null
-            },
-            onSaveCommitment = { name, target, progress ->
-                viewModel.saveCommitment(name, target, progress)
-                showCommitmentDialog = false
-                editingCommitment = null
-            },
-            onDeleteCommitment = { name ->
-                viewModel.deleteCommitment(name)
-                showCommitmentDialog = false
-                editingCommitment = null
-            }
-        )
-    }
+    // Commitment Add/Edit Dialog
+    CommitmentEditDialog(
+        showCommitmentDialog = showCommitmentDialog,
+        editingCommitment = editingCommitment,
+        onDismissRequest = {
+            showCommitmentDialog = false
+            editingCommitment = null
+        },
+        onSaveCommitment = { name, targetAmount, currentProgress ->
+            viewModel.saveCommitment(name, targetAmount, currentProgress)
+            showCommitmentDialog = false
+            editingCommitment = null
+        },
+        onDeleteCommitment = { name ->
+            viewModel.deleteCommitment(name)
+            showCommitmentDialog = false
+            editingCommitment = null
+        }
+    )
 
     if (reorderCommitmentTarget != null) {
         var targetPositionStr by remember { mutableStateOf("") }
@@ -929,22 +815,20 @@ fun MainLedgerView(
     }
 
     // Interactive Custom Pop-up Dialog for Day Transactions (Chronological order)
- // استدعاء نافذة تفاصيل المعاملات اليومية المفرزة
-    if (activeDayKey != null && activeDayLedger != null) {
-        ActiveDayTransactionsDialog(
-            activeDayLedger = activeDayLedger,
-            currencySymbol = settings.currencySymbol,
-            onDismiss = { activeDayKey = null },
-            onDeleteTransaction = { txId -> viewModel.deleteTransactionById(txId) },
-            onEditTransaction = { tx ->
-                editingTransaction = tx
-                txDialogType = tx.type
-                showTxDialog = true
-            },
-            formatCurrency = { value, symbol -> viewModel.formatCurrency(value, symbol) },
-            formatDoubleCurrency = { value, symbol -> viewModel.formatDoubleCurrency(value, symbol) }
-        )
-    }
+    ActiveDayTransactionsDialog(
+        activeDayKey = activeDayKey,
+        activeDayLedger = activeDayLedger,
+        currencySymbol = settings.currencySymbol,
+        onDismiss = { activeDayKey = null },
+        onDeleteTransaction = { txId -> viewModel.deleteTransactionById(txId) },
+        onEditTransaction = { tx ->
+            editingTransaction = tx
+            txDialogType = tx.type
+            showTxDialog = true
+        },
+        formatDoubleCurrency = { amt, sym -> viewModel.formatDoubleCurrency(amt, sym) },
+        formatCurrency = { amt, sym -> viewModel.formatCurrency(amt, sym) }
+    )
 
     // --- Container Transform / Shared Bounds Motion Screen Overlay ---
     val animProgress = remember { Animatable(0f) }

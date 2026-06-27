@@ -25,8 +25,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.*
+import com.example.data.local.CustomCategory
+import com.example.data.local.TransactionDb
 import com.example.ui.screens.CalculatorDialog
 import com.example.ui.screens.CategoryBottomSheet
 import com.example.ui.theme.CoralAccent
@@ -35,40 +37,31 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun TransactionRecordDialog(
-    editingTransaction: TransactionDb?,
+    showTxDialog: Boolean,
     txDialogType: String,
+    editingTransaction: TransactionDb?,
     currencySymbol: String,
     schoolExpensesEnabled: Boolean,
     customCategories: List<CustomCategory>,
     onDismiss: () -> Unit,
-    onSaveTransaction: (amount: Double, description: String, category: String) -> Unit,
-    onAddCustomCategory: (name: String, tab: String, emoji: String) -> Unit,
+    onSave: (id: String?, type: String, category: String, amount: Double, description: String) -> Unit,
+    onSaveCustomCategory: (name: String, tab: String, emoji: String) -> Unit,
     onDeleteCustomCategory: (CustomCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!showTxDialog) return
+
     val context = LocalContext.current
-    
-    var numAmount by rememberSaveable(editingTransaction) { 
-        mutableStateOf(editingTransaction?.amount?.toString() ?: "") 
-    }
-    var descriptionStr by rememberSaveable(editingTransaction) { 
-        mutableStateOf(editingTransaction?.description ?: "") 
-    }
-    var categoryName by rememberSaveable(editingTransaction) { 
-        mutableStateOf(
-            editingTransaction?.category ?: if (txDialogType == "INCOME") {
-                context.getString(R.string.ledger_category_overall_income)
-            } else {
-                context.getString(R.string.ledger_category_expense)
-            }
-        )
+    var numAmount by rememberSaveable(editingTransaction) { mutableStateOf(editingTransaction?.amount?.toString() ?: "") }
+    var descriptionStr by rememberSaveable(editingTransaction) { mutableStateOf(editingTransaction?.description ?: "") }
+    var categoryName by rememberSaveable(editingTransaction, txDialogType) {
+        mutableStateOf(editingTransaction?.category ?: if (txDialogType == "INCOME") context.getString(R.string.ledger_category_overall_income) else context.getString(R.string.ledger_category_expense))
     }
 
     var showCalcPopup by rememberSaveable { mutableStateOf(false) }
     var isSavingTx by remember { mutableStateOf(false) }
     var showCategoryPickerSheet by remember { mutableStateOf(false) }
 
-    // تحسين الأداء باستخدام derivedStateOf للتحقق المباشر من قيمة المدخلات
     val isConfirmButtonEnabled by remember {
         derivedStateOf {
             !isSavingTx && (numAmount.toDoubleOrNull() ?: 0.0) > 0.0
@@ -80,28 +73,19 @@ fun TransactionRecordDialog(
     val focusManager = LocalFocusManager.current
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
-    // توجيه الفوكس التلقائي على حقل المبلغ عند فتح الحوار
     LaunchedEffect(Unit) {
         delay(300)
         try {
             focusRequester.requestFocus()
             softwareKeyboardController?.show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) {}
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (editingTransaction != null) {
-                    stringResource(id = R.string.ledger_edit_transaction_title)
-                } else if (txDialogType == "INCOME") {
-                    stringResource(id = R.string.ledger_add_income_title)
-                } else {
-                    stringResource(id = R.string.ledger_add_expense_title)
-                },
+                text = if (editingTransaction != null) stringResource(id = R.string.ledger_edit_transaction_title) else if (txDialogType == "INCOME") stringResource(id = R.string.ledger_add_income_title) else stringResource(id = R.string.ledger_add_expense_title),
                 fontWeight = FontWeight.Bold,
                 color = EmeraldPrimary,
                 textAlign = TextAlign.Center,
@@ -110,14 +94,13 @@ fun TransactionRecordDialog(
         },
         text = {
             Column(
-                modifier = modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.End
             ) {
-                // حقل المبلغ بتركيز تلقائي
                 OutlinedTextField(
                     value = numAmount,
                     onValueChange = { numAmount = it },
@@ -132,11 +115,7 @@ fun TransactionRecordDialog(
                     singleLine = true,
                     leadingIcon = {
                         IconButton(onClick = { showCalcPopup = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Calculate, 
-                                contentDescription = stringResource(id = R.string.habayeb_calculator), 
-                                tint = CoralAccent
-                            )
+                            Icon(Icons.Default.Calculate, contentDescription = stringResource(id = R.string.habayeb_calculator), tint = CoralAccent)
                         }
                     },
                     modifier = Modifier
@@ -147,7 +126,6 @@ fun TransactionRecordDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // حقل تفاصيل الحركة
                 OutlinedTextField(
                     value = descriptionStr,
                     onValueChange = { descriptionStr = it },
@@ -169,7 +147,6 @@ fun TransactionRecordDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // زر اختيار تصنيف مخصص للحوار (متاح فقط للإيرادات INCOME)
                 if (txDialogType == "INCOME" && editingTransaction != null) {
                     Button(
                         onClick = { showCategoryPickerSheet = true },
@@ -178,11 +155,7 @@ fun TransactionRecordDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = if (categoryName.isNotBlank()) {
-                                stringResource(id = R.string.ledger_category_label, categoryName)
-                            } else {
-                                stringResource(id = R.string.ledger_choose_category_placeholder)
-                            },
+                            if (categoryName.isNotBlank()) stringResource(id = R.string.ledger_category_label, categoryName) else stringResource(id = R.string.ledger_choose_category_placeholder),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
@@ -199,7 +172,14 @@ fun TransactionRecordDialog(
 
                     val amtParsed = numAmount.toDoubleOrNull() ?: 0.0
                     if (amtParsed > 0) {
-                        onSaveTransaction(amtParsed, descriptionStr, categoryName)
+                        onSave(
+                            editingTransaction?.id,
+                            txDialogType,
+                            categoryName,
+                            amtParsed,
+                            descriptionStr
+                        )
+                        onDismiss()
                     } else {
                         isSavingTx = false
                     }
@@ -216,7 +196,6 @@ fun TransactionRecordDialog(
         }
     )
 
-    // عرض منتقي التصنيفات
     if (showCategoryPickerSheet) {
         CategoryBottomSheet(
             schoolExpensesEnabled = schoolExpensesEnabled,
@@ -225,13 +204,12 @@ fun TransactionRecordDialog(
                 categoryName = "$name $emoji"
                 showCategoryPickerSheet = false
             },
-            onAddCustomCategory = onAddCustomCategory,
+            onAddCustomCategory = onSaveCustomCategory,
             onDeleteCategory = onDeleteCustomCategory,
             onDismiss = { showCategoryPickerSheet = false }
         )
     }
 
-    // عرض الآلة الحاسبة المدمجة
     if (showCalcPopup) {
         CalculatorDialog(
             onDismiss = { showCalcPopup = false },

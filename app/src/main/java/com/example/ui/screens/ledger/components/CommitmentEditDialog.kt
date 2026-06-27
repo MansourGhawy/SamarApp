@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.local.FixedCommitment
 import com.example.ui.theme.EmeraldPrimary
@@ -28,12 +29,15 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun CommitmentEditDialog(
+    showCommitmentDialog: Boolean,
     editingCommitment: FixedCommitment?,
-    onDismiss: () -> Unit,
-    onSaveCommitment: (name: String, target: Double, progress: Double) -> Unit,
+    onDismissRequest: () -> Unit,
+    onSaveCommitment: (name: String, targetAmount: Double, currentProgress: Double) -> Unit,
     onDeleteCommitment: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!showCommitmentDialog) return
+
     val nameFocus = remember { FocusRequester() }
     val targetFocus = remember { FocusRequester() }
     val progressFocus = remember { FocusRequester() }
@@ -47,7 +51,6 @@ fun CommitmentEditDialog(
     var targetAmtStr by rememberSaveable(editingCommitment) { mutableStateOf(initialTarget) }
     var progressAmtStr by rememberSaveable(editingCommitment) { mutableStateOf(initialProgress) }
 
-    // التحكم في التركيز التلقائي للوحة المفاتيح
     LaunchedEffect(Unit) {
         delay(300)
         try {
@@ -62,14 +65,10 @@ fun CommitmentEditDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         title = {
             Text(
-                text = if (editingCommitment != null) {
-                    stringResource(id = R.string.ledger_edit_commitment_title)
-                } else {
-                    stringResource(id = R.string.ledger_add_commitment_title)
-                },
+                text = if (editingCommitment != null) stringResource(id = R.string.ledger_edit_commitment_title) else stringResource(id = R.string.ledger_add_commitment_title),
                 fontWeight = FontWeight.Bold,
                 color = EmeraldPrimary,
                 textAlign = TextAlign.Center,
@@ -78,14 +77,13 @@ fun CommitmentEditDialog(
         },
         text = {
             Column(
-                modifier = modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.End
             ) {
-                // اسم الالتزام (مُعطّل التعديل إذا كنا نعدّل التزاماً قائماً بالفعل)
                 OutlinedTextField(
                     value = obligationName,
                     onValueChange = { if (editingCommitment == null) obligationName = it },
@@ -102,7 +100,6 @@ fun CommitmentEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // المبلغ المستهدف لتغطية هذا الالتزام
                 OutlinedTextField(
                     value = targetAmtStr,
                     onValueChange = { targetAmtStr = it },
@@ -118,7 +115,6 @@ fun CommitmentEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // التقدم الحالي أو المبلغ المدخر له بالفعل
                 OutlinedTextField(
                     value = progressAmtStr,
                     onValueChange = { progressAmtStr = it },
@@ -150,11 +146,13 @@ fun CommitmentEditDialog(
         dismissButton = {
             Row {
                 if (editingCommitment != null) {
-                    TextButton(onClick = { onDeleteCommitment(editingCommitment.name) }) {
+                    TextButton(onClick = {
+                        onDeleteCommitment(editingCommitment.name)
+                    }) {
                         Text(stringResource(id = R.string.ledger_commitment_delete), color = SoftRed)
                     }
                 }
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismissRequest) {
                     Text(stringResource(id = R.string.common_cancel), color = Color.Gray)
                 }
             }

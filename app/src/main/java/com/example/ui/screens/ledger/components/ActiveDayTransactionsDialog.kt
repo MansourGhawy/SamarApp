@@ -1,6 +1,7 @@
 package com.example.ui.screens.ledger.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,16 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.DayLedger
 import com.example.data.local.TransactionDb
 import com.example.domain.DateUtils
 import com.example.domain.extractEmoji
@@ -33,11 +33,13 @@ import com.example.domain.getEmojiBgColor
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftGreen
 import com.example.ui.theme.SoftRed
+import com.example.ui.viewmodel.DayLedger
 import java.math.BigDecimal
 
 @Composable
 fun ActiveDayTransactionsDialog(
-    activeDayLedger: DayLedger,
+    activeDayKey: String?,
+    activeDayLedger: DayLedger?,
     currencySymbol: String,
     onDismiss: () -> Unit,
     onDeleteTransaction: (String) -> Unit,
@@ -46,20 +48,10 @@ fun ActiveDayTransactionsDialog(
     formatDoubleCurrency: (Double, String) -> String,
     modifier: Modifier = Modifier
 ) {
-    val haptic = LocalHapticFeedback.current
+    if (activeDayKey == null || activeDayLedger == null) return
+
     val context = LocalContext.current
-
-    // ترتيب المعاملات زمنياً تلقائياً داخل الـ dialog
-    val sortedTxs = remember(activeDayLedger.transactions) {
-        activeDayLedger.transactions.sortedBy { it.timestamp }
-    }
-
-    if (sortedTxs.isEmpty()) {
-        LaunchedEffect(Unit) {
-            onDismiss()
-        }
-        return
-    }
+    val haptic = LocalHapticFeedback.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -76,17 +68,23 @@ fun ActiveDayTransactionsDialog(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${activeDayLedger.dayOfWeek}، " + stringResource(
-                        id = R.string.ledger_days_prefix,
-                        activeDayLedger.dayNumber,
-                        activeDayLedger.fullDate
-                    ),
+                    text = "${activeDayLedger.dayOfWeek}، " + stringResource(id = R.string.ledger_days_prefix, activeDayLedger.dayNumber, activeDayLedger.fullDate),
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
             }
         },
         text = {
+            val sortedTxs = remember(activeDayLedger.transactions) {
+                activeDayLedger.transactions.sortedBy { it.timestamp }
+            }
+
+            if (sortedTxs.isEmpty()) {
+                LaunchedEffect(Unit) {
+                    onDismiss()
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -112,12 +110,10 @@ fun ActiveDayTransactionsDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // اليسار: العمليات ومبلغ الحركة
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                // حذف المعاملة سريعاً
                                 IconButton(
                                     modifier = Modifier.size(28.dp),
                                     onClick = {
@@ -133,7 +129,6 @@ fun ActiveDayTransactionsDialog(
                                     )
                                 }
 
-                                // تعديل المعاملة
                                 IconButton(
                                     modifier = Modifier.size(28.dp),
                                     onClick = {
@@ -167,7 +162,6 @@ fun ActiveDayTransactionsDialog(
                                 }
                             }
 
-                            // اليمين: التفاصيل وتصنيف المعاملة
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -208,7 +202,6 @@ fun ActiveDayTransactionsDialog(
                 HorizontalDivider(color = Color(0xFFF1F1EF))
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // إجمالي اليوم داخل الحوار
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,14 +233,14 @@ fun ActiveDayTransactionsDialog(
         },
         dismissButton = {
             TextButton(onClick = {
-                val builder = StringBuilder()
+                val builder = java.lang.StringBuilder()
                 val income = activeDayLedger.transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
                 val expense = activeDayLedger.transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
                 builder.append(context.getString(R.string.ledger_daily_record_share_title, activeDayLedger.dayOfWeek, activeDayLedger.fullDate))
                 builder.append(context.getString(R.string.ledger_share_total_income, formatDoubleCurrency(income, currencySymbol)))
                 builder.append(context.getString(R.string.ledger_share_total_expense, formatDoubleCurrency(expense, currencySymbol)))
                 builder.append("___________________\n\n")
-                
+
                 val txs = activeDayLedger.transactions.sortedBy { it.timestamp }
                 if (txs.isEmpty()) {
                     builder.append(context.getString(R.string.ledger_no_txs_today))

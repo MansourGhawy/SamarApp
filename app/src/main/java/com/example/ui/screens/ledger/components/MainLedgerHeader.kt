@@ -1,13 +1,19 @@
 package com.example.ui.screens.ledger.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,41 +21,142 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.R
 import com.example.data.local.FixedCommitment
-import com.example.domain.MonthLedger
 import com.example.ui.theme.EmeraldPrimary
+import com.example.ui.theme.SoftRed
+import com.example.ui.viewmodel.MonthLedger
 import java.math.BigDecimal
+
+@Composable
+fun PinnedMainLedgerHeader(
+    collapseFraction: Float,
+    onMenuClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onHabayebClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (collapseFraction <= 0f) return
+
+    val haptic = LocalHapticFeedback.current
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .zIndex(10f)
+            .background(EmeraldPrimary)
+            .statusBarsPadding()
+            .height(48.dp)
+            .alpha(collapseFraction)
+    ) {
+        Text(
+            text = stringResource(id = R.string.ledger_title),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Black,
+            color = Color.White,
+            modifier = Modifier.align(Alignment.Center)
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onMenuClick,
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.15f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onSearchClick()
+                },
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.15f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(id = R.string.habayeb_search_label),
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onHabayebClick()
+                },
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.15f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccountBalanceWallet,
+                    contentDescription = stringResource(id = R.string.habayeb_title),
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun MainLedgerHeader(
     collapseFraction: Float,
-    isPrivacyMode: Boolean,
     isDaySelectionMode: Boolean,
     selectedDayKeys: List<String>,
-    monthlyLedger: List<MonthLedger>,
-    totalCash: BigDecimal,
-    currencySymbol: String,
-    commitments: List<FixedCommitment>,
-    linkHabayebDebts: Boolean,
-    percentFloat: Float,
-    cashPercentFloat: Float,
-    onTogglePrivacyMode: () -> Unit,
-    onToggleLinkHabayebDebts: (Boolean) -> Unit,
+    onCancelDaySelection: () -> Unit,
+    onSelectAllDays: () -> Unit,
+    onDeleteSelectedDays: () -> Unit,
     onMenuClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onCancelDaySelection: () -> Unit,
-    onSelectAllDaysClick: () -> Unit,
-    onBulkDeleteDaysClick: () -> Unit,
+    totalCash: BigDecimal,
+    isPrivacyMode: Boolean,
+    onTogglePrivacyMode: () -> Unit,
+    currencySymbol: String,
     formatCurrency: (BigDecimal, String) -> String,
+    commitments: List<FixedCommitment>,
+    computedCommitments: List<Triple<FixedCommitment, Double, Double>>,
+    linkHabayebDebts: Boolean,
+    onLinkHabayebDebtsChange: (Boolean) -> Unit,
+    monthlyLedger: List<MonthLedger>,
+    selectedDayKeysCountText: String,
+    isSelectAllChecked: Boolean,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -62,7 +169,11 @@ fun MainLedgerHeader(
             .statusBarsPadding()
             .padding(bottom = 4.dp)
     ) {
-        val topRowHeight = if (isDaySelectionMode) 52.dp else (46 * (1f - collapseFraction)).dp
+        val topRowHeight = if (isDaySelectionMode) {
+            52.dp
+        } else {
+            (46 * (1f - collapseFraction)).dp
+        }
         val topRowAlpha = if (isDaySelectionMode) 1f else (1f - collapseFraction)
 
         Box(
@@ -72,7 +183,6 @@ fun MainLedgerHeader(
                 .alpha(topRowAlpha)
         ) {
             if (isDaySelectionMode) {
-                // شريط الاختيار المتعدد للأيام
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -86,8 +196,8 @@ fun MainLedgerHeader(
                     ) {
                         IconButton(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onCancelDaySelection()
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             modifier = Modifier
                                 .size(34.dp)
@@ -105,31 +215,21 @@ fun MainLedgerHeader(
                         TextButton(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onSelectAllDaysClick()
+                                onSelectAllDays()
                             },
                             colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
                             modifier = Modifier.height(34.dp)
                         ) {
-                            val allKeys = monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
                             Text(
-                                text = if (selectedDayKeys.size == allKeys.size) {
-                                    stringResource(id = R.string.ledger_cancel_all)
-                                } else {
-                                    stringResource(id = R.string.ledger_select_all)
-                                },
+                                text = if (isSelectAllChecked) stringResource(id = R.string.ledger_cancel_all) else stringResource(id = R.string.ledger_select_all),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
                         }
                     }
 
-                    val selectedCountText = when (selectedDayKeys.size) {
-                        1 -> stringResource(id = R.string.ledger_selected_days_count_1)
-                        2 -> stringResource(id = R.string.ledger_selected_days_count_2)
-                        else -> stringResource(id = R.string.ledger_selected_days_count_more, selectedDayKeys.size)
-                    }
                     Text(
-                        text = selectedCountText,
+                        text = selectedDayKeysCountText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
@@ -138,8 +238,8 @@ fun MainLedgerHeader(
                     IconButton(
                         onClick = {
                             if (selectedDayKeys.isNotEmpty()) {
+                                onDeleteSelectedDays()
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onBulkDeleteDaysClick()
                             }
                         },
                         modifier = Modifier
@@ -156,7 +256,6 @@ fun MainLedgerHeader(
                     }
                 }
             } else {
-                // الهيدر الطبيعي (العنوان وسر البحث والمنيو)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -225,7 +324,6 @@ fun MainLedgerHeader(
             }
         }
 
-        // لوحة الرصيد الفعلي الزجاجية Glassmorphic Card Container
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -273,9 +371,39 @@ fun MainLedgerHeader(
                 }
             }
 
-            // مؤشر ونسبة التغطية
             if (commitments.isNotEmpty()) {
+                val totalTarget = commitments.sumOf { it.targetAmount }
+                val totalAllocated = computedCommitments.sumOf { it.second }
+                val percentFloat = if (totalTarget > 0.0) {
+                    (totalAllocated / totalTarget).toFloat().coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+
+                val cashPercentFloat = remember(commitments, totalCash) {
+                    if (totalTarget > 0.0) {
+                        var remainingCash = totalCash.toDouble()
+                        val allocated = commitments.sumOf { fc ->
+                            val needed = (fc.targetAmount - fc.currentProgress).coerceAtLeast(0.0)
+                            if (remainingCash >= needed) {
+                                remainingCash -= needed
+                                needed
+                            } else if (remainingCash > 0) {
+                                val temp = remainingCash
+                                remainingCash = 0.0
+                                temp
+                            } else {
+                                0.0
+                            }
+                        }
+                        ((commitments.sumOf { it.currentProgress } + allocated) / totalTarget).toFloat().coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                }
+                
                 Spacer(modifier = Modifier.height(2.dp))
+                
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -292,7 +420,7 @@ fun MainLedgerHeader(
                     )
                     Switch(
                         checked = linkHabayebDebts,
-                        onCheckedChange = onToggleLinkHabayebDebts,
+                        onCheckedChange = onLinkHabayebDebtsChange,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color(0xFFF3E8FF),
                             checkedTrackColor = Color(0xFF8B5CF6),
@@ -334,8 +462,8 @@ fun MainLedgerHeader(
                     )
                 }
                 Spacer(modifier = Modifier.height(1.dp))
-
-                val neonGradient = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                
+                val neonGradient = Brush.horizontalGradient(
                     colors = listOf(
                         Color(0xFF00E676),
                         Color(0xFF00B0FF)

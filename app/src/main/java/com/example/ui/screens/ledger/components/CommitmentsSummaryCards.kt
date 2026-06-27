@@ -43,54 +43,48 @@ fun CommitmentsSummaryCards(
             .padding(horizontal = 16.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // الكارت الأول: صافي الميزانية المتبقية
+        // Card 1: Net Amount Capsule matching Row 1 style & size
         Box(
             modifier = Modifier
                 .weight(1f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFEDF7ED)) // أخضر باستيل هادئ
+                .background(Color(0xFFEDF7ED)) // Light Pastel Green
                 .border(
                     1.dp,
-                    Color(0xFFC8E6C9),
+                    Color(0xFFC8E6C9), // Soft green boundary
                     RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = stringResource(
-                    id = R.string.ledger_net_prefix,
-                    formatCurrency(BigDecimal.valueOf(netAmount), currencySymbol)
-                ),
+                text = stringResource(id = R.string.ledger_net_prefix, formatCurrency(BigDecimal.valueOf(netAmount), currencySymbol)),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2E7D32),
+                color = Color(0xFF2E7D32), // Clear green readability
                 textAlign = TextAlign.Center
             )
         }
 
-        // الكارت الثاني: قيمة الالتزامات المتبقية
+        // Card 2: Remaining Commitments Capsule matching Row 1 style & size
         Box(
             modifier = Modifier
                 .weight(1f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFDEDED)) // أحمر باستيل هادئ
+                .background(Color(0xFFFDEDED)) // Light Pastel Red
                 .border(
                     1.dp,
-                    Color(0xFFFFCDD2),
+                    Color(0xFFFFCDD2), // Soft red boundary
                     RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = stringResource(
-                    id = R.string.ledger_remaining_commitments,
-                    formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol)
-                ),
+                text = stringResource(id = R.string.ledger_remaining_commitments, formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol)),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFC62828),
+                color = Color(0xFFC62828), // Clear red readability
                 textAlign = TextAlign.Center
             )
         }

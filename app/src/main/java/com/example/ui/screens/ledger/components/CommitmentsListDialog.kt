@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
-import com.example.data.local.FixedCommitment
+import com.example.data.local.entities.FixedCommitment
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftGreen
 import com.example.ui.theme.SoftRed

@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
-import com.example.data.local.AppSettings
+import com.example.data.local.entities.AppSettings
 import com.example.ui.components.*
 import com.example.ui.navigation.Screen
 import com.example.ui.screens.BackupRestoreBottomSheet
@@ -152,7 +152,13 @@ fun MainAppLayout(
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.background),
+            bottomBar = {
+                MainBottomNavigation(
+                    currentScreen = currentScreen,
+                    onNavigate = { currentScreen = it }
+                )
+            }
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -174,13 +180,8 @@ fun MainAppLayout(
                         } else {
                             onExit()
                         }
-                    }
-                )
-
-                MainBottomNavigation(
-                    currentScreen = currentScreen,
-                    onNavigate = { currentScreen = it },
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    },
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }

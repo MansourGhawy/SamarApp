@@ -4,9 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
-import com.example.data.local.HabayebCustomer
-import com.example.data.local.HabayebTransaction
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.HabayebCustomer
+import com.example.data.local.entities.HabayebTransaction
+import com.example.data.local.entities.TransactionDb
 import com.example.ui.state.HabayebComputationResult
 import com.example.ui.state.MizanComputationResult
 import kotlinx.coroutines.Dispatchers

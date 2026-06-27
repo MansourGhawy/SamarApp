@@ -15,8 +15,8 @@ import android.text.TextPaint
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.R
-import com.example.data.local.HabayebCustomer
-import com.example.data.local.HabayebTransaction
+import com.example.data.local.entities.HabayebCustomer
+import com.example.data.local.entities.HabayebTransaction
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream

@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
-import com.example.data.local.HabayebCustomer
-import com.example.data.local.HabayebTransaction
+import com.example.data.local.entities.HabayebCustomer
+import com.example.data.local.entities.HabayebTransaction
 import com.example.data.serialization.PdfReportGenerator
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FinanceViewModel

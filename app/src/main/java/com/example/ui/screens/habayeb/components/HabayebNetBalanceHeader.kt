@@ -33,7 +33,7 @@ fun HabayebNetBalanceHeader(
     val netTotal = totalOwedByThem - totalOwedToThem
 
     // Solid Royal Indigo background (No bad new colors or gradients)
-    val cardBgColor = Color(0xFF3F51B5)
+    val cardBgColor = MaterialTheme.colorScheme.primary
 
     // Dynamic title text exactly as requested:
     // "إجمالي الصافي لك" if netTotal > 0

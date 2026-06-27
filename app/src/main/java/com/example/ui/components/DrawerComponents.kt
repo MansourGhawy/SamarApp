@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.EmeraldPrimary
 
+import androidx.compose.material3.MaterialTheme
+
 @Composable
 fun DrawerItem(
     selected: Boolean,
@@ -26,8 +28,8 @@ fun DrawerItem(
     label: String,
     onClick: () -> Unit
 ) {
-    val containerColor = if (selected) EmeraldPrimary.copy(alpha = 0.12f) else Color.Transparent
-    val contentColor = if (selected) EmeraldPrimary else Color.DarkGray
+    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     val fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
 
     Surface(
@@ -49,12 +51,12 @@ fun DrawerItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = label,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = fontWeight,
                 color = contentColor
             )

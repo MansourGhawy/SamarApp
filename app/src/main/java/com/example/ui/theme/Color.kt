@@ -19,29 +19,5 @@ val TextSecondaryDark = Color(0xFF9E9E97)
 val TextPrimaryLight = Color(0xFF2C322E)
 val TextSecondaryLight = Color(0xFF6F7671)
 
-// ==========================================
-// أولاً: لوحة ألوان "حسابات حبايب" الفخمة المدمجة
-// ==========================================
-
-// خلفية الشاشة الأساسية (بنفسجي فحمي داكن جداً يتماشى مع عتمة الزيتي الداكن)
-val HabayebBgDark = Color(0xFF14121C)
-
-// لون أسطح البطاقات والحاويات الداخلية لـ "حسابات حبايب"
-val HabayebSurface = Color(0xFF1D1B28)
-
-// اللون الأساسي المميز للمؤشرات والنصوص الهامة (بنفسجي رمادي وقور - Smoky Amethyst)
-val HabayebPrimary = Color(0xFF8C7B99)
-
-// لون اللمسات التفاعلية وأزرار التحويل النشطة (أرجواني مطفأ دافئ - Earthy Lavender)
-val HabayebAccent = Color(0xFFA592B3)
-
-// لون حركات الديون الدائنة (التي لنا عند الناس - أخضر حيوي ليطابق الفلتر)
-val HabayebCreditGreen = Color(0xFF10B981)
-
-// لون حركات الديون المدينة (التي علينا للناس - أحمر حيوي ليطابق الفلتر)
-val HabayebDebitCoral = Color(0xFFEF4444)
-
-// الألوان النصية لسهولة القراءة والتباين العالي (عالمي)
-val HabayebTextPrimary = Color(0xFFE2DFE5)
-val HabayebTextSecondary = Color(0xFF98949E)
+// Removed Habayeb colors to use standard Material Theme colors
 

@@ -1,7 +1,7 @@
 package com.example.ui.state
 
 import androidx.compose.runtime.Immutable
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.TransactionDb
 
 @Immutable
 data class MainLedgerUiState(

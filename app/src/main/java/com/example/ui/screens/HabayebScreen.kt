@@ -84,8 +84,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.window.Dialog
 import com.example.R
 import androidx.compose.ui.res.stringResource
-import com.example.data.local.HabayebCustomer
-import com.example.data.local.HabayebTransaction
+import com.example.data.local.entities.HabayebCustomer
+import com.example.data.local.entities.HabayebTransaction
 import com.example.ui.viewmodel.FinanceViewModel
 import com.example.ui.state.CustomerUiState
 import com.example.ui.theme.*
@@ -104,15 +104,8 @@ import com.example.ui.screens.habayeb.components.AddTransactionPopup
 import com.example.ui.screens.habayeb.components.CalculatorModal
 import com.example.ui.screens.habayeb.components.HabayebNetBalanceHeader
 import com.example.ui.screens.habayeb.components.HabayebFilterTabs
-val activeThemeColor = Color(0xFF3F51B5)    // Royal Indigo
-val activeSubColor = Color(0xFFE8EAF6)       // Pastel Lavender
-val RoyalPurple = activeThemeColor // For compatibility
-val DeepLavender = Color(0xFF1E3A8A).copy(alpha = 0.8f) // Deep solid for gradient/card fallback if used
-val SoftLavender = activeSubColor
-val LightPurpleBg = Color(0xFFF8FAFC)        // Match Makhzan background
-val DarkPurpleText = Color(0xFF1E1B4B)
-val HabayebTextSecondary = Color(0xFF4B5563)
-
+import com.example.ui.screens.habayeb.components.HabayebHeaderTopBar
+import com.example.ui.screens.habayeb.components.HabayebFilterToolbar
 // Pastel Colors for Initials
 val PastelColors = listOf(
     Color(0xFFFCA5A5), Color(0xFFFDBA74), Color(0xFFFDE047),
@@ -169,6 +162,15 @@ fun HabayebScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
+    val activeThemeColor = MaterialTheme.colorScheme.primary
+    val activeSubColor = MaterialTheme.colorScheme.primaryContainer
+    val RoyalPurple = activeThemeColor
+    val SoftLavender = activeSubColor
+    val DeepLavender = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+    val LightPurpleBg = MaterialTheme.colorScheme.background
+    val DarkPurpleText = MaterialTheme.colorScheme.onBackground
+    val HabayebTextSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -319,211 +321,34 @@ fun HabayebScreen(
                 colors = CardDefaults.cardColors(containerColor = activeThemeColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
-                 val focusRequester = remember { FocusRequester() }
-                 Column(
-                     modifier = Modifier
-                         .fillMaxWidth()
-                         .statusBarsPadding()
-                         .padding(bottom = 8.dp)
-                 ) {
-                // Header Top Row (Dual State: Normal vs Search Active)
-                if (isSearchActive) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                            .height(46.dp)
-                            .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(23.dp))
-                            .padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Close Search Icon Button
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                searchQuery = ""
-                                isSearchActive = false
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(id = R.string.habayeb_close_search),
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // Search Input field in center
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = {
-                                searchQuery = it
-                            },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Right
-                            ),
-                            cursorBrush = SolidColor(Color.White),
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 12.dp)
-                                .focusRequester(focusRequester),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    if (searchQuery.isEmpty()) {
-                                        Text(
-                                            text = stringResource(id = R.string.habayeb_search_hint),
-                                            color = Color.White.copy(alpha = 0.65f),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            textAlign = TextAlign.Right,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                    innerTextField()
+                HabayebHeaderTopBar(
+                    isSearchActive = isSearchActive,
+                    onSearchActiveChanged = { isSearchActive = it },
+                    searchQuery = searchQuery,
+                    onSearchQueryChanged = { searchQuery = it },
+                    isMultiSelectActive = isMultiSelectActive,
+                    selectedCount = selectedCustomerIds.size,
+                    onDeleteBulkClick = {
+                        showDeleteConfirmDialog = true
+                    },
+                    onClose = onClose,
+                    onSelectAllClick = {
+                        val allInListSelected = filteredCustomers.isNotEmpty() &&
+                                filteredCustomers.all { selectedCustomerIds.contains(it.id) }
+                        if (allInListSelected) {
+                            selectedCustomerIds.clear()
+                            isMultiSelectActive = false
+                        } else {
+                            filteredCustomers.forEach { customer ->
+                                if (!selectedCustomerIds.contains(customer.id)) {
+                                    selectedCustomerIds.add(customer.id)
                                 }
                             }
-                        )
-
-                        // Passive Search Icon
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    LaunchedEffect(Unit) {
-                        focusRequester.requestFocus()
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Right/Start Element: Wallet icon button that goes back, or Delete button when multi-selecting
-                        if (isMultiSelectActive) {
-                            IconButton(
-                                onClick = { 
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showDeleteConfirmDialog = true 
-                                },
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .background(Color.Red.copy(alpha = 0.2f), CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = stringResource(id = R.string.habayeb_delete_bulk),
-                                    tint = Color.Red,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onClose()
-                                },
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AccountBalanceWallet,
-                                    contentDescription = stringResource(id = R.string.habayeb_back_to_wallet),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
                         }
-
-                        // Centered head title
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = if (isMultiSelectActive) stringResource(id = R.string.habayeb_selected_count, selectedCustomerIds.size) else stringResource(id = R.string.habayeb_subtitle),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text(
-                                text = stringResource(id = R.string.habayeb_subtitle),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
-
-                        // Left/End Element: Search glass icon, or Check icon when multi-selecting
-                        if (isMultiSelectActive) {
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    val allInListSelected = filteredCustomers.isNotEmpty() &&
-                                            filteredCustomers.all { selectedCustomerIds.contains(it.id) }
-                                    if (allInListSelected) {
-                                        selectedCustomerIds.clear()
-                                        isMultiSelectActive = false
-                                    } else {
-                                        filteredCustomers.forEach { customer ->
-                                            if (!selectedCustomerIds.contains(customer.id)) {
-                                                selectedCustomerIds.add(customer.id)
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White.copy(alpha = 0.25f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(id = R.string.habayeb_select_all),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    isSearchActive = true
-                                },
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White.copy(alpha = 0.15f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = stringResource(id = R.string.habayeb_search_label),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-
-             }
-         } // Close Floating Header Card
+                    },
+                    haptic = haptic
+                )
+            } // Close Floating Header Card
 
             LazyColumn(
                 state = listState,
@@ -557,107 +382,22 @@ fun HabayebScreen(
                 }
 
              item {
-                 // Compact Smart Filter Toolbar
-                 Row(
-                     modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Right side (RTL left): Count Badge
-                Box(
-                    modifier = Modifier
-                        .height(28.dp)
-                        .background(activeSubColor, RoundedCornerShape(24.dp))
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.habayeb_customers_count, filteredCustomers.size),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF8B5CF6)
-                    )
-                }
-
-                // Left side (RTL right): Filtering and Sorting Actions
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Financial Sorting Button
-                    val isFinSorted = financialSortMode != 0
-                    val finText = when (financialSortMode) {
-                        1 -> stringResource(id = R.string.habayeb_sort_amount_desc)
-                        2 -> stringResource(id = R.string.habayeb_sort_amount_asc)
-                        else -> stringResource(id = R.string.habayeb_sort_amount)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .height(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isFinSorted) activeSubColor else activeSubColor.copy(alpha = 0.5f))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                historicalSortMode = 0
-                                financialSortMode = when (financialSortMode) {
-                                    0 -> 1
-                                    1 -> 2
-                                    else -> 0
-                                }
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(0)
-                                }
-                            }
-                            .padding(horizontal = 10.dp, vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = finText,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = activeThemeColor
-                        )
-                    }
-
-                    // Historical Sorting Button
-                    val isHistSorted = historicalSortMode != 0
-                    val histText = when (historicalSortMode) {
-                        1 -> stringResource(id = R.string.habayeb_sort_date_desc)
-                        2 -> stringResource(id = R.string.habayeb_sort_date_asc)
-                        else -> stringResource(id = R.string.habayeb_sort_date)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .height(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isHistSorted) activeSubColor else activeSubColor.copy(alpha = 0.5f))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                financialSortMode = 0
-                                historicalSortMode = when (historicalSortMode) {
-                                    0 -> 1
-                                    1 -> 2
-                                    else -> 0
-                                }
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(0)
-                                }
-                            }
-                            .padding(horizontal = 10.dp, vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = histText,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = activeThemeColor
-                        )
-                    }
-                }
-            }
-            } // Close Smart Filter Toolbar item block
+                 HabayebFilterToolbar(
+                     filteredCustomersCount = filteredCustomers.size,
+                     financialSortMode = financialSortMode,
+                     onFinancialSortModeChanged = { financialSortMode = it },
+                     historicalSortMode = historicalSortMode,
+                     onHistoricalSortModeChanged = { historicalSortMode = it },
+                     activeThemeColor = activeThemeColor,
+                     activeSubColor = activeSubColor,
+                     haptic = haptic,
+                     onScrollToTop = {
+                         coroutineScope.launch {
+                             listState.animateScrollToItem(0)
+                         }
+                     }
+                 )
+             } // Close Smart Filter Toolbar item block
 
             // Density Optimized List Area
             if (filteredCustomers.isEmpty()) {
@@ -733,7 +473,7 @@ fun HabayebScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(bottom = 96.dp, start = 24.dp) // Elevated to float over bottom Pill Navigation Dock
+                    .padding(bottom = 16.dp, start = 16.dp)
                     .size(58.dp)
                     .shadow(10.dp, CircleShape, spotColor = RoyalPurple.copy(alpha = 0.6f))
                     .background(RoyalPurple, CircleShape)

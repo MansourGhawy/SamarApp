@@ -42,6 +42,7 @@ import com.example.R
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.*
+import com.example.data.local.entities.*
 import com.example.domain.DateUtils
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FinanceViewModel

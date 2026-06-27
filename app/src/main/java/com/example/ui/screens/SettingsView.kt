@@ -47,7 +47,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
-import com.example.data.local.AppSettings
+import com.example.data.local.entities.AppSettings
 import com.example.data.CloudSyncState
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FinanceViewModel

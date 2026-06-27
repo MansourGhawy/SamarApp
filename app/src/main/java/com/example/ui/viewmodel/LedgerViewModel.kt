@@ -7,9 +7,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.R
 import com.example.data.local.AppDatabase
-import com.example.data.local.AppSettings
-import com.example.data.local.CustomCategory
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.AppSettings
+import com.example.data.local.entities.CustomCategory
+import com.example.data.local.entities.TransactionDb
 import com.example.data.repository.FinanceRepository
 import com.example.domain.StringUtils
 import kotlinx.coroutines.Dispatchers

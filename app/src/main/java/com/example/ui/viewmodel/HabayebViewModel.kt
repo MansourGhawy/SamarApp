@@ -7,11 +7,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.R
 import com.example.data.local.AppDatabase
-import com.example.data.local.AppSettings
-import com.example.data.local.DeletedItemEntity
-import com.example.data.local.HabayebCustomer
-import com.example.data.local.HabayebTransaction
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.AppSettings
+import com.example.data.local.entities.DeletedItemEntity
+import com.example.data.local.entities.HabayebCustomer
+import com.example.data.local.entities.HabayebTransaction
+import com.example.data.local.entities.TransactionDb
 import com.example.domain.LicenseManager
 import com.example.ui.state.CustomerUiState
 import com.example.ui.state.CustomersUiState

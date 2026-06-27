@@ -44,7 +44,7 @@ fun LedgerBottomDock(
 
     Column(
         modifier = modifier
-            .padding(bottom = 90.dp, start = 12.dp, end = 12.dp) // Elevated to float over bottom Pill Navigation Dock
+            .padding(bottom = 16.dp, start = 12.dp, end = 12.dp)
             .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally

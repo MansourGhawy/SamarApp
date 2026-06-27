@@ -16,7 +16,7 @@ import androidx.work.WorkManager
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import com.example.data.local.AppDatabase
-import com.example.data.local.AppSettings
+import com.example.data.local.entities.AppSettings
 import com.example.data.GoogleDriveSyncHelper
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray

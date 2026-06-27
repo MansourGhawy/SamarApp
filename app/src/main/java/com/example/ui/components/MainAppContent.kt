@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.data.local.AppSettings
+import com.example.data.local.entities.AppSettings
 import com.example.ui.navigation.Screen
 import com.example.ui.screens.*
 import com.example.ui.viewmodel.FinanceViewModel
@@ -20,7 +20,7 @@ fun MainAppContent(
     settings: AppSettings,
     monthlyLedger: List<MonthLedger>,
     totalCash: BigDecimal,
-    commitments: List<com.example.data.local.FixedCommitment>,
+    commitments: List<com.example.data.local.entities.FixedCommitment>,
     onNavigate: (Screen) -> Unit,
     onMenuClick: () -> Unit,
     onExit: () -> Unit,

@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.data.local.*
+import com.example.data.local.entities.*
 import com.example.domain.DateUtils
 import com.example.ui.theme.*
 import androidx.compose.ui.platform.LocalContext
@@ -472,7 +473,7 @@ fun MainLedgerView(
 
             // Bottom spacing past absolute FAB overlays (compressed rhythm)
             item {
-                Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(120.dp))
             }
         }
 

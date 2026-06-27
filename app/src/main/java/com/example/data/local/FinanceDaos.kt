@@ -2,6 +2,7 @@ package com.example.data.local
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
+import com.example.data.local.entities.*
 
 @Dao
 interface SettingsDao {

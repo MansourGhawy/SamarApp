@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.TransactionDb
 import com.example.domain.DateUtils
 import com.example.domain.extractEmoji
 import com.example.domain.getEmojiBgColor

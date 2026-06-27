@@ -42,7 +42,7 @@ fun AppNavigationDrawer(
     ) {
         // Header of Drawer
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF3F51B5)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -70,7 +70,7 @@ fun AppNavigationDrawer(
                             center = center.copy(x = center.x + 10f)
                         )
                         drawCircle(
-                            color = Color(0xFF93C5FD),
+                            color = Color.White.copy(alpha = 0.4f),
                             radius = radius,
                             center = center,
                             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
@@ -99,7 +99,7 @@ fun AppNavigationDrawer(
                     text = stringResource(id = R.string.app_slogan),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF93C5FD),
+                    color = Color.White.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center
                 )
             }

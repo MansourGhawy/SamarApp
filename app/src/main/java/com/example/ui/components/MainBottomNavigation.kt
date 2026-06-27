@@ -38,84 +38,39 @@ fun MainBottomNavigation(
 
     if (currentScreen != Screen.HABAYEB && currentScreen != Screen.LEDGER) return
 
-    val activeThemeColor = Color(0xFF3F51B5) // Royal Indigo
-    val activeSubColor = Color(0xFFE8EAF6)   // Pastel Lavender/Blue
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .navigationBarsPadding(),
-        contentAlignment = Alignment.Center
+    NavigationBar(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        tonalElevation = 8.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .height(64.dp)
-                .shadow(
-                    elevation = 8.dp,
-                    shape = RoundedCornerShape(32.dp),
-                    clip = false,
-                    ambientColor = Color(0xFF1E293B).copy(alpha = 0.08f),
-                    spotColor = Color(0xFF1E293B).copy(alpha = 0.12f)
+        items.forEach { (screen, icon, label) ->
+            NavigationBarItem(
+                selected = currentScreen == screen,
+                onClick = { onNavigate(screen) },
+                icon = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        fontWeight = if (currentScreen == screen) FontWeight.Bold else FontWeight.Medium
+                    )
+                },
+                alwaysShowLabel = true,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
-                .background(Color.White, shape = RoundedCornerShape(32.dp))
-                .border(
-                    width = 1.dp,
-                    color = Color(0xFFF1F5F9),
-                    shape = RoundedCornerShape(32.dp)
-                )
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            items.forEach { (screen, icon, label) ->
-                val isSelected = currentScreen == screen
-
-                if (isSelected) {
-                    // Selected state: capsule background, showing both icon and text
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(activeSubColor)
-                            .clickable { onNavigate(screen) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = activeThemeColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = label,
-                            color = activeThemeColor,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                    }
-                } else {
-                    // Non-selected state: transparent background, showing only icon
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .clickable { onNavigate(screen) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = Color(0xFF94A3B8),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }

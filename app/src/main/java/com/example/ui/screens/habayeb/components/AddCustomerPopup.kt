@@ -70,7 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
-import com.example.data.local.HabayebCustomer
+import com.example.data.local.entities.HabayebCustomer
 import com.example.domain.StringUtils.getContactDetails
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat

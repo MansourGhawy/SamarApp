@@ -34,7 +34,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.data.CloudSyncState
-import com.example.data.local.AppSettings
+import com.example.data.local.entities.AppSettings
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftRed
 import com.example.ui.viewmodel.FinanceViewModel

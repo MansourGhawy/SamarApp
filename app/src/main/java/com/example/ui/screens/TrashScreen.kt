@@ -30,8 +30,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.DeletedItemEntity
-import com.example.data.local.HabayebCustomer
+import com.example.data.local.entities.DeletedItemEntity
+import com.example.data.local.entities.HabayebCustomer
 import com.example.ui.viewmodel.FinanceViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONObject

@@ -1,6 +1,7 @@
 package com.example.data.serialization
 
 import com.example.data.local.*
+import com.example.data.local.entities.*
 import org.json.JSONArray
 import org.json.JSONObject
 

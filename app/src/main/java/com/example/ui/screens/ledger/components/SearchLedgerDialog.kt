@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
-import com.example.data.local.TransactionDb
+import com.example.data.local.entities.TransactionDb
 import com.example.domain.DateUtils
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.SoftGreen

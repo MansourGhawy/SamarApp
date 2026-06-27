@@ -36,10 +36,10 @@
     <!-- Drawer & Navigation (الدرج والقوائم) -->
     <string name="app_name_main">ميزان الدار</string>
     <string name="app_slogan">ميزان الدار.. راحة واستقرار</string>
-    <string name="drawer_security_label">🛡️ الامان وقفل التطبيق</string>
-    <string name="drawer_reports_label">📊 التقارير</string>
-    <string name="drawer_trash_label">🗑️ سلة المحذوفات</string>
-    <string name="drawer_backup_label1">☁️ النسخ الاحتياطي والاسترداد</string>
+    <string name="drawer_security_label">الامان وقفل التطبيق</string>
+    <string name="drawer_reports_label">التقارير</string>
+    <string name="drawer_trash_label">سلة المحذوفات</string>
+    <string name="drawer_backup_label1">النسخ الاحتياطي والاسترداد</string>
     <string name="drawer_business_profile_label">بيانات النشاط التجاري</string>
     <string name="drawer_app_version">الإصدار v%s</string>
     <string name="nav_habayeb_label">🤝 حسابات حبايب</string>
@@ -776,8 +776,16 @@
     <string name="sec_card_desc_warning">التطبيق يحمي خصوصيتك محلياً بالكامل بترميز مشفر. عبارة الاسترداد الفائقة هي طريقتك الوحيدة للوصول للبيانات حال نسيان رمز القفل.</string>
     <string name="sec_hint_pattern">تلميح الذاكرة الحالي: %1$s</string>
     <string name="sec_phrase_copylabel">عبارة أمان التطبيق للفقد والطوارئ</string>
-    <string name="sec_toast_copied">تم نسخ عبارة الأمان الأساسية للحافظة 📋</string>
     <string name="sec_btn_copy">نسخ عبارة الأمان</string>
+    <string name="sec_toast_copied">تم نسخ عبارة الأمان الأساسية للحافظة 📋</string>
+    <string name="sec_status_active">الأمان نشط بالكامل</string>
+    <string name="sec_status_inactive">تأمين الدار والبيانات</string>
+    <string name="sec_desc_active">تطبيقك محمي بتشفير محلي قوي</string>
+    <string name="sec_desc_inactive">أنشئ رمز أمان لمنع التطفل والوصول غير المصرح به</string>
+    <string name="sec_setup_title">إعداد رمز القفل الجديد</string>
+    <string name="sec_recovery_title">استرداد الحساب عند الطوارئ</string>
+    <string name="sec_toast_active_success">تطبيقك محمي بنجاح 🔒</string>
+    <string name="sec_deactivate_btn">تعطيل قفل التطبيق والأمان 🔓</string>
 
     <!-- Trash Screen Refined Strings -->
     <string name="trash_search_placeholder">ابحث عن اسم، مبلغ، أو نوع السجل...</string>

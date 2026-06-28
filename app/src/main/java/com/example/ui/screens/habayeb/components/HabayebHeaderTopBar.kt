@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +45,10 @@ fun HabayebHeaderTopBar(
     onClose: () -> Unit,
     onSelectAllClick: () -> Unit,
     haptic: HapticFeedback,
+    netDebt: Double,
+    isPrivacyMode: Boolean,
+    onTogglePrivacy: () -> Unit,
+    currencySymbol: String,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -178,23 +184,48 @@ fun HabayebHeaderTopBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = if (isMultiSelectActive) {
-                            stringResource(id = R.string.habayeb_selected_count, selectedCount)
-                        } else {
-                            stringResource(id = R.string.habayeb_subtitle)
-                        },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Text(
-                        text = stringResource(id = R.string.habayeb_subtitle),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+                    if (isMultiSelectActive) {
+                        Text(
+                            text = stringResource(id = R.string.habayeb_selected_count, selectedCount),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    } else {
+                        val titleText = if (netDebt >= 0.0) "إجمالي الصافي لك" else "إجمالي المبلغ عليك"
+                        val formattedBalance = if (isPrivacyMode) "****" else String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
+
+                        Text(
+                            text = titleText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+                        Spacer(modifier = Modifier.height(1.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            IconButton(
+                                onClick = onTogglePrivacy,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "$formattedBalance $currencySymbol",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
 
                 // Left/End Element: Search glass icon, or Check icon when multi-selecting

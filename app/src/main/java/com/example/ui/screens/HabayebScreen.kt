@@ -102,7 +102,6 @@ import com.example.ui.screens.habayeb.components.CustomerHistoryOverlay
 import com.example.ui.screens.habayeb.components.CustomerItemRow
 import com.example.ui.screens.habayeb.components.AddTransactionPopup
 import com.example.ui.screens.habayeb.components.CalculatorModal
-import com.example.ui.screens.habayeb.components.HabayebNetBalanceHeader
 import com.example.ui.screens.habayeb.components.HabayebFilterTabs
 import com.example.ui.screens.habayeb.components.HabayebHeaderTopBar
 import com.example.ui.screens.habayeb.components.HabayebFilterToolbar
@@ -269,161 +268,190 @@ fun HabayebScreen(
                 .background(surfaceBackgroundColor)
                 .testTag("habayeb_screen_root")
         ) {
-            Card(
+            // Static top Column to anchor TopBar, FilterTabs, and FilterToolbar
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .zIndex(1f),
-                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
-                colors = CardDefaults.cardColors(containerColor = activeThemeColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    .zIndex(1f)
+                    .background(surfaceBackgroundColor)
             ) {
-                HabayebHeaderTopBar(
-                    isSearchActive = isSearchActive,
-                    onSearchActiveChanged = { isSearchActive = it },
-                    searchQuery = searchQuery,
-                    onSearchQueryChanged = { searchQuery = it },
-                    isMultiSelectActive = isMultiSelectActive,
-                    selectedCount = selectedCustomerIds.size,
-                    onDeleteBulkClick = {
-                        showDeleteConfirmDialog = true
-                    },
-                    onClose = onClose,
-                    onSelectAllClick = {
-                        val allInListSelected = filteredCustomers.isNotEmpty() &&
-                                filteredCustomers.all { selectedCustomerIds.contains(it.id) }
-                        if (allInListSelected) {
-                            selectedCustomerIds.clear()
-                            isMultiSelectActive = false
-                        } else {
-                            filteredCustomers.forEach { customer ->
-                                if (!selectedCustomerIds.contains(customer.id)) {
-                                    selectedCustomerIds.add(customer.id)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                    colors = CardDefaults.cardColors(containerColor = activeThemeColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                ) {
+                    HabayebHeaderTopBar(
+                        isSearchActive = isSearchActive,
+                        onSearchActiveChanged = { isSearchActive = it },
+                        searchQuery = searchQuery,
+                        onSearchQueryChanged = { searchQuery = it },
+                        isMultiSelectActive = isMultiSelectActive,
+                        selectedCount = selectedCustomerIds.size,
+                        onDeleteBulkClick = {
+                            showDeleteConfirmDialog = true
+                        },
+                        onClose = onClose,
+                        onSelectAllClick = {
+                            val allInListSelected = filteredCustomers.isNotEmpty() &&
+                                    filteredCustomers.all { selectedCustomerIds.contains(it.id) }
+                            if (allInListSelected) {
+                                selectedCustomerIds.clear()
+                                isMultiSelectActive = false
+                            } else {
+                                filteredCustomers.forEach { customer ->
+                                    if (!selectedCustomerIds.contains(customer.id)) {
+                                        selectedCustomerIds.add(customer.id)
+                                    }
                                 }
                             }
-                        }
-                    },
+                        },
+                        haptic = haptic,
+                        netDebt = totalOwedByThem - totalOwedToThem,
+                        isPrivacyMode = isPrivacyModeState.value,
+                        onTogglePrivacy = { viewModel.togglePrivacyMode() },
+                        currencySymbol = currencySymbol
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                HabayebFilterTabs(
+                    selectedFilterTab = selectedFilterTab,
+                    onFilterTabSelected = { selectedFilterTab = it },
+                    totalOwedByThem = totalOwedByThem,
+                    totalOwedToThem = totalOwedToThem,
+                    currencySymbol = currencySymbol,
                     haptic = haptic
                 )
-            } // Close Floating Header Card
+
+                HabayebFilterToolbar(
+                    filteredCustomersCount = filteredCustomers.size,
+                    financialSortMode = financialSortMode,
+                    onFinancialSortModeChanged = { financialSortMode = it },
+                    historicalSortMode = historicalSortMode,
+                    onHistoricalSortModeChanged = { historicalSortMode = it },
+                    activeThemeColor = activeThemeColor,
+                    activeSubColor = activeSubColor,
+                    haptic = haptic,
+                    onScrollToTop = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    }
+                )
+            }
 
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
                 contentPadding = PaddingValues(
-                    top = 76.dp + with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() },
+                    top = 185.dp + with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() },
                     bottom = 80.dp
                 )
             ) {
-                // Item 1: Giant Net Balance Card
-                item {
-                    HabayebNetBalanceHeader(
-                        totalOwedByThem = totalOwedByThem,
-                        totalOwedToThem = totalOwedToThem,
-                        currencySymbol = currencySymbol,
-                        isPrivacyMode = isPrivacyModeState.value,
-                        onTogglePrivacy = { viewModel.togglePrivacyMode() }
-                    )
-                }
-
-                // Item 2: Compact Row of 2 Interactive Filter Tabs
-                item {
-                    HabayebFilterTabs(
-                        selectedFilterTab = selectedFilterTab,
-                        onFilterTabSelected = { selectedFilterTab = it },
-                        totalOwedByThem = totalOwedByThem,
-                        totalOwedToThem = totalOwedToThem,
-                        currencySymbol = currencySymbol,
-                        haptic = haptic
-                    )
-                }
-
-             item {
-                 HabayebFilterToolbar(
-                     filteredCustomersCount = filteredCustomers.size,
-                     financialSortMode = financialSortMode,
-                     onFinancialSortModeChanged = { financialSortMode = it },
-                     historicalSortMode = historicalSortMode,
-                     onHistoricalSortModeChanged = { historicalSortMode = it },
-                     activeThemeColor = activeThemeColor,
-                     activeSubColor = activeSubColor,
-                     haptic = haptic,
-                     onScrollToTop = {
-                         coroutineScope.launch {
-                             listState.animateScrollToItem(0)
-                         }
-                     }
-                 )
-             } // Close Smart Filter Toolbar item block
-
-            // Density Optimized List Area
-            if (filteredCustomers.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillParentMaxHeight(0.6f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🤝", fontSize = 48.sp)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = when (selectedFilterTab) {
-                                    1 -> stringResource(id = R.string.habayeb_no_debtors)
-                                    2 -> stringResource(id = R.string.habayeb_no_creditors)
-                                    else -> stringResource(id = R.string.habayeb_empty_list)
-                                },
-                                textAlign = TextAlign.Center,
-                                fontSize = 14.sp,
-                                color = Color.Gray,
-                                lineHeight = 20.sp
-                            )
+                // Density Optimized List Area
+                if (filteredCustomers.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillParentMaxHeight(0.6f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("🤝", fontSize = 48.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = when (selectedFilterTab) {
+                                        1 -> stringResource(id = R.string.habayeb_no_debtors)
+                                        2 -> stringResource(id = R.string.habayeb_no_creditors)
+                                        else -> stringResource(id = R.string.habayeb_empty_list)
+                                    },
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    lineHeight = 20.sp
+                                )
+                            }
                         }
                     }
-                }
-            } else {
-                // Let's add spacing between items using item blocks or item Content padding if possible?
-                // Wait, we can't easily specify verticalArrangement on LazyColumn item by item. 
-                // We'll wrap the inner card with padding.
-                items(filteredCustomers, key = { it.id }) { customer ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp)) {
+                } else {
+                    items(filteredCustomers, key = { it.id }) { customer ->
                         val isSelected = selectedCustomerIds.contains(customer.id)
-                        CustomerItemRow(
-                            customer = customer,
-                            isSelected = isSelected,
-                            isMultiSelectActive = isMultiSelectActive,
-                            activeThemeColor = activeThemeColor,
-                            activeSubColor = activeSubColor,
-                            currencySymbol = currencySymbol,
-                            haptic = haptic,
-                            onCustomerClick = {
-                                if (isMultiSelectActive) {
-                                    if (isSelected) {
-                                        selectedCustomerIds.remove(customer.id)
-                                        if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
-                                    } else {
-                                        selectedCustomerIds.add(customer.id)
-                                    }
-                                } else {
-                                    activeCustomerForHistory = customer.originalCustomer
+
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.StartToEnd) {
+                                    customerToDelete = customer.originalCustomer
+                                    showDeleteConfirmDialog = true
                                 }
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                false // Do not dismiss visually immediately
                             },
-                            onCustomerLongClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                isMultiSelectActive = true
-                                if (!isSelected) selectedCustomerIds.add(customer.id)
+                            positionalThreshold = { distance -> distance * 0.4f }
+                        )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = true, // Right to left swipe in RTL
+                            enableDismissFromEndToStart = false,
+                            backgroundContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp, vertical = 3.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFEF5350)), // Soft primary-red card
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             },
-                            onQuickAdd = {
-                                defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
-                                showAddTransactionDialogForCustomer = customer.originalCustomer
+                            content = {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp)) {
+                                    CustomerItemRow(
+                                        customer = customer,
+                                        isSelected = isSelected,
+                                        isMultiSelectActive = isMultiSelectActive,
+                                        activeThemeColor = activeThemeColor,
+                                        activeSubColor = activeSubColor,
+                                        currencySymbol = currencySymbol,
+                                        haptic = haptic,
+                                        onCustomerClick = {
+                                            if (isMultiSelectActive) {
+                                                if (isSelected) {
+                                                    selectedCustomerIds.remove(customer.id)
+                                                    if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
+                                                } else {
+                                                    selectedCustomerIds.add(customer.id)
+                                                }
+                                            } else {
+                                                activeCustomerForHistory = customer.originalCustomer
+                                            }
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        },
+                                        onCustomerLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            isMultiSelectActive = true
+                                            if (!isSelected) selectedCustomerIds.add(customer.id)
+                                        },
+                                        onQuickAdd = {
+                                            defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
+                                            showAddTransactionDialogForCustomer = customer.originalCustomer
+                                        }
+                                    )
+                                }
                             }
                         )
                     }
                 }
             }
-        }
 
         if (!isMultiSelectActive && activeCustomerForHistory == null) {
             Box(

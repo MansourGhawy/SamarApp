@@ -84,7 +84,7 @@ fun HabayebFilterTabs(
                     BorderStroke(
                         0.8.dp,
                         if (isOwedByThemSelected) Color(0xFF10B981)
-                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        else Color(0xFF10B981).copy(alpha = 0.25f)
                     ),
                     RoundedCornerShape(12.dp)
                 )
@@ -103,13 +103,13 @@ fun HabayebFilterTabs(
                     text = "لي عند الناس: ",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isOwedByThemSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isOwedByThemSelected) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.8f)
                 )
                 Text(
                     text = "$formattedOwedByThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isOwedByThemSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isOwedByThemSelected) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.8f)
                 )
             }
         }
@@ -130,7 +130,7 @@ fun HabayebFilterTabs(
                     BorderStroke(
                         0.8.dp,
                         if (isOwedToThemSelected) Color(0xFFEF4444)
-                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        else Color(0xFFEF4444).copy(alpha = 0.25f)
                     ),
                     RoundedCornerShape(12.dp)
                 )
@@ -149,13 +149,13 @@ fun HabayebFilterTabs(
                     text = "علي للناس: ",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.8f)
                 )
                 Text(
                     text = "$formattedOwedToThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.8f)
                 )
             }
         }

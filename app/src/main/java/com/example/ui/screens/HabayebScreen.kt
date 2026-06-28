@@ -268,187 +268,187 @@ fun HabayebScreen(
                 .background(surfaceBackgroundColor)
                 .testTag("habayeb_screen_root")
         ) {
-            // Static top Column to anchor TopBar, FilterTabs, and FilterToolbar
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .zIndex(1f)
-                    .background(surfaceBackgroundColor)
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
-                    colors = CardDefaults.cardColors(containerColor = activeThemeColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Static top Column to anchor TopBar, FilterTabs, and FilterToolbar
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(surfaceBackgroundColor)
                 ) {
-                    HabayebHeaderTopBar(
-                        isSearchActive = isSearchActive,
-                        onSearchActiveChanged = { isSearchActive = it },
-                        searchQuery = searchQuery,
-                        onSearchQueryChanged = { searchQuery = it },
-                        isMultiSelectActive = isMultiSelectActive,
-                        selectedCount = selectedCustomerIds.size,
-                        onDeleteBulkClick = {
-                            showDeleteConfirmDialog = true
-                        },
-                        onClose = onClose,
-                        onSelectAllClick = {
-                            val allInListSelected = filteredCustomers.isNotEmpty() &&
-                                    filteredCustomers.all { selectedCustomerIds.contains(it.id) }
-                            if (allInListSelected) {
-                                selectedCustomerIds.clear()
-                                isMultiSelectActive = false
-                            } else {
-                                filteredCustomers.forEach { customer ->
-                                    if (!selectedCustomerIds.contains(customer.id)) {
-                                        selectedCustomerIds.add(customer.id)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                        colors = CardDefaults.cardColors(containerColor = activeThemeColor),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    ) {
+                        HabayebHeaderTopBar(
+                            isSearchActive = isSearchActive,
+                            onSearchActiveChanged = { isSearchActive = it },
+                            searchQuery = searchQuery,
+                            onSearchQueryChanged = { searchQuery = it },
+                            isMultiSelectActive = isMultiSelectActive,
+                            selectedCount = selectedCustomerIds.size,
+                            onDeleteBulkClick = {
+                                showDeleteConfirmDialog = true
+                            },
+                            onClose = onClose,
+                            onSelectAllClick = {
+                                val allInListSelected = filteredCustomers.isNotEmpty() &&
+                                        filteredCustomers.all { selectedCustomerIds.contains(it.id) }
+                                if (allInListSelected) {
+                                    selectedCustomerIds.clear()
+                                    isMultiSelectActive = false
+                                } else {
+                                    filteredCustomers.forEach { customer ->
+                                        if (!selectedCustomerIds.contains(customer.id)) {
+                                            selectedCustomerIds.add(customer.id)
+                                        }
                                     }
                                 }
-                            }
-                        },
+                            },
+                            haptic = haptic,
+                            netDebt = totalOwedByThem - totalOwedToThem,
+                            isPrivacyMode = isPrivacyModeState.value,
+                            onTogglePrivacy = { viewModel.togglePrivacyMode() },
+                            currencySymbol = currencySymbol
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    HabayebFilterTabs(
+                        selectedFilterTab = selectedFilterTab,
+                        onFilterTabSelected = { selectedFilterTab = it },
+                        totalOwedByThem = totalOwedByThem,
+                        totalOwedToThem = totalOwedToThem,
+                        currencySymbol = currencySymbol,
+                        haptic = haptic
+                    )
+
+                    HabayebFilterToolbar(
+                        filteredCustomersCount = filteredCustomers.size,
+                        financialSortMode = financialSortMode,
+                        onFinancialSortModeChanged = { financialSortMode = it },
+                        historicalSortMode = historicalSortMode,
+                        onHistoricalSortModeChanged = { historicalSortMode = it },
+                        activeThemeColor = activeThemeColor,
+                        activeSubColor = activeSubColor,
                         haptic = haptic,
-                        netDebt = totalOwedByThem - totalOwedToThem,
-                        isPrivacyMode = isPrivacyModeState.value,
-                        onTogglePrivacy = { viewModel.togglePrivacyMode() },
-                        currencySymbol = currencySymbol
+                        onScrollToTop = {
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                HabayebFilterTabs(
-                    selectedFilterTab = selectedFilterTab,
-                    onFilterTabSelected = { selectedFilterTab = it },
-                    totalOwedByThem = totalOwedByThem,
-                    totalOwedToThem = totalOwedToThem,
-                    currencySymbol = currencySymbol,
-                    haptic = haptic
-                )
-
-                HabayebFilterToolbar(
-                    filteredCustomersCount = filteredCustomers.size,
-                    financialSortMode = financialSortMode,
-                    onFinancialSortModeChanged = { financialSortMode = it },
-                    historicalSortMode = historicalSortMode,
-                    onHistoricalSortModeChanged = { historicalSortMode = it },
-                    activeThemeColor = activeThemeColor,
-                    activeSubColor = activeSubColor,
-                    haptic = haptic,
-                    onScrollToTop = {
-                        coroutineScope.launch {
-                            listState.animateScrollToItem(0)
-                        }
-                    }
-                )
-            }
-
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
-                contentPadding = PaddingValues(
-                    top = 185.dp + with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() },
-                    bottom = 80.dp
-                )
-            ) {
-                // Density Optimized List Area
-                if (filteredCustomers.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillParentMaxHeight(0.6f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("🤝", fontSize = 48.sp)
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = when (selectedFilterTab) {
-                                        1 -> stringResource(id = R.string.habayeb_no_debtors)
-                                        2 -> stringResource(id = R.string.habayeb_no_creditors)
-                                        else -> stringResource(id = R.string.habayeb_empty_list)
-                                    },
-                                    textAlign = TextAlign.Center,
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                    lineHeight = 20.sp
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    items(filteredCustomers, key = { it.id }) { customer ->
-                        val isSelected = selectedCustomerIds.contains(customer.id)
-
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                if (dismissValue == SwipeToDismissBoxValue.StartToEnd) {
-                                    customerToDelete = customer.originalCustomer
-                                    showDeleteConfirmDialog = true
-                                }
-                                false // Do not dismiss visually immediately
-                            },
-                            positionalThreshold = { distance -> distance * 0.4f }
-                        )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = true, // Right to left swipe in RTL
-                            enableDismissFromEndToStart = false,
-                            backgroundContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 16.dp, vertical = 3.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFEF5350)), // Soft primary-red card
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).nestedScroll(nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        top = 4.dp,
+                        bottom = 80.dp
+                    )
+                ) {
+                    // Density Optimized List Area
+                    if (filteredCustomers.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillParentMaxHeight(0.6f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("🤝", fontSize = 48.sp)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = when (selectedFilterTab) {
+                                            1 -> stringResource(id = R.string.habayeb_no_debtors)
+                                            2 -> stringResource(id = R.string.habayeb_no_creditors)
+                                            else -> stringResource(id = R.string.habayeb_empty_list)
+                                        },
+                                        textAlign = TextAlign.Center,
+                                        fontSize = 14.sp,
+                                        color = Color.Gray,
+                                        lineHeight = 20.sp
                                     )
                                 }
-                            },
-                            content = {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp)) {
-                                    CustomerItemRow(
-                                        customer = customer,
-                                        isSelected = isSelected,
-                                        isMultiSelectActive = isMultiSelectActive,
-                                        activeThemeColor = activeThemeColor,
-                                        activeSubColor = activeSubColor,
-                                        currencySymbol = currencySymbol,
-                                        haptic = haptic,
-                                        onCustomerClick = {
-                                            if (isMultiSelectActive) {
-                                                if (isSelected) {
-                                                    selectedCustomerIds.remove(customer.id)
-                                                    if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
+                            }
+                        }
+                    } else {
+                        items(filteredCustomers, key = { it.id }) { customer ->
+                            val isSelected = selectedCustomerIds.contains(customer.id)
+
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { dismissValue ->
+                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                        customerToDelete = customer.originalCustomer
+                                        showDeleteConfirmDialog = true
+                                    }
+                                    false // Do not dismiss visually immediately
+                                },
+                                positionalThreshold = { distance -> distance * 0.4f }
+                            )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                enableDismissFromEndToStart = true,
+                                backgroundContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFEF5350)), // Soft primary-red card
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                },
+                                content = {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+                                        CustomerItemRow(
+                                            customer = customer,
+                                            isSelected = isSelected,
+                                            isMultiSelectActive = isMultiSelectActive,
+                                            activeThemeColor = activeThemeColor,
+                                            activeSubColor = activeSubColor,
+                                            currencySymbol = currencySymbol,
+                                            haptic = haptic,
+                                            onCustomerClick = {
+                                                if (isMultiSelectActive) {
+                                                    if (isSelected) {
+                                                        selectedCustomerIds.remove(customer.id)
+                                                        if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
+                                                    } else {
+                                                        selectedCustomerIds.add(customer.id)
+                                                    }
                                                 } else {
-                                                    selectedCustomerIds.add(customer.id)
+                                                    activeCustomerForHistory = customer.originalCustomer
                                                 }
-                                            } else {
-                                                activeCustomerForHistory = customer.originalCustomer
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            },
+                                            onCustomerLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                isMultiSelectActive = true
+                                                if (!isSelected) selectedCustomerIds.add(customer.id)
+                                            },
+                                            onQuickAdd = {
+                                                defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
+                                                showAddTransactionDialogForCustomer = customer.originalCustomer
                                             }
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        },
-                                        onCustomerLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            isMultiSelectActive = true
-                                            if (!isSelected) selectedCustomerIds.add(customer.id)
-                                        },
-                                        onQuickAdd = {
-                                            defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
-                                            showAddTransactionDialogForCustomer = customer.originalCustomer
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

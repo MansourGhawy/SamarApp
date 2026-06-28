@@ -80,8 +80,8 @@ fun CustomerItemRow(
     Card(
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
-            1.dp,
-            if (isSelected) activeThemeColor.copy(alpha = 0.5f) else Color(0xFFF1F5F9)
+            width = 0.5.dp,
+            color = if (isSelected) activeThemeColor.copy(alpha = 0.4f) else Color(0xFFE2E8F0)
         ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) activeSubColor.copy(alpha = 0.3f) else Color.White
@@ -99,7 +99,7 @@ fun CustomerItemRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(vertical = 8.dp, horizontal = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -112,22 +112,23 @@ fun CustomerItemRow(
 
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clickable { onQuickAdd() }
+                            .size(38.dp)
+                            .clickable { onQuickAdd() },
+                        contentAlignment = Alignment.Center
                     ) {
                         // Main Avatar circle in the center
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
+                                .size(34.dp)
                                 .clip(CircleShape)
                                 .background(avatarColor.copy(alpha = 0.12f))
-                                .border(1.dp, avatarColor, CircleShape),
+                                .border(0.5.dp, avatarColor, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = firstLetter,
                                 color = avatarColor,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -135,7 +136,7 @@ fun CustomerItemRow(
                         // Floating Badge in the bottom-end corner
                         Box(
                             modifier = Modifier
-                                .size(16.dp)
+                                .size(14.dp)
                                 .align(Alignment.BottomEnd)
                                 .background(activeThemeColor, CircleShape)
                                 .border(1.dp, Color.White, CircleShape),
@@ -145,7 +146,7 @@ fun CustomerItemRow(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(id = R.string.habayeb_add_tx_button).replace(" ➕",""),
                                 tint = Color.White,
-                                modifier = Modifier.size(10.dp)
+                                modifier = Modifier.size(8.dp)
                             )
                         }
                     }
@@ -162,7 +163,7 @@ fun CustomerItemRow(
                             }
                             Text(
                                 text = customer.name,
-                                fontSize = 15.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = onSurfaceTextColor
                             )
@@ -170,7 +171,7 @@ fun CustomerItemRow(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_last_modified, formattedDate),
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Normal,
                             color = textSecondaryColor
                         )
@@ -186,42 +187,42 @@ fun CustomerItemRow(
                     if (netDebt > 0.0) {
                         AutoScaleText(
                             text = formatCurrency(netDebt, currencySymbol),
-                            baseFontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            baseFontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
                             color = Color(0xFFEF4444)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_status_owed_by),
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Normal,
                             color = textSecondaryColor
                         )
                     } else if (netDebt < 0.0) {
                         AutoScaleText(
                             text = formatCurrency(netDebt, currencySymbol),
-                            baseFontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            baseFontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
                             color = Color(0xFF10B981)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_status_owed_to),
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Normal,
                             color = textSecondaryColor
                         )
                     } else {
                         Text(
                             text = stringResource(id = R.string.habayeb_pdf_balance_balanced).replace("الرصيد الصافي (متساوي):", "خالص").trim(),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
                             color = textSecondaryColor
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_status_balanced),
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Normal,
                             color = textSecondaryColor
                         )

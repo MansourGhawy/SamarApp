@@ -660,6 +660,7 @@ fun MainLedgerView(
         ) {
             HabayebScreen(
                 viewModel = viewModel,
+                onMenuClick = onMenuClick,
                 onClose = {
                     scope.launch {
                         isHabayebActive = false

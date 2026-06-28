@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -42,7 +43,7 @@ fun HabayebHeaderTopBar(
     isMultiSelectActive: Boolean,
     selectedCount: Int,
     onDeleteBulkClick: () -> Unit,
-    onClose: () -> Unit,
+    onMenuClick: () -> Unit,
     onSelectAllClick: () -> Unit,
     haptic: HapticFeedback,
     netDebt: Double,
@@ -164,15 +165,15 @@ fun HabayebHeaderTopBar(
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onClose()
+                            onMenuClick()
                         },
                         modifier = Modifier
                             .size(38.dp)
                             .background(Color.White.copy(alpha = 0.15f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AccountBalanceWallet,
-                            contentDescription = stringResource(id = R.string.habayeb_back_to_wallet),
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )

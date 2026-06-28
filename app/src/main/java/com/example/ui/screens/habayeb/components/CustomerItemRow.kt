@@ -78,15 +78,12 @@ fun CustomerItemRow(
     }
 
     Card(
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(
-            width = 0.5.dp,
-            color = if (isSelected) activeThemeColor.copy(alpha = 0.4f) else Color(0xFFE2E8F0)
-        ),
+        shape = RoundedCornerShape(12.dp),
+        border = null,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) activeSubColor.copy(alpha = 0.3f) else Color.White
+            containerColor = if (isSelected) activeSubColor.copy(alpha = 0.15f) else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 200))

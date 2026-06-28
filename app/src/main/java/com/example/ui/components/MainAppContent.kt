@@ -36,6 +36,7 @@ fun MainAppContent(
                 Screen.HABAYEB -> {
                     HabayebScreen(
                         viewModel = viewModel,
+                        onMenuClick = onMenuClick,
                         onClose = onExit
                     )
                 }

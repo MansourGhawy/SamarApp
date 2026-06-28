@@ -114,6 +114,7 @@ import com.example.ui.helper.getInitialColor
 @Composable
 fun HabayebScreen(
     viewModel: FinanceViewModel,
+    onMenuClick: () -> Unit,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -291,7 +292,7 @@ fun HabayebScreen(
                             onDeleteBulkClick = {
                                 showDeleteConfirmDialog = true
                             },
-                            onClose = onClose,
+                            onMenuClick = onMenuClick,
                             onSelectAllClick = {
                                 val allInListSelected = filteredCustomers.isNotEmpty() &&
                                         filteredCustomers.all { selectedCustomerIds.contains(it.id) }

@@ -123,83 +123,36 @@ fun CustomerHistoryOverlay(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                // Top Custom Header: Red Delete left, "تفاصيل الحساب" center-right, Purple Close right
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Left extreme: Delete Customer
-                    var confirmDeleteCust by remember { mutableStateOf(false) }
-                    IconButton(
-                        onClick = { confirmDeleteCust = true },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(Color(0xFFFFF1F2), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.habayeb_delete_account_title),
-                            tint = Color(0xFFEF5350),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    if (confirmDeleteCust) {
-                        AlertDialog(
-                            onDismissRequest = { confirmDeleteCust = false },
-                            title = { Text(stringResource(id = R.string.habayeb_delete_account_title), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-                            text = { Text(stringResource(id = R.string.habayeb_delete_account_confirm, activeCustomer.name)) },
-                            confirmButton = {
-                                Button(
-                                    onClick = {
-                                        viewModel.deleteHabayebCustomer(activeCustomer.id)
-                                        Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                                        confirmDeleteCust = false
-                                        onDismiss()
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
-                                ) {
-                                    Text(stringResource(id = R.string.habayeb_delete_yes), color = Color.White)
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { confirmDeleteCust = false }) {
-                                    Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
-                                }
-                            }
-                        )
-                    }
-
-                    // Centered Text "تفاصيل الحساب"
-                    Text(
-                        text = stringResource(id = R.string.habayeb_account_details),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = activeThemeColor
-                    )
-
-                    // Right extreme: Return/Close indicator
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(activeSubColor, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(id = R.string.habayeb_go_back),
-                            tint = activeThemeColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // State for editing name
+                // States
+                var confirmDeleteCust by remember { mutableStateOf(false) }
                 var showEditNameDialog by remember { mutableStateOf(false) }
                 var editedNameStr by remember(activeCustomer.name) { mutableStateOf(activeCustomer.name) }
+
+                if (confirmDeleteCust) {
+                    AlertDialog(
+                        onDismissRequest = { confirmDeleteCust = false },
+                        title = { Text(stringResource(id = R.string.habayeb_delete_account_title), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+                        text = { Text(stringResource(id = R.string.habayeb_delete_account_confirm, activeCustomer.name)) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    viewModel.deleteHabayebCustomer(activeCustomer.id)
+                                    Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
+                                    confirmDeleteCust = false
+                                    onDismiss()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
+                            ) {
+                                Text(stringResource(id = R.string.habayeb_delete_yes), color = Color.White)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { confirmDeleteCust = false }) {
+                                Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
+                            }
+                        }
+                    )
+                }
 
                 if (showEditNameDialog) {
                     val editNameFocusRequester = remember { FocusRequester() }
@@ -254,196 +207,202 @@ fun CustomerHistoryOverlay(
                     )
                 }
 
-                // Consolidated Glassmorphic Header Card (Super High Density, Zero Waste Padding)
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = activeSubColor.copy(alpha = 0.6f)),
-                    border = BorderStroke(1.dp, activeThemeColor.copy(alpha = 0.15f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            // Mini Avatar Circle
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(getInitialColor(activeCustomer.name).copy(alpha = 0.7f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = activeCustomer.name.firstOrNull()?.toString() ?: "",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = activeThemeColor
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.width(10.dp))
-                            
-                            Column(horizontalAlignment = Alignment.Start) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = activeCustomer.name,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = { 
-                                            editedNameStr = activeCustomer.name
-                                            showEditNameDialog = true
-                                        }, 
-                                        modifier = Modifier.size(20.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = stringResource(id = R.string.habayeb_edit_name_desc),
-                                            modifier = Modifier.size(12.dp),
-                                            tint = activeThemeColor
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(1.dp))
-                                Text(
-                                    text = activeCustomer.phone.ifEmpty { stringResource(id = R.string.habayeb_no_phone) },
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // Net balance summary on left side in RTL (right end visually)
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.wrapContentWidth(Alignment.End)
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.habayeb_remaining_balance),
-                                fontSize = 11.sp,
-                                color = Color.Gray,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
-                            val textBalanceColor = when {
-                                netDebt > 0.0 -> Color(0xFFDC2626) // Red
-                                netDebt < 0.0 -> Color(0xFF16A34A) // Green
-                                else -> Color.DarkGray
-                            }
-                            val stateLabel = when {
-                                netDebt > 0.0 -> stringResource(id = R.string.habayeb_status_owed_by)
-                                netDebt < 0.0 -> stringResource(id = R.string.habayeb_status_owed_to)
-                                else -> stringResource(id = R.string.habayeb_status_balanced)
-                            }
-
-                            Text(
-                                text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = textBalanceColor
-                            )
-                            
-                            Text(
-                                text = if (netDebt != 0.0) "($stateLabel)" else stateLabel,
-                                fontSize = 11.sp,
-                                color = textBalanceColor,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Action strip: Share, Print & Heading title
+                // Ultra-Compact Single Row Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Right extreme: Return indicator (Borderless Back Button)
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        // 1. زر تصدير كشف الحساب الفخم والمطور (PDF)
-                        AssistChip(
-                            onClick = {
-                                PdfReportGenerator.generateAndHandleCustomerPdfReport(
-                                    context = context,
-                                    customer = activeCustomer,
-                                    netDebt = netDebt,
-                                    transactions = customerTxs,
-                                    action = "SHARE"
-                                )
-                            },
-                            label = { Text(stringResource(id = R.string.habayeb_export_pdf), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                            leadingIcon = { 
-                                Icon(
-                                    imageVector = Icons.Default.Description, 
-                                    contentDescription = null, 
-                                    modifier = Modifier.size(15.dp)
-                                ) 
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = activeThemeColor.copy(alpha = 0.08f),
-                                labelColor = activeThemeColor,
-                                leadingIconContentColor = activeThemeColor
-                            ),
-                            border = BorderStroke(1.dp, activeThemeColor.copy(alpha = 0.2f))
-                        )
-
-                        // 2. زر مشاركة النص السريع
-                        AssistChip(
-                            onClick = {
-                                // مشاركة النص السريع للمعاملات
-                                val sendIntent = android.content.Intent().apply {
-                                    action = android.content.Intent.ACTION_SEND
-                                    val textBody = "كشف حساب ${activeCustomer.name}:\n" + customerTxs.joinToString("\n") { tx ->
-                                        val txDate = try {
-                                            val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
-                                            sdf.format(Date(tx.timestamp * 1000))
-                                        } catch (e: Exception) {
-                                            ""
-                                        }
-                                        "$txDate: ${formatCurrency(tx.amount, currencySymbol)}"
-                                    }
-                                    putExtra(android.content.Intent.EXTRA_TEXT, textBody)
-                                    type = "text/plain"
-                                }
-                                context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة نصية سريعة"))
-                            },
-                            label = { Text(stringResource(id = R.string.habayeb_share_text), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                            leadingIcon = { 
-                                Icon(
-                                    imageVector = Icons.Default.Share, 
-                                    contentDescription = null, 
-                                    modifier = Modifier.size(14.dp)
-                                ) 
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = Color.Gray.copy(alpha = 0.08f),
-                                labelColor = Color.DarkGray,
-                                leadingIconContentColor = Color.DarkGray
-                            ),
-                            border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(id = R.string.habayeb_go_back),
+                            tint = Color.Gray,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
+
+                    // Center (Identity & Data)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Mini Avatar Circle
+                        val avatarColor = getInitialColor(activeCustomer.name)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(avatarColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = avatarColor
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = activeCustomer.name,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E293B),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = {
+                                        editedNameStr = activeCustomer.name
+                                        showEditNameDialog = true
+                                    },
+                                    modifier = Modifier.size(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource(id = R.string.habayeb_edit_name_desc),
+                                        modifier = Modifier.size(12.dp),
+                                        tint = activeThemeColor
+                                    )
+                                }
+                            }
+                            Text(
+                                text = activeCustomer.phone.ifEmpty { stringResource(id = R.string.habayeb_no_phone) },
+                                fontSize = 10.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+
+                    // Left Center (Financial Status)
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        val textBalanceColor = when {
+                            netDebt > 0.0 -> Color(0xFFDC2626) // Red
+                            netDebt < 0.0 -> Color(0xFF16A34A) // Green
+                            else -> Color.DarkGray
+                        }
+                        val stateLabel = when {
+                            netDebt > 0.0 -> stringResource(id = R.string.habayeb_status_owed_by)
+                            netDebt < 0.0 -> stringResource(id = R.string.habayeb_status_owed_to)
+                            else -> stringResource(id = R.string.habayeb_status_balanced)
+                        }
+
+                        Text(
+                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textBalanceColor
+                        )
+
+                        Text(
+                            text = if (netDebt != 0.0) stateLabel else stateLabel,
+                            fontSize = 10.sp,
+                            color = textBalanceColor
+                        )
+                    }
+
+                    // Left extreme: Delete Customer (Soft Red without large background)
+                    IconButton(
+                        onClick = { confirmDeleteCust = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(id = R.string.habayeb_delete_account_title),
+                            tint = Color(0xFFEF5350),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Action strip: Share, Print
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 1. PDF Export button
+                    AssistChip(
+                        onClick = {
+                            PdfReportGenerator.generateAndHandleCustomerPdfReport(
+                                context = context,
+                                customer = activeCustomer,
+                                netDebt = netDebt,
+                                transactions = customerTxs,
+                                action = "SHARE"
+                            )
+                        },
+                        label = { Text(stringResource(id = R.string.habayeb_export_pdf), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = activeThemeColor.copy(alpha = 0.08f),
+                            labelColor = activeThemeColor,
+                            leadingIconContentColor = activeThemeColor
+                        ),
+                        border = BorderStroke(1.dp, activeThemeColor.copy(alpha = 0.2f)),
+                        modifier = Modifier.height(36.dp)
+                    )
+
+                    // 2. Share text button
+                    AssistChip(
+                        onClick = {
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                val textBody = "كشف حساب ${activeCustomer.name}:\n" + customerTxs.joinToString("\n") { tx ->
+                                    val txDate = try {
+                                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
+                                        sdf.format(Date(tx.timestamp * 1000))
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
+                                    "$txDate: ${formatCurrency(tx.amount, currencySymbol)}"
+                                }
+                                putExtra(android.content.Intent.EXTRA_TEXT, textBody)
+                                type = "text/plain"
+                            }
+                            context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة نصية سريعة"))
+                        },
+                        label = { Text(stringResource(id = R.string.habayeb_share_text), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color.Gray.copy(alpha = 0.08f),
+                            labelColor = Color.DarkGray,
+                            leadingIconContentColor = Color.DarkGray
+                        ),
+                        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f)),
+                        modifier = Modifier.height(36.dp)
+                    )
                 }
 
                 // Dynamic previous transactions list

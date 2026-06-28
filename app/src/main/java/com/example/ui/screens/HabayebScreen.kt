@@ -416,7 +416,6 @@ fun HabayebScreen(
                                 if (!isSelected) selectedCustomerIds.add(customer.id)
                             },
                             onQuickAdd = {
-                                activeCustomerForHistory = customer.originalCustomer
                                 defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
                                 showAddTransactionDialogForCustomer = customer.originalCustomer
                             }

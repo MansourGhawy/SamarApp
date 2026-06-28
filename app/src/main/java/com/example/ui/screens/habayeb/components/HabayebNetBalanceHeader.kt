@@ -27,7 +27,7 @@ fun HabayebNetBalanceHeader(
     modifier: Modifier = Modifier
 ) {
     val netBalance = totalOwedByThem - totalOwedToThem
-    val formattedBalance = if (isPrivacyMode) "••••" else String.format(java.util.Locale.ENGLISH, "%,.0f", netBalance)
+    val formattedBalance = if (isPrivacyMode) "****" else String.format(java.util.Locale.ENGLISH, "%,.0f", netBalance)
 
     // بطاقة الصافي منخفضة الارتفاع ورشيقة بنسبة 40%
     Card(
@@ -54,13 +54,6 @@ fun HabayebNetBalanceHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "$formattedBalance $currencySymbol",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = onTogglePrivacy,
                     modifier = Modifier.size(24.dp)
@@ -72,6 +65,13 @@ fun HabayebNetBalanceHeader(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "$formattedBalance $currencySymbol",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
     }

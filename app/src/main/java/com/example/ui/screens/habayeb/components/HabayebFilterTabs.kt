@@ -1,6 +1,8 @@
 package com.example.ui.screens.habayeb.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,16 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
-import com.example.ui.helper.AutoScaleText
-import com.example.ui.helper.formatCurrency
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 @Composable
 fun HabayebFilterTabs(
@@ -29,91 +28,134 @@ fun HabayebFilterTabs(
     haptic: HapticFeedback,
     modifier: Modifier = Modifier
 ) {
+    // ضغط كتل التصفية بالكامل أفقياً بارتفاع 38dp ميكروي مميز
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Right: "لي عند الناس" (Filter Tab 1) - Green Pastel Card
-        val isTab1Selected = selectedFilterTab == 1
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F5E9)
-            ),
-            border = BorderStroke(
-                width = if (isTab1Selected) 2.dp else 1.dp,
-                color = if (isTab1Selected) Color(0xFF10B981) else Color(0xFFA7F3D0)
-            ),
+        // تبويب الكل الرشيق
+        Box(
             modifier = Modifier
                 .weight(1f)
+                .height(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (selectedFilterTab == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                    else Color.Transparent
+                )
+                .border(
+                    BorderStroke(
+                        0.8.dp,
+                        if (selectedFilterTab == 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    ),
+                    RoundedCornerShape(12.dp)
+                )
                 .clickable {
-                    onFilterTabSelected(if (isTab1Selected) 0 else 1)
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onFilterTabSelected(0)
+                },
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Text(
+                text = "الكل",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (selectedFilterTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // كبسولة لي عند الناس الأفقية منخفضة الارتفاع
+        val isOwedByThemSelected = selectedFilterTab == 1
+        val formattedOwedByThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedByThem)
+        Box(
+            modifier = Modifier
+                .weight(1.8f)
+                .height(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (isOwedByThemSelected) Color(0xFFE8F5E9)
+                    else Color.Transparent
+                )
+                .border(
+                    BorderStroke(
+                        0.8.dp,
+                        if (isOwedByThemSelected) Color(0xFF10B981)
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    ),
+                    RoundedCornerShape(12.dp)
+                )
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onFilterTabSelected(1)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = stringResource(id = R.string.habayeb_filter_owed_by),
+                    text = "لي عند الناس: ",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isOwedByThemSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$formattedOwedByThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF047857)
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                AutoScaleText(
-                    text = formatCurrency(totalOwedByThem, currencySymbol),
-                    baseFontSize = 14.sp,
-                    color = Color(0xFF10B981),
-                    fontWeight = FontWeight.Bold
+                    color = if (isOwedByThemSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Left: "علي للناس" (Filter Tab 2) - Red Pastel Card
-        val isTab2Selected = selectedFilterTab == 2
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFEBEE)
-            ),
-            border = BorderStroke(
-                width = if (isTab2Selected) 2.dp else 1.dp,
-                color = if (isTab2Selected) Color(0xFFEF4444) else Color(0xFFFECACA)
-            ),
+        // كبسولة علي للناس الأفقية منخفضة الارتفاع
+        val isOwedToThemSelected = selectedFilterTab == 2
+        val formattedOwedToThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedToThem)
+        Box(
             modifier = Modifier
-                .weight(1f)
+                .weight(1.8f)
+                .height(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (isOwedToThemSelected) Color(0xFFFFEBEE)
+                    else Color.Transparent
+                )
+                .border(
+                    BorderStroke(
+                        0.8.dp,
+                        if (isOwedToThemSelected) Color(0xFFEF4444)
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    ),
+                    RoundedCornerShape(12.dp)
+                )
                 .clickable {
-                    onFilterTabSelected(if (isTab2Selected) 0 else 2)
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onFilterTabSelected(2)
+                },
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = stringResource(id = R.string.habayeb_filter_owed_to),
+                    text = "علي للناس: ",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$formattedOwedToThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB91C1C)
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                AutoScaleText(
-                    text = formatCurrency(totalOwedToThem, currencySymbol),
-                    baseFontSize = 14.sp,
-                    color = Color(0xFFEF4444),
-                    fontWeight = FontWeight.Bold
+                    color = if (isOwedToThemSelected) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

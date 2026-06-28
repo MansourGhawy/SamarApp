@@ -1,7 +1,7 @@
 package com.example.ui.screens.habayeb.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,15 +11,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
-import com.example.ui.helper.AutoScaleText
-import com.example.ui.helper.formatCurrency
 
 @Composable
 fun HabayebNetBalanceHeader(
@@ -30,78 +26,50 @@ fun HabayebNetBalanceHeader(
     onTogglePrivacy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val netTotal = totalOwedByThem - totalOwedToThem
+    val netBalance = totalOwedByThem - totalOwedToThem
+    val formattedBalance = if (isPrivacyMode) "••••" else String.format(java.util.Locale.ENGLISH, "%,.0f", netBalance)
 
-    // Solid Royal Indigo background (No bad new colors or gradients)
-    val cardBgColor = MaterialTheme.colorScheme.primary
-
-    // Dynamic title text exactly as requested:
-    // "إجمالي الصافي لك" if netTotal > 0
-    // "إجمالي الصافي عليك" if netTotal < 0
-    // "إجمالي الرصيد الصافي" if netTotal == 0
-    val netTitle = when {
-        netTotal > 0.0 -> "إجمالي الصافي لك"
-        netTotal < 0.0 -> "إجمالي الصافي عليك"
-        else -> "إجمالي الرصيد الصافي"
-    }
-
-    // Dynamic amount color: Red if money is owed to people (netTotal < 0.0), otherwise White
-    val amountColor = if (netTotal < 0.0) {
-        Color(0xFFFF5252) // Bright readable red
-    } else {
-        Color.White
-    }
-
-    Column(
+    // بطاقة الصافي منخفضة الارتفاع ورشيقة بنسبة 40%
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = cardBgColor
-            ),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp, horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Text(
+                text = "إجمالي الصافي لك",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.75f)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = netTitle,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
+                    text = "$formattedBalance $currencySymbol",
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                    color = Color.White
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onTogglePrivacy,
+                    modifier = Modifier.size(24.dp)
                 ) {
-                    IconButton(
-                        onClick = onTogglePrivacy,
-                        modifier = Modifier.size(24.dp).padding(end = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = stringResource(id = R.string.habayeb_visibility_toggle),
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    AutoScaleText(
-                        text = if (isPrivacyMode) "*****" else formatCurrency(netTotal, currencySymbol),
-                        baseFontSize = 26.sp,
-                        color = amountColor,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center
+                    Icon(
+                        imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

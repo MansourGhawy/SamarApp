@@ -1,9 +1,11 @@
 package com.example.ui.screens.ledger.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -12,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -40,53 +41,73 @@ fun CommitmentsSummaryCards(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Card 1: Net Amount Capsule matching Row 1 style & size
+        // Card 1: Remaining Commitments Capsule
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(50.dp)
+                .height(38.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFEDF7ED)) // Light Pastel Green
+                .background(Color(0xFFFDEDED).copy(alpha = 0.5f))
                 .border(
-                    1.dp,
-                    Color(0xFFC8E6C9), // Soft green boundary
+                    BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                     RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = stringResource(id = R.string.ledger_net_prefix, formatCurrency(BigDecimal.valueOf(netAmount), currencySymbol)),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2E7D32), // Clear green readability
-                textAlign = TextAlign.Center
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = "🛑 بقي للالتزامات: ",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFC62828)
+                )
+                Text(
+                    text = formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFC62828)
+                )
+            }
         }
 
-        // Card 2: Remaining Commitments Capsule matching Row 1 style & size
+        // Card 2: Net Amount Capsule
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(50.dp)
+                .height(38.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFDEDED)) // Light Pastel Red
+                .background(Color(0xFFEDF7ED).copy(alpha = 0.5f))
                 .border(
-                    1.dp,
-                    Color(0xFFFFCDD2), // Soft red boundary
+                    BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                     RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = stringResource(id = R.string.ledger_remaining_commitments, formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol)),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFC62828), // Clear red readability
-                textAlign = TextAlign.Center
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = "❇️ الصافي: ",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2E7D32)
+                )
+                Text(
+                    text = formatCurrency(BigDecimal.valueOf(netAmount), currencySymbol),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF2E7D32)
+                )
+            }
         }
     }
 }

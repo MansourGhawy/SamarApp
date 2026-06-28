@@ -333,39 +333,41 @@ fun MainLedgerHeader(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(Color.White.copy(alpha = 0.12f))
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp, horizontal = 12.dp),
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = stringResource(id = R.string.ledger_actual_cash),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFEF08A)
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.75f)
                     )
-                    Spacer(modifier = Modifier.height(1.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = onTogglePrivacyMode,
-                            modifier = Modifier.size(24.dp).padding(end = 6.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = stringResource(id = R.string.ledger_visibility_desc),
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isPrivacyMode) "*****" else formatCurrency(totalCash, currencySymbol),
-                            fontSize = 24.sp,
+                            fontSize = 22.sp,
                             color = Color.White,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -402,7 +404,7 @@ fun MainLedgerHeader(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 Row(
                     modifier = Modifier
@@ -431,7 +433,7 @@ fun MainLedgerHeader(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
                     modifier = Modifier
@@ -470,12 +472,12 @@ fun MainLedgerHeader(
                     )
                 )
 
-                Box(modifier = Modifier.fillMaxWidth().height(4.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().height(6.dp)) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(RoundedCornerShape(3.dp))
                             .background(Color.White.copy(alpha = 0.2f))
                     )
                     if (linkHabayebDebts && percentFloat > 0f) {
@@ -483,7 +485,7 @@ fun MainLedgerHeader(
                             modifier = Modifier
                                 .fillMaxWidth(percentFloat)
                                 .fillMaxHeight()
-                                .clip(RoundedCornerShape(2.dp))
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(Color(0xFFC4B5FD))
                         )
                     }
@@ -493,7 +495,7 @@ fun MainLedgerHeader(
                             modifier = Modifier
                                 .fillMaxWidth(frontPercent)
                                 .fillMaxHeight()
-                                .clip(RoundedCornerShape(2.dp))
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(neonGradient)
                         )
                     }

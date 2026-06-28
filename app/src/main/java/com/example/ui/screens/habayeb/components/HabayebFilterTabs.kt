@@ -39,7 +39,7 @@ fun HabayebFilterTabs(
         // تبويب الكل الرشيق
         Box(
             modifier = Modifier
-                .weight(1f)
+                .width(56.dp)
                 .height(38.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(
@@ -73,7 +73,7 @@ fun HabayebFilterTabs(
         val formattedOwedByThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedByThem)
         Box(
             modifier = Modifier
-                .weight(1.8f)
+                .weight(1f)
                 .height(38.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(
@@ -119,7 +119,7 @@ fun HabayebFilterTabs(
         val formattedOwedToThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedToThem)
         Box(
             modifier = Modifier
-                .weight(1.8f)
+                .weight(1f)
                 .height(38.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(

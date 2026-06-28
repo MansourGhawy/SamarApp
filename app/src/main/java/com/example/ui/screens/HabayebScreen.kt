@@ -124,7 +124,7 @@ fun HabayebScreen(
     val activeSubColor = MaterialTheme.colorScheme.primaryContainer
     val primaryColor = activeThemeColor
     val containerColor = activeSubColor
-    val surfaceBackgroundColor = MaterialTheme.colorScheme.background
+    val surfaceBackgroundColor = Color(0xFFF1F5F9)
     
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -400,7 +400,7 @@ fun HabayebScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                            .padding(horizontal = 16.dp, vertical = 6.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color(0xFFEF5350)), // Soft primary-red card
                                         contentAlignment = Alignment.Center
@@ -414,7 +414,7 @@ fun HabayebScreen(
                                     }
                                 },
                                 content = {
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                                         CustomerItemRow(
                                             customer = customer,
                                             isSelected = isSelected,

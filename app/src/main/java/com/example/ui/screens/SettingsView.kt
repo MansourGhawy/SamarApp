@@ -1001,77 +1001,30 @@ fun SettingsView(
 
         // 3.5 Auto Backup Background Card (النسخ الاحتياطي التلقائي)
         item {
-            ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = isAutoBackupEnabled,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    val enableAutoBackup = {
-                                        isAutoBackupEnabled = true
-                                        saveAllSettings()
-                                        com.example.AutoBackupWorker.scheduleDailyBackupWorker(context)
-                                        Toast.makeText(context, context.getString(R.string.settings_toast_auto_backup_enabled), Toast.LENGTH_SHORT).show()
-                                    }
-                                    if (checkBackupPermissionsGranted()) {
-                                        enableAutoBackup()
-                                    } else {
-                                        onPermissionGrantedCallback = enableAutoBackup
-                                        showBackupPermissionExplanationDialog = true
-                                    }
-                                } else {
-                                    isAutoBackupEnabled = false
-                                    saveAllSettings()
-                                    com.example.AutoBackupWorker.cancelDailyBackupWorker(context)
-                                    Toast.makeText(context, context.getString(R.string.settings_toast_auto_backup_disabled), Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF075E54)
-                            )
-                        )
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_auto_backup_title),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = Color(0xFF075E54)
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Update,
-                                contentDescription = stringResource(R.string.settings_desc_auto_backup),
-                                tint = Color(0xFF075E54),
-                                modifier = Modifier.size(20.dp)
-                            )
+            SettingsAutoBackupCard(
+                isAutoBackupEnabled = isAutoBackupEnabled,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        val enableAutoBackup = {
+                            isAutoBackupEnabled = true
+                            saveAllSettings()
+                            com.example.AutoBackupWorker.scheduleDailyBackupWorker(context)
+                            Toast.makeText(context, context.getString(R.string.settings_toast_auto_backup_enabled), Toast.LENGTH_SHORT).show()
                         }
+                        if (checkBackupPermissionsGranted()) {
+                            enableAutoBackup()
+                        } else {
+                            onPermissionGrantedCallback = enableAutoBackup
+                            showBackupPermissionExplanationDialog = true
+                        }
+                    } else {
+                        isAutoBackupEnabled = false
+                        saveAllSettings()
+                        com.example.AutoBackupWorker.cancelDailyBackupWorker(context)
+                        Toast.makeText(context, context.getString(R.string.settings_toast_auto_backup_disabled), Toast.LENGTH_SHORT).show()
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.settings_auto_backup_desc),
-                        fontSize = 11.sp,
-                        color = Color.Gray,
-                        textAlign = TextAlign.Right,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
-            }
+            )
         }
 
         // 4. Danger Zone Card (منطقة الخطر - Outlined red button)
@@ -1104,75 +1057,7 @@ fun SettingsView(
 
         // 5. Developer Info Footer Card (تذييل المطور البسيط والأنيق) - Compact Centered Minimalist
         item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_app_version),
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.settings_developer_info),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = Color(0xFF788282),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Subtle centered Circular social rows
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Call Button
-                    IconButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:774004399"))
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.Gray.copy(alpha = 0.08f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Call,
-                            contentDescription = stringResource(R.string.settings_desc_call_support),
-                            tint = Color(0xFF788282),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    // WhatsApp Direct Chat Button
-                    IconButton(
-                        onClick = {
-                            val waUrl = "https://wa.me/967774004399"
-                            val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
-                            context.startActivity(waIntent)
-                        },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.Gray.copy(alpha = 0.08f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Chat,
-                            contentDescription = stringResource(R.string.settings_desc_whatsapp),
-                            tint = Color(0xFF788282),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
+            SettingsDeveloperFooter(context = context)
         }
     }
 

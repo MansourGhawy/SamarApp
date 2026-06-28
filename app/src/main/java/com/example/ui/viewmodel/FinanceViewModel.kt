@@ -327,6 +327,17 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateHabayebCustomer(customer: HabayebCustomer) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.insertCustomer(customer)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
+            }
+        }
+    }
+
     fun deleteHabayebCustomer(customerId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

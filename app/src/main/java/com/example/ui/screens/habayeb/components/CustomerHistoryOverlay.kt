@@ -1,75 +1,56 @@
 package com.example.ui.screens.habayeb.components
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.stringResource
 import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.data.local.entities.HabayebTransaction
@@ -91,504 +72,917 @@ fun CustomerHistoryOverlay(
     activeSubColor: Color,
     currencySymbol: String
 ) {
+    // Intercept back presses to dismiss this full-screen overlay beautifully
+    BackHandler(onBack = onDismiss)
+
     val customers by viewModel.habayebCustomersState.collectAsStateWithLifecycle()
     val activeCustomer = customers.find { it.id == customer.id } ?: customer
 
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
-    val customerTxs = remember(transactions, customer) {
-        transactions.filter { it.customerId == customer.id }.sortedByDescending { it.timestamp }
+    // Search state
+    var txSearchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    // Customer transactions list filtered by client ID
+    val allCustomerTxs = remember(transactions, activeCustomer) {
+        transactions.filter { it.customerId == activeCustomer.id }.sortedByDescending { it.timestamp }
     }
 
-    val owedByThem = customerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
-    val paymentByThem = customerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
-    val owedToThem = customerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
-    val paymentToThem = customerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
+    // Filtered by Search query (supporting description and amount filtering)
+    val displayedTxs = remember(allCustomerTxs, txSearchQuery) {
+        if (txSearchQuery.isBlank()) {
+            allCustomerTxs
+        } else {
+            allCustomerTxs.filter { tx ->
+                tx.description.contains(txSearchQuery, ignoreCase = true) ||
+                tx.amount.toString().contains(txSearchQuery) ||
+                (if (tx.type == "OWED_BY_THEM") "دين" else "سداد").contains(txSearchQuery)
+            }
+        }
+    }
+
+    // Calculations
+    val owedByThem = allCustomerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
+    val paymentByThem = allCustomerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
+    val owedToThem = allCustomerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
+    val paymentToThem = allCustomerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
     val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
 
+    // Calculate sequential running balances (chronological order)
+    val runningBalances = remember(allCustomerTxs) {
+        val chronological = allCustomerTxs.sortedBy { it.timestamp }
+        val balancesMap = mutableMapOf<String, Double>()
+        var currentBal = 0.0
+        for (tx in chronological) {
+            when (tx.type) {
+                "OWED_BY_THEM" -> currentBal += tx.amount
+                "PAYMENT_BY_THEM" -> currentBal -= tx.amount
+                "OWED_TO_THEM" -> currentBal -= tx.amount
+                "PAYMENT_TO_THEM" -> currentBal += tx.amount
+            }
+            balancesMap[tx.id] = currentBal
+        }
+        balancesMap
+    }
+
+    // Selected Transaction for bottom sheet actions
+    var selectedTxForActions by remember { mutableStateOf<HabayebTransaction?>(null) }
+
+    // Dialogs States
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
     var showAddTransactionDialogFromHistory by remember { mutableStateOf<HabayebCustomer?>(null) }
     var defaultTransactionTypeFromHistory by remember { mutableStateOf("OWED_BY_THEM") }
 
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.95f)
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                // States
-                var confirmDeleteCust by remember { mutableStateOf(false) }
-                var showEditNameDialog by remember { mutableStateOf(false) }
-                var editedNameStr by remember(activeCustomer.name) { mutableStateOf(activeCustomer.name) }
+    var confirmDeleteCust by remember { mutableStateOf(false) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var editedNameStr by remember(activeCustomer.name) { mutableStateOf(activeCustomer.name) }
+    var editedPhoneStr by remember(activeCustomer.phone) { mutableStateOf(activeCustomer.phone) }
 
-                if (confirmDeleteCust) {
-                    AlertDialog(
-                        onDismissRequest = { confirmDeleteCust = false },
-                        title = { Text(stringResource(id = R.string.habayeb_delete_account_title), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-                        text = { Text(stringResource(id = R.string.habayeb_delete_account_confirm, activeCustomer.name)) },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    viewModel.deleteHabayebCustomer(activeCustomer.id)
-                                    Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                                    confirmDeleteCust = false
-                                    onDismiss()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
-                            ) {
-                                Text(stringResource(id = R.string.habayeb_delete_yes), color = Color.White)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { confirmDeleteCust = false }) {
-                                Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
-                            }
-                        }
-                    )
+    // Dialogs code
+    if (confirmDeleteCust) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteCust = false },
+            title = { Text(stringResource(id = R.string.habayeb_delete_account_title), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = { Text(stringResource(id = R.string.habayeb_delete_account_confirm, activeCustomer.name)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteHabayebCustomer(activeCustomer.id)
+                        Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
+                        confirmDeleteCust = false
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(id = R.string.habayeb_delete_yes), color = Color.White)
                 }
-
-                if (showEditNameDialog) {
-                    val editNameFocusRequester = remember { FocusRequester() }
-                    LaunchedEffect(Unit) {
-                        editNameFocusRequester.requestFocus()
-                    }
-                    AlertDialog(
-                        onDismissRequest = { showEditNameDialog = false },
-                        title = {
-                            Text(stringResource(id = R.string.habayeb_edit_name_title), fontWeight = FontWeight.Bold)
-                        },
-                        text = {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .imePadding()
-                                    .verticalScroll(rememberScrollState())
-                            ) {
-                                OutlinedTextField(
-                                    value = editedNameStr,
-                                    onValueChange = { editedNameStr = it },
-                                    label = { Text(stringResource(id = R.string.habayeb_account_name)) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth().focusRequester(editNameFocusRequester),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = activeThemeColor,
-                                        focusedLabelColor = activeThemeColor,
-                                        cursorColor = activeThemeColor
-                                    )
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    if (editedNameStr.isNotBlank()) {
-                                        viewModel.updateHabayebCustomerName(activeCustomer.id, editedNameStr.trim())
-                                    }
-                                    showEditNameDialog = false
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = activeThemeColor)
-                            ) {
-                                Text(stringResource(id = R.string.habayeb_save_edit))
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showEditNameDialog = false }) {
-                                Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
-                            }
-                        }
-                    )
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteCust = false }) {
+                    Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
                 }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
 
-                // Ultra-Compact Single Row Header
-                Row(
+    if (showEditNameDialog) {
+        val editNameFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) {
+            editNameFocusRequester.requestFocus()
+        }
+        AlertDialog(
+            onDismissRequest = { showEditNameDialog = false },
+            title = {
+                Text(stringResource(id = R.string.habayeb_edit_name_title), fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Right extreme: Return indicator (Borderless Back Button)
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(id = R.string.habayeb_go_back),
-                            tint = Color.Gray,
-                            modifier = Modifier.size(22.dp)
+                    OutlinedTextField(
+                        value = editedNameStr,
+                        onValueChange = { editedNameStr = it },
+                        label = { Text(stringResource(id = R.string.habayeb_account_name)) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(editNameFocusRequester),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = activeThemeColor,
+                            focusedLabelColor = activeThemeColor,
+                            cursorColor = activeThemeColor
                         )
-                    }
+                    )
 
-                    // Center (Identity & Data)
+                    OutlinedTextField(
+                        value = editedPhoneStr,
+                        onValueChange = { editedPhoneStr = it },
+                        label = { Text("رقم الهاتف") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = activeThemeColor,
+                            focusedLabelColor = activeThemeColor,
+                            cursorColor = activeThemeColor
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editedNameStr.isNotBlank()) {
+                            viewModel.updateHabayebCustomer(
+                                activeCustomer.copy(
+                                    name = editedNameStr.trim(),
+                                    phone = editedPhoneStr.trim()
+                                )
+                            )
+                            Toast.makeText(context, "تم تحديث البيانات بنجاح", Toast.LENGTH_SHORT).show()
+                        }
+                        showEditNameDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = activeThemeColor),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(id = R.string.habayeb_save_edit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditNameDialog = false }) {
+                    Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    // Helper functions for sending SMS statement or transaction SMS/WhatsApp
+    fun triggerSmsStatement(customer: HabayebCustomer, debt: Double) {
+        val debtStatus = when {
+            debt > 0.0 -> "عليكم مبلغ وقدره"
+            debt < 0.0 -> "لكم مبلغ وقدره"
+            else -> "رصيدكم متعادل"
+        }
+        val amt = formatCurrency(kotlin.math.abs(debt), currencySymbol)
+        val body = "كشف حساب من ميزان الدار لـ ${customer.name}:\n" +
+                "الحالة الحالية: $debtStatus $amt.\n" +
+                "شكراً لتعاملكم الراقي معنا."
+        try {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:${customer.phone}")
+                putExtra("sms_body", body)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "إرسال كشف حساب"))
+        }
+    }
+
+    fun triggerWhatsAppStatement(customer: HabayebCustomer, debt: Double) {
+        val debtStatus = when {
+            debt > 0.0 -> "عليكم مبلغ وقدره"
+            debt < 0.0 -> "لكم مبلغ وقدره"
+            else -> "رصيدكم متعادل"
+        }
+        val amt = formatCurrency(kotlin.math.abs(debt), currencySymbol)
+        val body = "كشف حساب من ميزان الدار لـ ${customer.name}:\n" +
+                "الحالة الحالية: $debtStatus $amt.\n" +
+                "شكراً لتعاملكم الراقي معنا."
+        try {
+            val waUrl = "https://wa.me/${customer.phone.replace("+", "").replace(" ", "")}?text=${Uri.encode(body)}"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "إرسال عبر واتساب"))
+        }
+    }
+
+    fun triggerSingleTxSms(tx: HabayebTransaction, customer: HabayebCustomer) {
+        val txTypeAr = when (tx.type) {
+            "OWED_BY_THEM" -> "دين جديد عليكم"
+            "PAYMENT_BY_THEM" -> "تم استلام سداد منكم بقيمة"
+            "OWED_TO_THEM" -> "دين جديد لكم"
+            "PAYMENT_TO_THEM" -> "تم دفع سداد لكم بقيمة"
+            else -> "حركة حساب"
+        }
+        val dateStr = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.ENGLISH).format(Date(tx.timestamp * 1000))
+        val body = "إشعار حركة حساب - ميزان الدار:\n" +
+                "العميل: ${customer.name}\n" +
+                "النوع: $txTypeAr\n" +
+                "المبلغ: ${formatCurrency(tx.amount, currencySymbol)}\n" +
+                "التفاصيل: ${tx.description.ifEmpty { "لا يوجد ملاحظات" }}\n" +
+                "التاريخ: $dateStr\n" +
+                "رصيدكم الإجمالي الحالي لدينا: ${formatCurrency(kotlin.math.abs(netDebt), currencySymbol)} (${if (netDebt > 0) "عليكم" else if (netDebt < 0) "لكم" else "متعادل"})"
+
+        try {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:${customer.phone}")
+                putExtra("sms_body", body)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "إرسال إشعار"))
+        }
+    }
+
+    fun triggerSingleTxWhatsApp(tx: HabayebTransaction, customer: HabayebCustomer) {
+        val txTypeAr = when (tx.type) {
+            "OWED_BY_THEM" -> "دين جديد عليكم"
+            "PAYMENT_BY_THEM" -> "تم استلام سداد منكم بقيمة"
+            "OWED_TO_THEM" -> "دين جديد لكم"
+            "PAYMENT_TO_THEM" -> "تم دفع سداد لكم بقيمة"
+            else -> "حركة حساب"
+        }
+        val dateStr = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.ENGLISH).format(Date(tx.timestamp * 1000))
+        val body = "*إشعار حركة حساب - ميزان الدار:*\n" +
+                "👤 *العميل:* ${customer.name}\n" +
+                "📌 *النوع:* $txTypeAr\n" +
+                "💰 *المبلغ:* ${formatCurrency(tx.amount, currencySymbol)}\n" +
+                "📝 *التفاصيل:* ${tx.description.ifEmpty { "لا يوجد ملاحظات" }}\n" +
+                "📅 *التاريخ:* $dateStr\n" +
+                "💼 *الرصيد الإجمالي الحالي:* ${formatCurrency(kotlin.math.abs(netDebt), currencySymbol)} (${if (netDebt > 0) "عليكم" else if (netDebt < 0) "لكم" else "متعادل"})"
+
+        try {
+            val waUrl = "https://wa.me/${customer.phone.replace("+", "").replace(" ", "")}?text=${Uri.encode(body)}"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "إرسال عبر واتساب"))
+        }
+    }
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF8FAFC))
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // 1. FULL SCREEN CUSTOM APP BAR WITH INTEGRATED SEARCH
+                Surface(
+                    color = activeThemeColor,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Row(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .height(56.dp)
                             .padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Mini Avatar Circle
-                        val avatarColor = getInitialColor(activeCustomer.name)
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(avatarColor.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = avatarColor
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "رجوع",
+                                tint = Color.White
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = activeCustomer.name,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1E293B),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                        if (isSearchActive) {
+                            // Search Mode View
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.White.copy(alpha = 0.15f))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "بحث",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                IconButton(
-                                    onClick = {
-                                        editedNameStr = activeCustomer.name
-                                        showEditNameDialog = true
-                                    },
-                                    modifier = Modifier.size(16.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                BasicTextField(
+                                    value = txSearchQuery,
+                                    onValueChange = { txSearchQuery = it },
+                                    textStyle = TextStyle(
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    cursorBrush = SolidColor(Color.White),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f),
+                                    decorationBox = { innerTextField ->
+                                        if (txSearchQuery.isEmpty()) {
+                                            Text(
+                                                text = "ابحث في تفاصيل أو مبلغ المعاملات...",
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                                if (txSearchQuery.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { txSearchQuery = "" },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "مسح",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            IconButton(onClick = {
+                                isSearchActive = false
+                                txSearchQuery = ""
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "إلغاء البحث",
+                                    tint = Color.White
+                                )
+                            }
+                        } else {
+                            // Standard Mode Header details
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Micro Avatar with gorgeous initials
+                                val avatarColor = getInitialColor(activeCustomer.name)
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = stringResource(id = R.string.habayeb_edit_name_desc),
-                                        modifier = Modifier.size(12.dp),
-                                        tint = activeThemeColor
+                                    Text(
+                                        text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        text = activeCustomer.name,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = activeCustomer.phone.ifEmpty { "ليس لديه هاتف" },
+                                        fontSize = 10.sp,
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
-                            Text(
-                                text = activeCustomer.phone.ifEmpty { stringResource(id = R.string.habayeb_no_phone) },
-                                fontSize = 10.sp,
-                                color = Color.Gray
-                            )
+
+                            // Dynamic Actions inside Bar
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "بحث",
+                                    tint = Color.White
+                                )
+                            }
+
+                            IconButton(onClick = {
+                                PdfReportGenerator.generateAndHandleCustomerPdfReport(
+                                    context = context,
+                                    customer = activeCustomer,
+                                    netDebt = netDebt,
+                                    transactions = allCustomerTxs,
+                                    action = "SHARE"
+                                )
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = "PDF كشف",
+                                    tint = Color.White
+                                )
+                            }
+
+                            IconButton(onClick = { showEditNameDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل الحساب",
+                                    tint = Color.White
+                                )
+                            }
+
+                            IconButton(onClick = { confirmDeleteCust = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "حذف الحساب",
+                                    tint = Color.White
+                                )
+                            }
                         }
-                    }
-
-                    // Left Center (Financial Status)
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        val textBalanceColor = when {
-                            netDebt > 0.0 -> Color(0xFFDC2626) // Red
-                            netDebt < 0.0 -> Color(0xFF16A34A) // Green
-                            else -> Color.DarkGray
-                        }
-                        val stateLabel = when {
-                            netDebt > 0.0 -> stringResource(id = R.string.habayeb_status_owed_by)
-                            netDebt < 0.0 -> stringResource(id = R.string.habayeb_status_owed_to)
-                            else -> stringResource(id = R.string.habayeb_status_balanced)
-                        }
-
-                        Text(
-                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textBalanceColor
-                        )
-
-                        Text(
-                            text = if (netDebt != 0.0) stateLabel else stateLabel,
-                            fontSize = 10.sp,
-                            color = textBalanceColor
-                        )
-                    }
-
-                    // Left extreme: Delete Customer (Soft Red without large background)
-                    IconButton(
-                        onClick = { confirmDeleteCust = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.habayeb_delete_account_title),
-                            tint = Color(0xFFEF5350),
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
 
-                // Action strip: Share, Print
-                Row(
+                // 2. FINANCIAL STATUS SUMMARY CARD (COMPACT AND SPACIOUS)
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    // 1. PDF Export button
-                    AssistChip(
-                        onClick = {
-                            PdfReportGenerator.generateAndHandleCustomerPdfReport(
-                                context = context,
-                                customer = activeCustomer,
-                                netDebt = netDebt,
-                                transactions = customerTxs,
-                                action = "SHARE"
-                            )
-                        },
-                        label = { Text(stringResource(id = R.string.habayeb_export_pdf), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = activeThemeColor.copy(alpha = 0.08f),
-                            labelColor = activeThemeColor,
-                            leadingIconContentColor = activeThemeColor
-                        ),
-                        border = BorderStroke(1.dp, activeThemeColor.copy(alpha = 0.2f)),
-                        modifier = Modifier.height(36.dp)
-                    )
-
-                    // 2. Share text button
-                    AssistChip(
-                        onClick = {
-                            val sendIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                val textBody = "كشف حساب ${activeCustomer.name}:\n" + customerTxs.joinToString("\n") { tx ->
-                                    val txDate = try {
-                                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
-                                        sdf.format(Date(tx.timestamp * 1000))
-                                    } catch (e: Exception) {
-                                        ""
-                                    }
-                                    "$txDate: ${formatCurrency(tx.amount, currencySymbol)}"
-                                }
-                                putExtra(android.content.Intent.EXTRA_TEXT, textBody)
-                                type = "text/plain"
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text("مجموع ديونك (له)", fontSize = 10.sp, color = Color.Gray)
+                                Text(
+                                    text = formatCurrency(owedByThem, currencySymbol),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFDC2626)
+                                )
                             }
-                            context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة نصية سريعة"))
-                        },
-                        label = { Text(stringResource(id = R.string.habayeb_share_text), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = Color.Gray.copy(alpha = 0.08f),
-                            labelColor = Color.DarkGray,
-                            leadingIconContentColor = Color.DarkGray
-                        ),
-                        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f)),
-                        modifier = Modifier.height(36.dp)
-                    )
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("مجموع سدادك (عليه)", fontSize = 10.sp, color = Color.Gray)
+                                Text(
+                                    text = formatCurrency(paymentByThem + owedToThem, currencySymbol),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF16A34A)
+                                )
+                            }
+
+                            val textBalanceColor = when {
+                                netDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
+                                netDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
+                                else -> Color.DarkGray
+                            }
+                            val stateLabel = when {
+                                netDebt > 0.0 -> "مطلوب منه"
+                                netDebt < 0.0 -> "مطلوب له"
+                                else -> "متعادل"
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("الرصيد الإجمالي", fontSize = 10.sp, color = textBalanceColor, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = textBalanceColor
+                                )
+                                Text(
+                                    text = stateLabel,
+                                    fontSize = 10.sp,
+                                    color = textBalanceColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        // Direct SMS & WhatsApp fast quick actions
+                        if (activeCustomer.phone.isNotBlank()) {
+                            Divider(color = Color(0xFFF1F5F9), thickness = 0.8.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TextButton(
+                                    onClick = { triggerSmsStatement(activeCustomer, netDebt) },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF0F766E)),
+                                    modifier = Modifier.weight(1f).height(32.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Sms, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Text("إرسال كشف SMS", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                VerticalDivider(color = Color(0xFFE2E8F0), modifier = Modifier.height(20.dp).align(Alignment.CenterVertically))
+
+                                TextButton(
+                                    onClick = { triggerWhatsAppStatement(activeCustomer, netDebt) },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF16A34A)),
+                                    modifier = Modifier.weight(1f).height(32.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Text("إرسال كشف WhatsApp", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // Dynamic previous transactions list
-                if (customerTxs.isEmpty()) {
+                // 3. TABLE GRID COLUMN HEADER STRIP (MATCHING COMPETITOR SCREENSHOT)
+                Surface(
+                    color = Color(0xFFE2E8F0).copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Date (Right Column in RTL)
+                        Text(
+                            text = "التاريخ",
+                            modifier = Modifier.weight(1.3f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF475569),
+                            textAlign = TextAlign.Right
+                        )
+
+                        // Amount (Middle-Right Column)
+                        Text(
+                            text = "المبلغ",
+                            modifier = Modifier.weight(1.0f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF475569),
+                            textAlign = TextAlign.Center
+                        )
+
+                        // Details (Middle-Left Column)
+                        Text(
+                            text = "التفاصيل",
+                            modifier = Modifier.weight(1.5f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF475569),
+                            textAlign = TextAlign.Center
+                        )
+
+                        // Balance (Far Left Column)
+                        Text(
+                            text = "الرصيد",
+                            modifier = Modifier.weight(1.2f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF475569),
+                            textAlign = TextAlign.Left
+                        )
+                    }
+                }
+
+                // 4. THE HIGH-DENSITY HIGH-FIDELITY TRANSACTION LIST
+                if (displayedTxs.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(stringResource(id = R.string.habayeb_no_txs), fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            text = if (txSearchQuery.isEmpty()) "لا توجد أي معاملات مسجلة للحساب" else "لا توجد معاملات تطابق البحث",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .weight(1f),
+                        verticalArrangement = Arrangement.Top
                     ) {
-                        items(customerTxs, key = { it.id }) { tx ->
+                        items(displayedTxs, key = { it.id }) { tx ->
                             val formattedDate = remember(tx.timestamp) {
-                                val sdf = SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale.ENGLISH)
-                                val formatted = sdf.format(Date(tx.timestamp * 1000))
-                                formatted.replace("AM", "ص").replace("PM", "م")
-                                    .replace("am", "ص").replace("pm", "م")
+                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+                                sdf.format(Date(tx.timestamp * 1000))
+                            }
+                            val formattedTime = remember(tx.timestamp) {
+                                val sdf = SimpleDateFormat("HH:mm", Locale.ENGLISH)
+                                sdf.format(Date(tx.timestamp * 1000))
                             }
 
                             val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
                             val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
-                            val iconEmoji = when (tx.type) {
-                                "OWED_BY_THEM" -> "📝" // دين عليه
-                                "OWED_TO_THEM" -> "📝" // دين له
-                                "PAYMENT_BY_THEM", "PAYMENT_TO_THEM" -> "💸" // سداد
-                                else -> "💼"
-                            }
-                            val isDebt = tx.type == "OWED_BY_THEM" || tx.type == "OWED_TO_THEM"
-                            val sign = if (isDebt) "+" else "-"
+                            val rowBgColor = if (selectedTxForActions?.id == tx.id) Color(0xFF0F766E).copy(alpha = 0.08f) else Color.White
 
-                            Card(
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                            // Historical running balance at this exact transaction
+                            val currentHistBalance = runningBalances[tx.id] ?: 0.0
+                            val formattedHistBal = try { String.format(Locale.getDefault(), "%,.0f", currentHistBalance) } catch (e: Exception) { currentHistBalance.toString() }
+
+                            // Clean table-row layout
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .background(rowBgColor)
+                                    .clickable {
+                                        selectedTxForActions = if (selectedTxForActions?.id == tx.id) null else tx
+                                    }
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(IntrinsicSize.Min)
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // 1. Rightmost vertical color indicator (Touches the right border in RTL)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .width(4.dp)
-                                            .background(indicatorColor)
-                                            .align(Alignment.CenterStart)
-                                    )
+                                    // 1. Date/Time (Rightmost)
+                                    Column(
+                                        modifier = Modifier.weight(1.3f),
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        Text(
+                                            text = formattedDate,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF1E293B),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = formattedTime,
+                                            fontSize = 9.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
 
+                                    // 2. Amount with colorful indicator arrow (Middle-Right)
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 10.dp, bottom = 10.dp, end = 10.dp, start = 12.dp),
+                                        modifier = Modifier.weight(1.0f),
+                                        horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // 2. Small Avatar/Icon
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .background(indicatorColor.copy(alpha = 0.12f)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = iconEmoji,
-                                                fontSize = 13.sp
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                            contentDescription = null,
+                                            tint = indicatorColor,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text(
+                                            text = try { String.format(Locale.getDefault(), "%,.0f", tx.amount) } catch (e: Exception) { tx.amount.toString() },
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = indicatorColor
+                                        )
+                                    }
 
-                                        Spacer(modifier = Modifier.width(10.dp))
+                                    // 3. Details (Middle-Left)
+                                    Text(
+                                        text = tx.description.ifEmpty { if (isPositive) "سداد" else "دين" },
+                                        modifier = Modifier.weight(1.5f),
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF334155),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
 
-                                        // 3. Middle: transaction details (Title & subtitle/description)
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            horizontalAlignment = Alignment.Start
-                                        ) {
-                                            val readableType = when (tx.type) {
-                                                "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by)
-                                                "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by)
-                                                "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to)
-                                                "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to)
-                                                else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
-                                            }
+                                    // 4. Running Balance (Leftmost)
+                                    Text(
+                                        text = "$formattedHistBal-",
+                                        modifier = Modifier.weight(1.2f),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (currentHistBalance > 0) Color(0xFFDC2626) else if (currentHistBalance < 0) Color(0xFF16A34A) else Color.DarkGray,
+                                        textAlign = TextAlign.Left
+                                    )
+                                }
+                                Divider(color = Color(0xFFE2E8F0).copy(alpha = 0.5f), thickness = 0.5.dp)
+                            }
+                        }
+                    }
+                }
+            }
 
-                                            if (tx.description.isNotEmpty()) {
-                                                // الملاحظة التفصيلية للمستخدم تصبح هي العنوان الرئيسي لسهولة القراءة والتمييز
-                                                Text(
-                                                    text = tx.description,
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF1E293B),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                // فاصل عمودي ناعم لمنع تداخل النصوص
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                // نوع المعاملة يصبح فرعياً وناعماً بوزن عادي وحجم أصغر لتجنب تكرار الهيكل البصري
-                                                Text(
-                                                    text = readableType,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Normal,
-                                                    color = Color(0xFF64748B)
-                                                )
-                                            } else {
-                                                // في حال عدم كتابة تفاصيل، يظهر نوع المعاملة كعنوان رئيسي بحجم ووزن معتدل
-                                                Text(
-                                                    text = readableType,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF1E293B),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
+            // 5. STUNNING BOTTOM TRANSACTION ACTIONS PANEL (SAVES SCREEN REAL ESTATE, HIGH ACCESSIBILITY)
+            if (selectedTxForActions != null) {
+                val currentTx = selectedTxForActions!!
+                val isPositive = currentTx.type == "PAYMENT_BY_THEM" || currentTx.type == "OWED_TO_THEM"
+                val typeName = when (currentTx.type) {
+                    "OWED_BY_THEM" -> "دين عليه"
+                    "PAYMENT_BY_THEM" -> "سداد منه"
+                    "OWED_TO_THEM" -> "دين له"
+                    "PAYMENT_TO_THEM" -> "سداد له"
+                    else -> "حركة حساب"
+                }
+                val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
 
-                                        Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 76.dp, start = 8.dp, end = 8.dp) // Offset above standard floating adding buttons
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Row Header: Status indicator and text description
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(indicatorColor)
+                                    )
+                                    Text(
+                                        text = "$typeName: ${formatCurrency(currentTx.amount, currencySymbol)} ${if (currentTx.description.isNotEmpty()) "- " + currentTx.description else ""}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth(0.85f)
+                                    )
+                                }
 
-                                        // 4. Far Left: Monetary value and Timestamp
-                                        Column(
-                                            horizontalAlignment = Alignment.End,
-                                            modifier = Modifier.wrapContentWidth()
-                                        ) {
-                                            Text(
-                                                text = "$sign${formatCurrency(tx.amount, currencySymbol)}",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = indicatorColor
-                                            )
-                                            Text(
-                                                text = formattedDate,
-                                                fontSize = 9.sp,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                        }
+                                Text(
+                                    text = "إخفاء",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.clickable { selectedTxForActions = null }
+                                )
+                            }
 
-                                        Spacer(modifier = Modifier.width(4.dp))
+                            Divider(color = Color.White.copy(alpha = 0.1f), thickness = 0.8.dp)
 
-                                        // Edit & delete options
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            IconButton(
-                                                onClick = {
-                                                    editingTransactionForDialog = tx
-                                                    defaultTransactionTypeFromHistory = tx.type
-                                                    showAddTransactionDialogFromHistory = customer
-                                                },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = stringResource(id = R.string.detail_btn_edit),
-                                                    tint = activeThemeColor.copy(alpha = 0.7f),
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
+                            // Control buttons row: Edit, Delete, Send SMS, Send WhatsApp
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // 1. SMS Alert button
+                                Button(
+                                    onClick = { triggerSingleTxSms(currentTx, activeCustomer) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(34.dp).weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Sms, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                        Text("إشعار SMS", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                }
 
-                                            IconButton(
-                                                onClick = {
-                                                    viewModel.deleteHabayebTransaction(tx.id)
-                                                    Toast.makeText(context, context.getString(R.string.toast_delete_success), Toast.LENGTH_SHORT).show()
-                                                },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = stringResource(id = R.string.detail_btn_delete),
-                                                    tint = Color(0xFFEF4444).copy(alpha = 0.7f),
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
-                                        }
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // 2. WhatsApp Alert button
+                                Button(
+                                    onClick = { triggerSingleTxWhatsApp(currentTx, activeCustomer) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(34.dp).weight(1.1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                        Text("إشعار WhatsApp", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // 3. Edit transaction
+                                Button(
+                                    onClick = {
+                                        editingTransactionForDialog = currentTx
+                                        defaultTransactionTypeFromHistory = currentTx.type
+                                        showAddTransactionDialogFromHistory = activeCustomer
+                                        selectedTxForActions = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = activeThemeColor),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(34.dp).weight(0.8f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                        Text("تعديل", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // 4. Delete transaction
+                                Button(
+                                    onClick = {
+                                        viewModel.deleteHabayebTransaction(currentTx.id)
+                                        Toast.makeText(context, "تم حذف المعاملة بنجاح", Toast.LENGTH_SHORT).show()
+                                        selectedTxForActions = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(34.dp).weight(0.8f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                        Text("حذف", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -597,7 +991,7 @@ fun CustomerHistoryOverlay(
                 }
             }
 
-            // Beautiful custom floating button at the bottom extreme
+            // 6. DELUXE PERSISTENT FLOATING ADDING ACTION BUTTON
             FloatingActionButton(
                 onClick = {
                     val defaultType = if (netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
@@ -606,22 +1000,27 @@ fun CustomerHistoryOverlay(
                 containerColor = activeThemeColor,
                 contentColor = Color.White,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(bottom = 90.dp, end = 20.dp, start = 20.dp), // Elevated to float over bottom Pill Navigation Dock
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(id = R.string.habayeb_add_tx_button), modifier = Modifier.size(18.dp))
-                    Text(stringResource(id = R.string.habayeb_add_tx_button).replace(" ➕",""), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "إضافة حركة",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "إضافة حركة",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
-
-                }
-        }
         }
     }
 

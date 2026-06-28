@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -511,7 +512,7 @@ fun AddTransactionPopup(
                             text = stringResource(id = R.string.habayeb_tx_desc_optional),
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
-                            fontSize = 13.sp,
+                            fontSize = 11.sp,
                             color = Color.Gray
                         )
                     },
@@ -527,10 +528,11 @@ fun AddTransactionPopup(
                         Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
                     },
                     shape = RoundedCornerShape(18.dp),
-                    maxLines = 3,
+                    singleLine = false,
+                    maxLines = 2,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(86.dp)
+                        .heightIn(min = 40.dp, max = 56.dp)
                         .focusRequester(descFocusRequester),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(

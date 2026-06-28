@@ -115,7 +115,8 @@ import com.example.ui.helper.getInitialColor
 fun HabayebScreen(
     viewModel: FinanceViewModel,
     onMenuClick: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -348,7 +349,7 @@ fun HabayebScreen(
                     modifier = Modifier.weight(1f).nestedScroll(nestedScrollConnection),
                     contentPadding = PaddingValues(
                         top = 4.dp,
-                        bottom = 80.dp
+                        bottom = contentPadding.calculateBottomPadding() + 80.dp
                     )
                 ) {
                     // Density Optimized List Area

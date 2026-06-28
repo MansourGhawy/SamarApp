@@ -70,11 +70,9 @@ fun CustomerItemRow(
     val lastTxTime = customer.lastTransactionTimestamp
     val onSurfaceTextColor = MaterialTheme.colorScheme.onBackground
     val textSecondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val sdf = remember { java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", java.util.Locale.ENGLISH) }
+    val sdf = remember { java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", java.util.Locale("ar")) }
     val formattedDate = remember(lastTxTime) {
-        val formatted = sdf.format(java.util.Date(lastTxTime * 1000))
-        formatted.replace("AM", "ص").replace("PM", "م")
-                 .replace("am", "ص").replace("pm", "م")
+        sdf.format(java.util.Date(lastTxTime * 1000))
     }
 
     Card(

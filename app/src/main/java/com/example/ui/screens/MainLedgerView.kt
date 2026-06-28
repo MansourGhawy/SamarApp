@@ -269,7 +269,7 @@ fun MainLedgerView(
             state = lazyListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = topPadding + 8.dp,
+                top = 0.dp,
                 bottom = bottomPadding + 110.dp // حشوة كافية للتمرير خلف الـ Dock والـ Navigation Bar بأمان وتناسق
             ),
             horizontalAlignment = Alignment.CenterHorizontally,

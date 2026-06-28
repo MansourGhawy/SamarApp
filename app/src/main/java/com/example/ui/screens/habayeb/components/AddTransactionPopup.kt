@@ -544,10 +544,8 @@ fun AddTransactionPopup(
 
                 // Date displays container
                 val formattedSelectedDate = remember(dateMillis) {
-                    val sdf = SimpleDateFormat("yyyy/MM/dd - hh:mm a", Locale.ENGLISH)
-                    val formatted = sdf.format(Date(dateMillis))
-                    formatted.replace("AM", "ص").replace("PM", "م")
-                        .replace("am", "ص").replace("pm", "م")
+                    val sdf = SimpleDateFormat("yyyy/MM/dd - hh:mm a", Locale("ar"))
+                    sdf.format(Date(dateMillis))
                 }
 
                 Box(

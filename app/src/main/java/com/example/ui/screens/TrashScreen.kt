@@ -46,7 +46,8 @@ enum class FilterType {
 @Composable
 fun TrashScreen(
     viewModel: FinanceViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     // 100% Lifecycle-aware state flow tracking for better memory optimization
     val items by viewModel.deletedItemsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -132,6 +133,7 @@ fun TrashScreen(
     }
 
     Scaffold(
+        modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding()),
         topBar = {
             AnimatedContent(
                 targetState = isSearchActive && !isSelectionMode,

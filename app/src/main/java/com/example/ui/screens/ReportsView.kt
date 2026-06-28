@@ -63,6 +63,7 @@ fun ReportsView(
     viewModel: FinanceViewModel,
     settings: AppSettings,
     currencySymbol: String,
+    contentPadding: PaddingValues = PaddingValues(),
     reportsViewModel: ReportsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
@@ -325,6 +326,7 @@ fun ReportsView(
     }
 
     Scaffold(
+        modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding()),
         topBar = {
             Column(
                 modifier = Modifier

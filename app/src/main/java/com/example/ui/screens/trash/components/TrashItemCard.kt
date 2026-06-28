@@ -166,7 +166,7 @@ fun TrashItemCard(
                             }
                         } else {
                             val parsedDate = try {
-                                java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(item.deletedAt))
+                                java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale("ar")).format(Date(item.deletedAt))
                             } catch (e: Exception) {
                                 ""
                             }

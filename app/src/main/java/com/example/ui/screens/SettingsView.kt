@@ -67,7 +67,8 @@ import android.app.Activity
 fun SettingsView(
     viewModel: FinanceViewModel,
     settings: AppSettings,
-    onNavigateToSecurity: () -> Unit
+    onNavigateToSecurity: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -298,7 +299,8 @@ fun SettingsView(
             .statusBarsPadding()
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 40.dp)
     ) {
         // App Settings Header Card (Visual Title Card)
         item {

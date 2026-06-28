@@ -163,7 +163,6 @@ fun MainAppLayout(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
             ) {
                 MainAppContent(
                     currentScreen = currentScreen,
@@ -172,6 +171,7 @@ fun MainAppLayout(
                     monthlyLedger = monthlyLedger,
                     totalCash = totalCash,
                     commitments = commitments,
+                    contentPadding = innerPadding,
                     onNavigate = { currentScreen = it },
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onExit = {

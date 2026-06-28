@@ -153,7 +153,7 @@
     <string name="habayeb_whatsapp_text">مراسلة واتساب</string>
     <string name="habayeb_call">اتصال هاتفي</string>
     <string name="habayeb_edit_tx_title">تعديل بيانات المعاملة 📝</string>
-    <string name="habayeb_add_tx_title">إضافة حركة مالية جديدة 💰</string>
+    <string name="habayeb_add_tx_title">إضافة معاملة مالية جديدة 💰</string>
     <string name="habayeb_payment_from">استلام سداد (مقبوض منه)</string>
     <string name="habayeb_payment_to">تسديد مبلغ (مدفوع له)</string>
     <string name="habayeb_new_debt_by">دين جديد عليه (مطلوب منه)</string>

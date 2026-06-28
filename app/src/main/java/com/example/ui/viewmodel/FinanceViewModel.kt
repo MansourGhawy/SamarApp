@@ -59,11 +59,21 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _localBackups = MutableStateFlow<List<File>>(emptyList())
     val localBackups: StateFlow<List<File>> = _localBackups.asStateFlow()
 
+    private val _activationTrigger = MutableStateFlow(0)
+    private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "m_act_code") {
+            _activationTrigger.value += 1
+        }
+    }
+
     init {
         val database = AppDatabase.getDatabase(application)
         repository = FinanceRepository(database)
         trashDao = database.trashDao()
         deletedItemDao = database.deletedItemDao()
+
+        val secPrefs = application.getSharedPreferences("mizan_sec_prefs", Context.MODE_PRIVATE)
+        secPrefs.registerOnSharedPreferenceChangeListener(preferenceListener)
 
         val prefs = application.getSharedPreferences(FinanceConstants.PREFS_NAME, Context.MODE_PRIVATE)
         viewModelScope.launch {
@@ -125,8 +135,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun togglePrivacyMode() {
         isPrivacyModeEnabled.value = !isPrivacyModeEnabled.value
     }
-
-    private val _activationTrigger = MutableStateFlow(0)
 
     val deviceIdState: StateFlow<String> = flow {
         emit(com.example.domain.LicenseManager.getOrGenerateUnifiedDeviceId(getApplication()))
@@ -1386,6 +1394,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val formatter = DecimalFormat("#,##0", symbols)
         val formatted = formatter.format(amount)
         return "$formatted $symbol"
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val secPrefs = getApplication<Application>().getSharedPreferences("mizan_sec_prefs", Context.MODE_PRIVATE)
+        secPrefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
 }
 

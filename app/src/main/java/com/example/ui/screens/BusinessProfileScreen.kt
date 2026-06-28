@@ -62,7 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun BusinessProfileScreen(
     viewModel: FinanceViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -151,6 +152,7 @@ fun BusinessProfileScreen(
     }
 
     Scaffold(
+        modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding()),
         topBar = {
             TopAppBar(
                 title = {

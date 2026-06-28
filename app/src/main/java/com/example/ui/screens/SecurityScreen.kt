@@ -36,7 +36,8 @@ import kotlinx.coroutines.withContext
 fun SecurityScreen(
     settings: AppSettings,
     viewModel: FinanceViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -56,6 +57,7 @@ fun SecurityScreen(
     var isSaving by remember { mutableStateOf(false) }
 
     Scaffold(
+        modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding()),
         topBar = {
             TopAppBar(
                 title = {

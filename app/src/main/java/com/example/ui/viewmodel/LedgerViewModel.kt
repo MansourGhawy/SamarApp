@@ -59,8 +59,7 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             val normalizedQuery = StringUtils.normalizeArabic(query)
             transactions.filter { tx ->
-                StringUtils.normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true) ||
-                StringUtils.normalizeArabic(tx.category).contains(normalizedQuery, ignoreCase = true)
+                StringUtils.normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true)
             }.sortedByDescending { it.timestamp }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

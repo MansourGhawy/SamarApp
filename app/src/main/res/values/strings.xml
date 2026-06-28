@@ -101,6 +101,8 @@
     <string name="habayeb_back_to_wallet">الرجوع للمحفظة</string>
     <string name="habayeb_select_all">تحديد الكل</string>
     <string name="habayeb_search_label">البحث</string>
+    <string name="habayeb_net_total_for_you">إجمالي الصافي لك</string>
+    <string name="habayeb_net_total_on_you">إجمالي المبلغ عليك</string>
     <string name="habayeb_net_balance">إجمالي الرصيد الصافي</string>
     <string name="habayeb_net_title_assets">إجمالي الرصيد الصافي (مستحق لي ↗️)</string>
     <string name="habayeb_net_title_liabilities">إجمالي الرصيد الصافي (مطلوب مني ↘️)</string>
@@ -343,8 +345,8 @@
     <string name="ledger_visibility_desc">عرض المبالغ</string>
     <string name="ledger_link_debts">تضمين الديون المستحقة 🔗</string>
     <string name="ledger_commitments_ratio">نسبة تغطية الالتزامات</string>
-    <string name="ledger_net_prefix">❇️ الصافي: %s</string>
-    <string name="ledger_remaining_commitments">🛑 بقي للالتزامات: %s</string>
+    <string name="ledger_net_prefix">الصافي:</string>
+    <string name="ledger_remaining_commitments">باقي الالتزامات:</string>
     <string name="ledger_empty_state_msg">السجل المالي فارغ حالياً!\nقم بتسجيل الإيرادات والمصروفات لتتبع ميزانيتك.</string>
     <string name="ledger_daily_record">السجل اليومي 📖</string>
     <string name="ledger_monthly_record">حركات شهر:</string>

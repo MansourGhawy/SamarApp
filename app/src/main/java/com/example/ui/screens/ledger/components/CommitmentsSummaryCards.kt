@@ -63,7 +63,7 @@ fun CommitmentsSummaryCards(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = "🛑 بقي للالتزامات: ",
+                    text = "${stringResource(R.string.ledger_remaining_commitments)} ",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFC62828)
@@ -96,7 +96,7 @@ fun CommitmentsSummaryCards(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = "❇️ الصافي: ",
+                    text = "${stringResource(R.string.ledger_net_prefix)} ",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF2E7D32)

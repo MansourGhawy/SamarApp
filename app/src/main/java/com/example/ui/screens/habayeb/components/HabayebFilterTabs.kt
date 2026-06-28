@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.res.stringResource
+import com.example.R
 
 @Composable
 fun HabayebFilterTabs(
@@ -25,6 +27,7 @@ fun HabayebFilterTabs(
     totalOwedByThem: Double,
     totalOwedToThem: Double,
     currencySymbol: String,
+    isPrivacyMode: Boolean = false,
     haptic: HapticFeedback,
     modifier: Modifier = Modifier
 ) {
@@ -61,7 +64,7 @@ fun HabayebFilterTabs(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "الكل",
+                text = stringResource(id = R.string.trash_filter_all),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (selectedFilterTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -100,13 +103,13 @@ fun HabayebFilterTabs(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = "لي عند الناس: ",
+                    text = stringResource(id = R.string.habayeb_filter_owed_by) + ": ",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isOwedByThemSelected) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.8f)
                 )
                 Text(
-                    text = "$formattedOwedByThem $currencySymbol",
+                    text = if (isPrivacyMode) "*****" else "$formattedOwedByThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isOwedByThemSelected) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.8f)
@@ -146,13 +149,13 @@ fun HabayebFilterTabs(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = "علي للناس: ",
+                    text = stringResource(id = R.string.habayeb_filter_owed_to) + ": ",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isOwedToThemSelected) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.8f)
                 )
                 Text(
-                    text = "$formattedOwedToThem $currencySymbol",
+                    text = if (isPrivacyMode) "*****" else "$formattedOwedToThem $currencySymbol",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isOwedToThemSelected) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.8f)

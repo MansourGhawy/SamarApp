@@ -70,7 +70,8 @@ fun CustomerHistoryOverlay(
     onAddTransaction: (HabayebCustomer, String) -> Unit,
     activeThemeColor: Color,
     activeSubColor: Color,
-    currencySymbol: String
+    currencySymbol: String,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     // Intercept back presses to dismiss this full-screen overlay beautifully
     BackHandler(onBack = onDismiss)
@@ -81,6 +82,7 @@ fun CustomerHistoryOverlay(
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
 
     // Search state
     var txSearchQuery by remember { mutableStateOf("") }
@@ -127,9 +129,6 @@ fun CustomerHistoryOverlay(
         }
         balancesMap
     }
-
-    // Selected Transaction for bottom sheet actions
-    var selectedTxForActions by remember { mutableStateOf<HabayebTransaction?>(null) }
 
     // Dialogs States
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
@@ -371,102 +370,173 @@ fun CustomerHistoryOverlay(
                 // 1. FULL SCREEN CUSTOM APP BAR WITH INTEGRATED SEARCH
                 Surface(
                     color = Color.White,
-                    shadowElevation = 2.dp,
+                    shadowElevation = 1.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     var showShareMenu by remember { mutableStateOf(false) }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .height(64.dp)
-                            .padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "رجوع",
-                                tint = Color(0xFF1E293B)
-                            )
-                        }
-
-                        if (isSearchActive) {
-                            // Search Mode View
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFF1F5F9))
-                                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .height(56.dp)
+                                .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = onDismiss) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "بحث",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "رجوع",
+                                    tint = Color(0xFF1E293B)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                BasicTextField(
-                                    value = txSearchQuery,
-                                    onValueChange = { txSearchQuery = it },
-                                    textStyle = TextStyle(
-                                        color = Color(0xFF1E293B),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    cursorBrush = SolidColor(activeThemeColor),
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    decorationBox = { innerTextField ->
-                                        if (txSearchQuery.isEmpty()) {
-                                            Text(
-                                                text = "بحث عن معاملة...",
-                                                color = Color.Gray.copy(alpha = 0.8f),
-                                                fontSize = 13.sp
+                            }
+
+                            if (isSearchActive) {
+                                // Search Mode View
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFF1F5F9))
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "بحث",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    BasicTextField(
+                                        value = txSearchQuery,
+                                        onValueChange = { txSearchQuery = it },
+                                        textStyle = TextStyle(
+                                            color = Color(0xFF1E293B),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        cursorBrush = SolidColor(activeThemeColor),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f),
+                                        decorationBox = { innerTextField ->
+                                            if (txSearchQuery.isEmpty()) {
+                                                Text(
+                                                    text = "بحث عن حركة...",
+                                                    color = Color.Gray.copy(alpha = 0.8f),
+                                                    fontSize = 13.sp
+                                                )
+                                            }
+                                            innerTextField()
+                                        }
+                                    )
+                                    if (txSearchQuery.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = { txSearchQuery = "" },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "مسح",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
-                                        innerTextField()
                                     }
+                                }
+                                IconButton(onClick = {
+                                    isSearchActive = false
+                                    txSearchQuery = ""
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "إلغاء البحث",
+                                        tint = Color(0xFF1E293B)
+                                    )
+                                }
+                            } else {
+                                // Standard Mode: Centered / Start-aligned account full name written by the user
+                                Text(
+                                    text = activeCustomer.name,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF1E293B),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                if (txSearchQuery.isNotEmpty()) {
+
+                                // Action icons: Search, PDF, SMS (moved to header with standard icons)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    IconButton(onClick = { isSearchActive = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "بحث",
+                                            tint = Color(0xFF475569),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
                                     IconButton(
-                                        onClick = { txSearchQuery = "" },
-                                        modifier = Modifier.size(24.dp)
+                                        onClick = {
+                                            PdfReportGenerator.generateAndHandleCustomerPdfReport(context, activeCustomer, netDebt, allCustomerTxs, "SHARE")
+                                        }
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "مسح",
-                                            tint = Color.Gray,
-                                            modifier = Modifier.size(18.dp)
+                                            imageVector = Icons.Default.Description,
+                                            contentDescription = "مشاركة PDF",
+                                            tint = activeThemeColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    val isPhoneAvailable = activeCustomer.phone.isNotBlank()
+                                    IconButton(
+                                        enabled = isPhoneAvailable,
+                                        onClick = { triggerWhatsAppStatement(activeCustomer, netDebt) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Chat,
+                                            contentDescription = "واتساب",
+                                            tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        enabled = isPhoneAvailable,
+                                        onClick = { triggerSmsStatement(activeCustomer, netDebt) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sms,
+                                            contentDescription = "SMS",
+                                            tint = if (isPhoneAvailable) Color(0xFF0F766E) else Color.Gray.copy(alpha = 0.35f),
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
                             }
-                            IconButton(onClick = {
-                                isSearchActive = false
-                                txSearchQuery = ""
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "إلغاء البحث",
-                                    tint = Color(0xFF1E293B)
-                                )
-                            }
-                        } else {
-                            // Standard Mode Header details
+                        }
+
+                        if (!isSearchActive) {
+                            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+
+                            // Account Details Card directly under top bar
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Micro Avatar
                                 val avatarColor = getInitialColor(activeCustomer.name)
                                 Box(
                                     modifier = Modifier
-                                        .size(42.dp)
+                                        .size(44.dp)
                                         .clip(CircleShape)
                                         .background(avatarColor.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
@@ -487,93 +557,56 @@ fun CustomerHistoryOverlay(
                                 ) {
                                     Text(
                                         text = activeCustomer.name,
-                                        fontSize = 16.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = Color(0xFF1E293B)
                                     )
                                     Text(
                                         text = activeCustomer.phone.ifEmpty { "لا يوجد هاتف مسجل" },
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         color = Color.Gray,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                            }
 
-                            // Actions
-                            IconButton(onClick = { isSearchActive = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "بحث",
-                                    tint = Color(0xFF1E293B)
-                                )
-                            }
-
-                            Box {
-                                IconButton(onClick = { showShareMenu = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = "خيارات المشاركة",
-                                        tint = Color(0xFF1E293B)
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showShareMenu,
-                                    onDismissRequest = { showShareMenu = false },
-                                    modifier = Modifier.background(Color.White)
+                                // Distribute Edit & Delete icons under name with professional resizing and world-class symbols
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    DropdownMenuItem(
-                                        text = { Text("مشاركة كشف PDF") },
-                                        onClick = {
-                                            showShareMenu = false
-                                            PdfReportGenerator.generateAndHandleCustomerPdfReport(
-                                                context = context,
-                                                customer = activeCustomer,
-                                                netDebt = netDebt,
-                                                transactions = allCustomerTxs,
-                                                action = "SHARE"
-                                            )
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Description, contentDescription = null, tint = activeThemeColor) }
-                                    )
-                                    if (activeCustomer.phone.isNotBlank()) {
-                                        DropdownMenuItem(
-                                            text = { Text("إرسال عبر واتساب") },
-                                            onClick = {
-                                                showShareMenu = false
-                                                triggerWhatsAppStatement(activeCustomer, netDebt)
-                                            },
-                                            leadingIcon = { Icon(Icons.Default.Chat, contentDescription = null, tint = Color(0xFF16A34A)) }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFF1F5F9))
+                                            .clickable { showEditNameDialog = true },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "تعديل",
+                                            tint = Color(0xFF475569),
+                                            modifier = Modifier.size(14.dp)
                                         )
-                                        DropdownMenuItem(
-                                            text = { Text("إرسال رسالة نصية SMS") },
-                                            onClick = {
-                                                showShareMenu = false
-                                                triggerSmsStatement(activeCustomer, netDebt)
-                                            },
-                                            leadingIcon = { Icon(Icons.Default.Sms, contentDescription = null, tint = Color(0xFF0F766E)) }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFEF4444).copy(alpha = 0.1f))
+                                            .clickable { confirmDeleteCust = true },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "حذف",
+                                            tint = Color(0xFFEF4444),
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                 }
-                            }
-
-                            IconButton(onClick = { showEditNameDialog = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "تعديل الحساب",
-                                    tint = Color(0xFF1E293B)
-                                )
-                            }
-
-                            IconButton(onClick = { confirmDeleteCust = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "حذف الحساب",
-                                    tint = Color(0xFFEF4444)
-                                )
                             }
                         }
                     }
@@ -713,7 +746,11 @@ fun CustomerHistoryOverlay(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        verticalArrangement = Arrangement.Top
+                        verticalArrangement = Arrangement.Top,
+                        contentPadding = PaddingValues(
+                            top = 4.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 80.dp
+                        )
                     ) {
                         items(displayedTxs, key = { it.id }) { tx ->
                             val formattedDate = remember(tx.timestamp) {
@@ -727,7 +764,7 @@ fun CustomerHistoryOverlay(
 
                             val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
                             val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
-                            val rowBgColor = if (selectedTxForActions?.id == tx.id) Color(0xFF0F766E).copy(alpha = 0.08f) else Color.White
+                            val rowBgColor = Color.White
 
                             // Historical running balance at this exact transaction
                             val currentHistBalance = runningBalances[tx.id] ?: 0.0
@@ -740,11 +777,13 @@ fun CustomerHistoryOverlay(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .clickable {
-                                        selectedTxForActions = if (selectedTxForActions?.id == tx.id) null else tx
+                                        editingTransactionForDialog = tx
+                                        defaultTransactionTypeFromHistory = tx.type
+                                        showAddTransactionDialogFromHistory = activeCustomer
                                     },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = rowBgColor),
-                                border = if (selectedTxForActions?.id == tx.id) BorderStroke(1.dp, activeThemeColor) else BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
                                 Row(
@@ -819,167 +858,6 @@ fun CustomerHistoryOverlay(
                 }
             }
 
-            // 5. STUNNING BOTTOM TRANSACTION ACTIONS PANEL (SAVES SCREEN REAL ESTATE, HIGH ACCESSIBILITY)
-            if (selectedTxForActions != null) {
-                val currentTx = selectedTxForActions!!
-                val isPositive = currentTx.type == "PAYMENT_BY_THEM" || currentTx.type == "OWED_TO_THEM"
-                val typeName = when (currentTx.type) {
-                    "OWED_BY_THEM" -> "دين عليه"
-                    "PAYMENT_BY_THEM" -> "سداد منه"
-                    "OWED_TO_THEM" -> "دين له"
-                    "PAYMENT_TO_THEM" -> "سداد له"
-                    else -> "حركة حساب"
-                }
-                val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 76.dp, start = 8.dp, end = 8.dp) // Offset above standard floating adding buttons
-                ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Row Header: Status indicator and text description
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(indicatorColor)
-                                    )
-                                    Text(
-                                        text = "$typeName: ${formatCurrency(currentTx.amount, currencySymbol)} ${if (currentTx.description.isNotEmpty()) "- " + currentTx.description else ""}",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(0.85f)
-                                    )
-                                }
-
-                                Text(
-                                    text = "إخفاء",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.clickable { selectedTxForActions = null }
-                                )
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.1f), thickness = 0.8.dp)
-
-                            // Control buttons row: Edit, Delete, Send SMS, Send WhatsApp
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // 1. SMS Alert button
-                                Button(
-                                    onClick = { triggerSingleTxSms(currentTx, activeCustomer) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(34.dp).weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(Icons.Default.Sms, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                        Text("إشعار SMS", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(6.dp))
-
-                                // 2. WhatsApp Alert button
-                                Button(
-                                    onClick = { triggerSingleTxWhatsApp(currentTx, activeCustomer) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(34.dp).weight(1.1f),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                        Text("إشعار WhatsApp", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(6.dp))
-
-                                // 3. Edit transaction
-                                Button(
-                                    onClick = {
-                                        editingTransactionForDialog = currentTx
-                                        defaultTransactionTypeFromHistory = currentTx.type
-                                        showAddTransactionDialogFromHistory = activeCustomer
-                                        selectedTxForActions = null
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = activeThemeColor),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(34.dp).weight(0.8f),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                        Text("تعديل", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(6.dp))
-
-                                // 4. Delete transaction
-                                Button(
-                                    onClick = {
-                                        viewModel.deleteHabayebTransaction(currentTx.id)
-                                        Toast.makeText(context, "تم حذف المعاملة بنجاح", Toast.LENGTH_SHORT).show()
-                                        selectedTxForActions = null
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(34.dp).weight(0.8f),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                        Text("حذف", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // 6. DELUXE PERSISTENT FLOATING ADDING ACTION BUTTON
             FloatingActionButton(
                 onClick = {
@@ -990,7 +868,10 @@ fun CustomerHistoryOverlay(
                 contentColor = Color.White,
                 modifier = Modifier
                     .align(Alignment.BottomStart) // BottomStart = Right side in RTL
-                    .padding(20.dp)
+                    .padding(
+                        bottom = contentPadding.calculateBottomPadding() + 16.dp,
+                        start = 20.dp
+                    )
                     .size(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {

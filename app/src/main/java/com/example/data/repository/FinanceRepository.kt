@@ -61,6 +61,7 @@ class FinanceRepository(internal val database: AppDatabase) {
 
     // Habayeb (حسابات الحبايب) operations
     suspend fun insertCustomer(customer: HabayebCustomer) = habayebDao.insertCustomer(customer)
+    suspend fun updateCustomer(customer: HabayebCustomer) = habayebDao.updateCustomer(customer)
     suspend fun insertCustomerWithOpeningTransaction(customer: HabayebCustomer, transaction: HabayebTransaction?) = 
         habayebDao.insertCustomerWithOpeningTransaction(customer, transaction)
     suspend fun deleteCustomerAndTransactions(customerId: String) = habayebDao.deleteCustomerAndTransactions(customerId)

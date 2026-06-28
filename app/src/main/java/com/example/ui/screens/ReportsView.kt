@@ -165,12 +165,7 @@ fun ReportsView(
                     "المصروفات المنصرفة: ${formatVal(totalExpense)}",
                     "صافي المحصول والمتبقي في الدار: ${formatVal(netSavings)}"
                 )
-                val detailedData = categoryTotals.map { (cat, amt) ->
-                    val prc = if (totalExpense.compareTo(BigDecimal.ZERO) > 0) {
-                        amt.multiply(BigDecimal.valueOf(100)).divide(totalExpense, 1, RoundingMode.HALF_UP)
-                    } else BigDecimal.ZERO
-                    "$cat ($prc%)" to formatVal(amt)
-                }
+                val detailedData = emptyList<Pair<String, String>>()
 
                 if (type == "PDF") {
                     generateModernPdfReport(context, reportTitle, summaryHeaders, detailedData)
@@ -181,17 +176,6 @@ fun ReportsView(
                     builder.append("📥 *إجمالي الوارد:* ${formatVal(totalIncome)}\n")
                     builder.append("💸 *إجمالي المصروفات:* ${formatVal(totalExpense)}\n")
                     builder.append("⚖️ *صافي المحصول المتبقي:* ${formatVal(netSavings)}\n\n")
-                    if (categoryTotals.isNotEmpty()) {
-                        builder.append("📂 *النفقات المصنفة بالأبواب:*\n")
-                        categoryTotals.forEach { (cat, amt) ->
-                            val prc = if (totalExpense.compareTo(BigDecimal.ZERO) > 0) {
-                                amt.multiply(BigDecimal.valueOf(100)).divide(totalExpense, 1, RoundingMode.HALF_UP)
-                            } else BigDecimal.ZERO
-                            builder.append("- *$cat:* ${formatVal(amt)} ($prc%)\n")
-                        }
-                    } else {
-                        builder.append("بفضل الله ورعايته لا توجد مصروفات منسقة مضافة للدار 🌸\n")
-                    }
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         setType("text/plain")
                         putExtra(Intent.EXTRA_TEXT, builder.toString())

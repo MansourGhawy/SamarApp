@@ -194,7 +194,7 @@ fun SearchResultItem(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = tx.description.ifBlank { tx.category },
+                        text = tx.description.ifBlank { if (tx.type == "INCOME") stringResource(id = R.string.ledger_category_overall_income) else stringResource(id = R.string.ledger_category_expense) },
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = EmeraldPrimary,

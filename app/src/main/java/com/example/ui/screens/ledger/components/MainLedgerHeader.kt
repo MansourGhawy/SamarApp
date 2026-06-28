@@ -350,7 +350,10 @@ fun MainLedgerHeader(
                         color = Color.White.copy(alpha = 0.75f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         IconButton(
                             onClick = onTogglePrivacyMode,
                             modifier = Modifier.size(24.dp)
@@ -362,7 +365,7 @@ fun MainLedgerHeader(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isPrivacyMode) "*****" else formatCurrency(totalCash, currencySymbol),
                             fontSize = 22.sp,

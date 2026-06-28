@@ -174,17 +174,9 @@ fun ActiveDayTransactionsDialog(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         textAlign = TextAlign.Right
                                     )
-                                    if (tx.category.isNotBlank() && tx.category != stringResource(id = R.string.ledger_category_expense)) {
-                                        Text(
-                                            text = tx.category,
-                                            fontSize = 9.sp,
-                                            color = Color.Gray,
-                                            textAlign = TextAlign.Right
-                                        )
-                                    }
                                 }
 
-                                val parsedEmoji = extractEmoji(tx.category, if (tx.type == "INCOME") "💰" else "🛒")
+                                val parsedEmoji = if (tx.type == "INCOME") "💰" else "🛒"
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
@@ -247,10 +239,8 @@ fun ActiveDayTransactionsDialog(
                 } else {
                     txs.forEach { tx ->
                         val icon = if (tx.type == "INCOME") "🟢 (+)" else "🔴 (-)"
-                        builder.append(context.getString(R.string.ledger_share_tx_format, icon, tx.category, formatDoubleCurrency(tx.amount, currencySymbol)))
-                        if (tx.description.isNotBlank()) {
-                            builder.append(context.getString(R.string.ledger_share_tx_desc, tx.description))
-                        }
+                        val title = tx.description.ifBlank { if (tx.type == "INCOME") "وارد" else "منصرف" }
+                        builder.append(context.getString(R.string.ledger_share_tx_format, icon, title, formatDoubleCurrency(tx.amount, currencySymbol)))
                     }
                 }
 

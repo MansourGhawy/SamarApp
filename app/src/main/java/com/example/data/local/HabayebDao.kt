@@ -29,6 +29,9 @@ interface HabayebDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCustomer(customer: HabayebCustomer)
 
+    @Update
+    suspend fun updateCustomer(customer: HabayebCustomer)
+
     @Query("UPDATE habayeb_customers SET name = :newName WHERE id = :id")
     suspend fun updateCustomerName(id: String, newName: String)
 

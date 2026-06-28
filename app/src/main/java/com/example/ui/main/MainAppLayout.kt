@@ -134,6 +134,7 @@ fun MainAppLayout(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = true,
         drawerContent = {
             AppNavigationDrawer(
                 currentScreen = currentScreen,

@@ -62,6 +62,7 @@ fun CustomerItemRow(
     activeThemeColor: Color,
     activeSubColor: Color,
     currencySymbol: String,
+    isPrivacyMode: Boolean = false,
     haptic: HapticFeedback,
     onCustomerClick: () -> Unit,
     onCustomerLongClick: () -> Unit,

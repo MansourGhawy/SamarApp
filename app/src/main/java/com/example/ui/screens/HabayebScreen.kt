@@ -163,6 +163,12 @@ fun HabayebScreen(
     // Dialog sheets states
     var showAddCustomerDialog by remember { mutableStateOf(false) }
     var activeCustomerForHistory by remember { mutableStateOf<HabayebCustomer?>(null) }
+    var stableCustomer by remember { mutableStateOf<HabayebCustomer?>(null) }
+    LaunchedEffect(activeCustomerForHistory) {
+        if (activeCustomerForHistory != null) {
+            stableCustomer = activeCustomerForHistory
+        }
+    }
     var showAddTransactionDialogForCustomer by remember { mutableStateOf<HabayebCustomer?>(null) }
     var defaultTransactionTypeForDialog by remember { mutableStateOf("OWED_BY_THEM") }
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
@@ -170,7 +176,6 @@ fun HabayebScreen(
     var customerToDelete by remember { mutableStateOf<HabayebCustomer?>(null) }
     var showEditCustomerDialog by remember { mutableStateOf(false) }
     var editingCustomerForDialog by remember { mutableStateOf<HabayebCustomer?>(null) }
-    var showExitConfirmDialog by remember { mutableStateOf(false) }
     var financialSortMode by remember { mutableStateOf(0) }
     var historicalSortMode by remember { mutableStateOf(1) }
     
@@ -324,6 +329,7 @@ fun HabayebScreen(
                         totalOwedByThem = totalOwedByThem,
                         totalOwedToThem = totalOwedToThem,
                         currencySymbol = currencySymbol,
+                        isPrivacyMode = isPrivacyModeState.value,
                         haptic = haptic
                     )
 
@@ -417,6 +423,7 @@ fun HabayebScreen(
                                 content = {
                                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                                         CustomerItemRow(
+                                            isPrivacyMode = isPrivacyModeState.value,
                                             customer = customer,
                                             isSelected = isSelected,
                                             isMultiSelectActive = isMultiSelectActive,
@@ -459,7 +466,7 @@ fun HabayebScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(bottom = 16.dp, start = 16.dp)
+                    .padding(bottom = contentPadding.calculateBottomPadding() + 16.dp, start = 16.dp)
                     .size(58.dp)
                     .shadow(10.dp, CircleShape, spotColor = primaryColor.copy(alpha = 0.6f))
                     .background(primaryColor, CircleShape)
@@ -493,19 +500,27 @@ fun HabayebScreen(
         }
 
         // 2. DETAILED CUSTOMER DEBT TRANSACTION HISTORY OVERLAY
-        if (activeCustomerForHistory != null) {
-            CustomerHistoryOverlay(
-                customer = activeCustomerForHistory!!,
-                viewModel = viewModel,
-                onDismiss = { activeCustomerForHistory = null },
-                onAddTransaction = { customer, type ->
-                    defaultTransactionTypeForDialog = type
-                    showAddTransactionDialogForCustomer = customer
-                },
-                activeThemeColor = activeThemeColor,
-                activeSubColor = activeSubColor,
-                currencySymbol = currencySymbol
-            )
+        AnimatedVisibility(
+            visible = activeCustomerForHistory != null,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier.zIndex(10f)
+        ) {
+            stableCustomer?.let { customer ->
+                CustomerHistoryOverlay(
+                    customer = customer,
+                    viewModel = viewModel,
+                    onDismiss = { activeCustomerForHistory = null },
+                    onAddTransaction = { c, type ->
+                        defaultTransactionTypeForDialog = type
+                        showAddTransactionDialogForCustomer = c
+                    },
+                    activeThemeColor = activeThemeColor,
+                    activeSubColor = activeSubColor,
+                    currencySymbol = currencySymbol,
+                    contentPadding = contentPadding
+                )
+            }
         }
 
         // 3. ADD/EDIT DEBT TRANSACTION POPUP

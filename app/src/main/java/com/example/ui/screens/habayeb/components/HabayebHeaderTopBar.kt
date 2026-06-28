@@ -193,16 +193,21 @@ fun HabayebHeaderTopBar(
                             color = Color.White
                         )
                     } else {
-                        val titleText = if (netDebt >= 0.0) "إجمالي الصافي لك" else "إجمالي المبلغ عليك"
-                        val formattedBalance = if (isPrivacyMode) "****" else String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
+                        val titleText = if (netDebt >= 0.0) stringResource(R.string.habayeb_net_total_for_you) else stringResource(R.string.habayeb_net_total_on_you)
+                        val formattedBalanceText = if (isPrivacyMode) {
+                            "*****"
+                        } else {
+                            val formatted = String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
+                            "$formatted $currencySymbol"
+                        }
 
                         Text(
                             text = titleText,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.White.copy(alpha = 0.75f)
                         )
-                        Spacer(modifier = Modifier.height(1.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
@@ -213,15 +218,15 @@ fun HabayebHeaderTopBar(
                             ) {
                                 Icon(
                                     imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null,
-                                    tint = Color.White,
+                                    contentDescription = stringResource(id = R.string.ledger_visibility_desc),
+                                    tint = Color.White.copy(alpha = 0.7f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "$formattedBalance $currencySymbol",
-                                fontSize = 18.sp,
+                                text = formattedBalanceText,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )

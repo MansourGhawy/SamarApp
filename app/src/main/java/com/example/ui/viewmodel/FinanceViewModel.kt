@@ -338,7 +338,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun updateHabayebCustomer(customer: HabayebCustomer) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.insertCustomer(customer)
+                repository.updateCustomer(customer)
             } catch (e: Exception) {
                 e.printStackTrace()
                 sendUiEvent(UiEvent.ShowToast(R.string.toast_save_failed))
@@ -419,8 +419,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         else {
             val normalizedQuery = normalizeArabic(query)
             transactions.filter { tx ->
-                normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true) ||
-                normalizeArabic(tx.category).contains(normalizedQuery, ignoreCase = true)
+                normalizeArabic(tx.description).contains(normalizedQuery, ignoreCase = true)
             }.sortedByDescending { it.timestamp }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

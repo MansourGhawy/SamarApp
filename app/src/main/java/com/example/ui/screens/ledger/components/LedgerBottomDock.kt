@@ -72,33 +72,33 @@ fun LedgerBottomDock(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(42.dp)
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Add Expense Button (Left)
+                // Add Income Button (First element - Right side in RTL)
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onAddExpenseClick()
+                        onAddIncomeClick()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373)), // Destructive Crimson/Soft Red
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)), // Secondary Mint/Green
+                    shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(42.dp)
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(id = R.string.ledger_add_expense), tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.ledger_add_income), tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(id = R.string.ledger_add_expense), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(id = R.string.ledger_add_income), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
 
                 // Center Target Button (Goals/Commitments)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFF8F9FA))
                         .border(1.dp, Color(0xFFE0E0E0), CircleShape)
@@ -114,22 +114,22 @@ fun LedgerBottomDock(
                     )
                 }
 
-                // Add Income Button (Right)
+                // Add Expense Button (Third element - Left side in RTL)
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onAddIncomeClick()
+                        onAddExpenseClick()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)), // Secondary Mint/Green
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373)), // Destructive Crimson/Soft Red
+                    shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(42.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.ledger_add_income), tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(id = R.string.ledger_add_expense), tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(id = R.string.ledger_add_income), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(id = R.string.ledger_add_expense), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }

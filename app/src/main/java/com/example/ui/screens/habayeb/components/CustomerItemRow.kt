@@ -10,6 +10,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -106,23 +107,47 @@ fun CustomerItemRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val avatarBgColor = activeThemeColor.copy(alpha = 0.08f)
-                    val avatarIconColor = activeThemeColor
+                    val firstLetter = remember(customer.name) { customer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟" }
+                    val avatarColor = remember(customer.name) { getInitialColor(customer.name) }
 
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(CircleShape)
-                            .background(avatarBgColor)
-                            .clickable { onQuickAdd() },
-                        contentAlignment = Alignment.Center
+                            .clickable { onQuickAdd() }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(id = R.string.habayeb_add_tx_button).replace(" ➕",""),
-                            tint = avatarIconColor,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        // Main Avatar circle in the center
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(CircleShape)
+                                .background(avatarColor.copy(alpha = 0.12f))
+                                .border(1.dp, avatarColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = firstLetter,
+                                color = avatarColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Floating Badge in the bottom-end corner
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .align(Alignment.BottomEnd)
+                                .background(activeThemeColor, CircleShape)
+                                .border(1.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(id = R.string.habayeb_add_tx_button).replace(" ➕",""),
+                                tint = Color.White,
+                                modifier = Modifier.size(10.dp)
+                            )
+                        }
                     }
 
                     Column(horizontalAlignment = Alignment.Start) {
@@ -138,7 +163,7 @@ fun CustomerItemRow(
                             Text(
                                 text = customer.name,
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = onSurfaceTextColor
                             )
                         }

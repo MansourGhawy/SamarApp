@@ -106,52 +106,10 @@ import com.example.ui.screens.habayeb.components.HabayebNetBalanceHeader
 import com.example.ui.screens.habayeb.components.HabayebFilterTabs
 import com.example.ui.screens.habayeb.components.HabayebHeaderTopBar
 import com.example.ui.screens.habayeb.components.HabayebFilterToolbar
-// Pastel Colors for Initials
-val PastelColors = listOf(
-    Color(0xFFFCA5A5), Color(0xFFFDBA74), Color(0xFFFDE047),
-    Color(0xFF86EFAC), Color(0xFF93C5FD), Color(0xFFC4B5FD),
-    Color(0xFFF472B6), Color(0xFF2DD4BF)
-)
+import com.example.ui.helper.AutoScaleText
+import com.example.ui.helper.formatCurrency
+import com.example.ui.helper.getInitialColor
 
-fun getInitialColor(name: String): Color {
-    val hash = name.hashCode().coerceAtLeast(0)
-    return PastelColors[hash % PastelColors.size]
-}
-
-fun formatCurrency(amount: Double, currencySymbol: String): String {
-    val absVal = kotlin.math.abs(amount)
-    val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-    val formatter = java.text.DecimalFormat("#,##0", symbols)
-    return "${formatter.format(absVal)} $currencySymbol"
-}
-
-@Composable
-fun AutoScaleText(
-    text: String,
-    baseFontSize: TextUnit,
-    color: Color,
-    fontWeight: FontWeight,
-    modifier: Modifier = Modifier,
-    textAlign: TextAlign = TextAlign.Center,
-    maxLines: Int = 1
-) {
-    val adjustedFontSize = when {
-        text.length > 18 -> baseFontSize * 0.70f
-        text.length > 13 -> baseFontSize * 0.82f
-        else -> baseFontSize
-    }
-    Text(
-        text = text,
-        color = color,
-        fontSize = adjustedFontSize,
-        fontWeight = fontWeight,
-        textAlign = textAlign,
-        maxLines = maxLines,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -164,12 +122,9 @@ fun HabayebScreen(
 
     val activeThemeColor = MaterialTheme.colorScheme.primary
     val activeSubColor = MaterialTheme.colorScheme.primaryContainer
-    val RoyalPurple = activeThemeColor
-    val SoftLavender = activeSubColor
-    val DeepLavender = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-    val LightPurpleBg = MaterialTheme.colorScheme.background
-    val DarkPurpleText = MaterialTheme.colorScheme.onBackground
-    val HabayebTextSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = activeThemeColor
+    val containerColor = activeSubColor
+    val surfaceBackgroundColor = MaterialTheme.colorScheme.background
     
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -186,8 +141,10 @@ fun HabayebScreen(
     // Observe DB lists
     val customersState by viewModel.customersUiState.collectAsStateWithLifecycle()
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
-    val totalOwedByThem by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
-    val totalOwedToThem by viewModel.habayebOwedToThemTotalState.collectAsStateWithLifecycle()
+    val totalOwedByThemState by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
+    val totalOwedToThemState by viewModel.habayebOwedToThemTotalState.collectAsStateWithLifecycle()
+    val totalOwedByThem = totalOwedByThemState.toDouble()
+    val totalOwedToThem = totalOwedToThemState.toDouble()
     val currencySymbol = viewModel.settingsState.collectAsStateWithLifecycle().value.currencySymbol
     val isPrivacyModeState = viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
 
@@ -309,7 +266,7 @@ fun HabayebScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LightPurpleBg)
+                .background(surfaceBackgroundColor)
                 .testTag("habayeb_screen_root")
         ) {
             Card(
@@ -352,7 +309,7 @@ fun HabayebScreen(
 
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = 76.dp + with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() },
                     bottom = 80.dp
@@ -361,8 +318,8 @@ fun HabayebScreen(
                 // Item 1: Giant Net Balance Card
                 item {
                     HabayebNetBalanceHeader(
-                        totalOwedByThem = totalOwedByThem.toDouble(),
-                        totalOwedToThem = totalOwedToThem.toDouble(),
+                        totalOwedByThem = totalOwedByThem,
+                        totalOwedToThem = totalOwedToThem,
                         currencySymbol = currencySymbol,
                         isPrivacyMode = isPrivacyModeState.value,
                         onTogglePrivacy = { viewModel.togglePrivacyMode() }
@@ -374,8 +331,8 @@ fun HabayebScreen(
                     HabayebFilterTabs(
                         selectedFilterTab = selectedFilterTab,
                         onFilterTabSelected = { selectedFilterTab = it },
-                        totalOwedByThem = totalOwedByThem.toDouble(),
-                        totalOwedToThem = totalOwedToThem.toDouble(),
+                        totalOwedByThem = totalOwedByThem,
+                        totalOwedToThem = totalOwedToThem,
                         currencySymbol = currencySymbol,
                         haptic = haptic
                     )
@@ -475,9 +432,9 @@ fun HabayebScreen(
                     .align(Alignment.BottomStart)
                     .padding(bottom = 16.dp, start = 16.dp)
                     .size(58.dp)
-                    .shadow(10.dp, CircleShape, spotColor = RoyalPurple.copy(alpha = 0.6f))
-                    .background(RoyalPurple, CircleShape)
-                    .border(1.dp, SoftLavender.copy(alpha = 0.3f), CircleShape)
+                    .shadow(10.dp, CircleShape, spotColor = primaryColor.copy(alpha = 0.6f))
+                    .background(primaryColor, CircleShape)
+                    .border(1.dp, containerColor.copy(alpha = 0.3f), CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         showAddCustomerDialog = true

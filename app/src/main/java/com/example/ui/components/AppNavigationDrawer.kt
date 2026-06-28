@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.navigation.Screen
+import com.example.ui.helper.dialPhoneNumber
+import com.example.ui.helper.openWhatsAppChat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,9 +33,10 @@ fun AppNavigationDrawer(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val supportPhoneNumber = stringResource(id = R.string.support_phone_number)
     
     ModalDrawerSheet(
-        drawerContainerColor = Color.White,
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
         modifier = modifier
             .fillMaxWidth(0.85f)
             .widthIn(max = 310.dp)
@@ -49,7 +52,6 @@ fun AppNavigationDrawer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -159,13 +161,13 @@ fun AppNavigationDrawer(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Divider(color = Color.LightGray.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = stringResource(id = R.string.drawer_app_version, versionName),
                 fontSize = 11.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center
             )
@@ -175,7 +177,7 @@ fun AppNavigationDrawer(
             Text(
                 text = stringResource(id = R.string.developer_credit),
                 fontSize = 10.sp,
-                color = Color.Gray.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center
             )
@@ -189,30 +191,19 @@ fun AppNavigationDrawer(
                 ContactIcon(
                     icon = Icons.Default.Call,
                     onClick = {
-                        try {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:+967774004399"))
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                        dialPhoneNumber(context, supportPhoneNumber)
                     }
                 )
                 
                 ContactIcon(
                     icon = Icons.Default.Share,
                     onClick = {
-                        try {
-                            val msg = context.getString(R.string.whatsapp_contact_msg)
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                                data = android.net.Uri.parse("https://api.whatsapp.com/send?phone=967774004399&text=${android.net.Uri.encode(msg)}")
-                            }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                        val msg = context.getString(R.string.whatsapp_contact_msg)
+                        openWhatsAppChat(context, supportPhoneNumber, msg)
                     }
                 )
             }
         }
     }
 }
+

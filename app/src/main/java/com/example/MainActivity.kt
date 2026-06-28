@@ -34,7 +34,6 @@ class MainActivity : ComponentActivity() {
         AutoBackupWorker.scheduleDailyBackupWorker(this)
 
         setContent {
-            val syncViewModel: com.example.ui.viewmodel.SyncSettingsViewModel = viewModel()
             val viewModel: FinanceViewModel = viewModel()
 
             val context = LocalContext.current
@@ -120,7 +119,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         } else {
-                            MainAppLayout(viewModel = viewModel, syncViewModel = syncViewModel, settings = settings, onExit = { 
+                            MainAppLayout(viewModel = viewModel, settings = settings, onExit = { 
                                 finishAffinity() 
                             })
                         }

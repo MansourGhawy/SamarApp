@@ -37,8 +37,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONObject
 import java.util.*
 
-import com.example.ui.viewmodel.SyncSettingsViewModel
-
 enum class FilterType {
     ALL, HABAYEB, LEDGER
 }
@@ -47,7 +45,6 @@ enum class FilterType {
 @Composable
 fun TrashScreen(
     viewModel: FinanceViewModel,
-    syncViewModel: SyncSettingsViewModel,
     onBack: () -> Unit
 ) {
     // 100% Lifecycle-aware state flow tracking for better memory optimization
@@ -245,7 +242,7 @@ fun TrashScreen(
                             if (isSelectionMode) {
                                 IconButton(onClick = {
                                     val selectedItems = items.filter { selectedItemIds.contains(it.id) }
-                                    syncViewModel.restoreMultipleItems(selectedItems)
+                                    viewModel.restoreMultipleItems(selectedItems)
                                     clearSelection()
                                 }) {
                                     Icon(
@@ -256,7 +253,7 @@ fun TrashScreen(
                                 }
                                 IconButton(onClick = {
                                     val selectedItems = items.filter { selectedItemIds.contains(it.id) }
-                                    syncViewModel.permanentlyDeleteMultipleItems(selectedItems)
+                                    viewModel.permanentlyDeleteMultipleItems(selectedItems)
                                     clearSelection()
                                 }) {
                                     Icon(
@@ -417,8 +414,8 @@ fun TrashScreen(
                                 toggleSelection(item.id)
                             }
                         },
-                        onRestore = { syncViewModel.restoreDeletedItem(item) },
-                        onPermanentDelete = { syncViewModel.permanentlyDeleteDeletedItem(item) }
+                        onRestore = { viewModel.restoreDeletedItem(item) },
+                        onPermanentDelete = { viewModel.permanentlyDeleteDeletedItem(item) }
                     )
                 }
             }
@@ -431,7 +428,7 @@ fun TrashScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        syncViewModel.emptyTrash()
+                        viewModel.emptyTrash()
                         showEmptyConfirm = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF43F5E)),

@@ -18,8 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.screens.AutoScaleText
-import com.example.ui.screens.formatCurrency
+import com.example.ui.helper.AutoScaleText
+import com.example.ui.helper.formatCurrency
 
 @Composable
 fun HabayebNetBalanceHeader(

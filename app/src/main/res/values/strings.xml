@@ -59,6 +59,7 @@
     <string name="common_cancel">إلغاء</string>
     <string name="developer_credit">تصميم وتطوير م/ منصور قطينه للبرمجيات</string>
     <string name="whatsapp_contact_msg">مرحباً م/ منصور قطينه، أود التواصل بخصوص تطبيق ميزان الدار</string>
+    <string name="support_phone_number">+967774004399</string>
 
     <!-- Calculator Dialog (الآلة الحاسبة) -->
     <string name="calc_error">خطأ برياضي</string>

@@ -74,7 +74,8 @@ import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.data.local.entities.HabayebTransaction
 import com.example.data.serialization.PdfReportGenerator
-import com.example.ui.screens.formatCurrency
+import com.example.ui.helper.formatCurrency
+import com.example.ui.helper.getInitialColor
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.Date

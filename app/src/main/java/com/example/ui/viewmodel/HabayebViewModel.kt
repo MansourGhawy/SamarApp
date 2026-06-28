@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.math.BigDecimal
 import java.util.UUID
 
 /**
@@ -37,22 +38,21 @@ import java.util.UUID
 class HabayebViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
-    private val habayebDao = database.habayebDao()
+    private val repository = com.example.data.repository.FinanceRepository(database)
     private val ledgerDao = database.ledgerDao()
     private val settingsDao = database.settingsDao()
-    private val deletedItemDao = database.deletedItemDao()
 
-    private val sharedPrefs = application.getSharedPreferences("mizan_prefs", Context.MODE_PRIVATE)
+    private val sharedPrefs = application.getSharedPreferences(FinanceConstants.PREFS_NAME, Context.MODE_PRIVATE)
 
     // --- Core Flows ---
-    val settingsState: StateFlow<AppSettings> = settingsDao.getSettingsFlow()
+    val settingsState: StateFlow<AppSettings> = repository.settingsFlow
         .map { it ?: AppSettings() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
-    val habayebCustomersState: StateFlow<List<HabayebCustomer>> = habayebDao.getAllCustomersFlow()
+    val habayebCustomersState: StateFlow<List<HabayebCustomer>> = repository.habayebCustomersFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val habayebTransactionsState: StateFlow<List<HabayebTransaction>> = habayebDao.getAllTransactionsFlow()
+    val habayebTransactionsState: StateFlow<List<HabayebTransaction>> = repository.habayebTransactionsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- Privacy Mode State ---
@@ -63,12 +63,12 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // --- Shared Preference Settings ---
-    private val _linkHabayebDebtsState = MutableStateFlow(sharedPrefs.getBoolean("link_habayeb_debts", false))
+    private val _linkHabayebDebtsState = MutableStateFlow(sharedPrefs.getBoolean(FinanceConstants.KEY_LINK_HABAYEB_DEBTS, false))
     val linkHabayebDebtsState = _linkHabayebDebtsState.asStateFlow()
 
     fun toggleLinkHabayebDebts(enabled: Boolean) {
         _linkHabayebDebtsState.value = enabled
-        sharedPrefs.edit().putBoolean("link_habayeb_debts", enabled).apply()
+        sharedPrefs.edit().putBoolean(FinanceConstants.KEY_LINK_HABAYEB_DEBTS, enabled).apply()
     }
 
     // --- Licensing & Transaction Limit States ---
@@ -111,19 +111,21 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
         val txsByCustomer = transactions.groupBy { it.customerId }
         val customerStates = customers.map { customer ->
             val custTxs = txsByCustomer[customer.id] ?: emptyList()
-            var owedByThem = 0.0
-            var paymentByThem = 0.0
-            var owedToThem = 0.0
-            var paymentToThem = 0.0
+            var owedByThem = BigDecimal.ZERO
+            var paymentByThem = BigDecimal.ZERO
+            var owedToThem = BigDecimal.ZERO
+            var paymentToThem = BigDecimal.ZERO
             for (tx in custTxs) {
+                val amount = BigDecimal.valueOf(tx.amount)
                 when (tx.type) {
-                    "OWED_BY_THEM" -> owedByThem += tx.amount
-                    "PAYMENT_BY_THEM" -> paymentByThem += tx.amount
-                    "OWED_TO_THEM" -> owedToThem += tx.amount
-                    "PAYMENT_TO_THEM" -> paymentToThem += tx.amount
+                    HabayebTransactionType.OWED_BY_THEM.name -> owedByThem = owedByThem.add(amount)
+                    HabayebTransactionType.PAYMENT_BY_THEM.name -> paymentByThem = paymentByThem.add(amount)
+                    HabayebTransactionType.OWED_TO_THEM.name -> owedToThem = owedToThem.add(amount)
+                    HabayebTransactionType.PAYMENT_TO_THEM.name -> paymentToThem = paymentToThem.add(amount)
                 }
             }
-            val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
+            val netDebtBd = (owedByThem.subtract(paymentByThem)).subtract(owedToThem.subtract(paymentToThem))
+            val netDebt = netDebtBd.toDouble()
             val lastTxTime = custTxs.maxOfOrNull { it.timestamp } ?: customer.createdAt
             CustomerUiState(
                 id = customer.id,
@@ -137,28 +139,36 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                 originalCustomer = customer
             )
         }
-        val totalOwedByThem = customerStates.filter { it.netDebt > 0.0 }.sumOf { it.netDebt }
-        val totalOwedToThem = customerStates.filter { it.netDebt < 0.0 }.sumOf { kotlin.math.abs(it.netDebt) }
+        var totalOwedByThem = BigDecimal.ZERO
+        var totalOwedToThem = BigDecimal.ZERO
+        customerStates.forEach { state ->
+            val bdVal = BigDecimal.valueOf(state.netDebt)
+            if (state.netDebt > 0.0) {
+                totalOwedByThem = totalOwedByThem.add(bdVal)
+            } else if (state.netDebt < 0.0) {
+                totalOwedToThem = totalOwedToThem.add(bdVal.abs())
+            }
+        }
 
         CustomersUiState(
             customers = customerStates,
-            totalOwedByThem = totalOwedByThem.toBigDecimal(),
-            totalOwedToThem = totalOwedToThem.toBigDecimal(),
+            totalOwedByThem = totalOwedByThem,
+            totalOwedToThem = totalOwedToThem,
             isLoading = false
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CustomersUiState())
 
     // Metrics Exposing Flow
-    val habayebOwedByThemTotalState: StateFlow<BigDecimal> = customersUiState
-        .map { it.totalOwedByThem }
+    val habayebOwedByThemTotalState: StateFlow<Double> = customersUiState
+        .map { it.totalOwedByThem.toDouble() }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val habayebOwedToThemTotalState: StateFlow<BigDecimal> = customersUiState
-        .map { it.totalOwedToThem }
+    val habayebOwedToThemTotalState: StateFlow<Double> = customersUiState
+        .map { it.totalOwedToThem.toDouble() }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val habayebNetBalanceState: StateFlow<Double> = combine(
         habayebOwedByThemTotalState,
@@ -194,7 +204,7 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                     )
                 } else null
 
-                habayebDao.insertCustomerWithOpeningTransaction(customer, transaction)
+                repository.insertCustomerWithOpeningTransaction(customer, transaction)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         getApplication(),
@@ -239,7 +249,7 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                     description = desc,
                     linkedMainTxId = linkedMainTxId
                 )
-                habayebDao.insertTransaction(transaction)
+                repository.insertHabayebTransaction(transaction)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         getApplication(),
@@ -289,7 +299,7 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
     fun updateHabayebCustomerName(customerId: String, newName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                habayebDao.updateCustomerName(customerId, newName)
+                repository.updateCustomerName(customerId, newName)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         getApplication(),
@@ -314,13 +324,13 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val customer = habayebCustomersState.value.find { it.id == customerId }
-                val customerTxs = habayebDao.getAllTransactionsDirect().filter { it.customerId == customerId }
+                val customerTxs = repository.getAllTransactionsDirect().filter { it.customerId == customerId }
 
                 if (customer != null) {
-                    softDeleteHabayebBundleToTrash(customer, customerTxs)
+                    repository.softDeleteHabayebBundleToTrash(customer, customerTxs)
                 }
 
-                habayebDao.deleteCustomerAndTransactions(customerId)
+                repository.deleteCustomerAndTransactions(customerId)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         getApplication(),
@@ -344,14 +354,14 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
     fun deleteMultipleHabayebCustomers(customerIds: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val allTxs = habayebDao.getAllTransactionsDirect()
+                val allTxs = repository.getAllTransactionsDirect()
                 for (id in customerIds) {
                     val customer = habayebCustomersState.value.find { it.id == id }
                     val customerTxs = allTxs.filter { it.customerId == id }
                     if (customer != null) {
-                        softDeleteHabayebBundleToTrash(customer, customerTxs)
+                        repository.softDeleteHabayebBundleToTrash(customer, customerTxs)
                     }
-                    habayebDao.deleteCustomerAndTransactions(id)
+                    repository.deleteCustomerAndTransactions(id)
                 }
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
@@ -376,18 +386,18 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
     fun deleteHabayebTransaction(txId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val tx = habayebDao.getTransactionById(txId)
+                val tx = repository.getHabayebTransactionById(txId)
                 if (tx != null) {
-                    softDeleteHabayebTransactionToTrash(tx)
+                    repository.softDeleteHabayebTransactionToTrash(tx)
                 }
                 if (tx?.linkedMainTxId != null) {
                     val linkedTx = ledgerDao.getAllTransactionsFlow().first().find { it.id == tx.linkedMainTxId }
                     if (linkedTx != null) {
-                        softDeleteTransactionToTrash(linkedTx)
+                        repository.softDeleteTransactionToTrash(linkedTx)
                     }
                     ledgerDao.deleteTransactionById(tx.linkedMainTxId)
                 }
-                habayebDao.deleteTransactionById(txId)
+                repository.deleteHabayebTransactionById(txId)
             } catch (e: Exception) {
                 android.util.Log.e("HabayebViewModel", "Error in deleteHabayebTransaction: ${e.message}", e)
                 withContext(Dispatchers.Main) {
@@ -399,78 +409,5 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
         }
-    }
-
-    // --- Private Helper Methods ---
-
-    private suspend fun softDeleteHabayebBundleToTrash(customer: HabayebCustomer, transactions: List<HabayebTransaction>) {
-        val jsonData = JSONObject().apply {
-            put("customer", JSONObject().apply {
-                put("id", customer.id)
-                put("name", customer.name)
-                put("phone", customer.phone)
-                put("notes", customer.notes)
-                put("createdAt", customer.createdAt)
-            })
-            val txsArray = JSONArray()
-            transactions.forEach { tx ->
-                txsArray.put(JSONObject().apply {
-                    put("id", tx.id)
-                    put("customerId", tx.customerId)
-                    put("type", tx.type)
-                    put("amount", tx.amount)
-                    put("timestamp", tx.timestamp)
-                    put("description", tx.description)
-                    put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
-                })
-            }
-            put("transactions", txsArray)
-            put("totalTransactions", transactions.size)
-            put("name", customer.name)
-        }.toString()
-        val trashItem = DeletedItemEntity(
-            id = "bundle_${customer.id}",
-            sourceSystem = "حبايب",
-            originalTableName = "habayeb_bundle",
-            jsonData = jsonData
-        )
-        deletedItemDao.insertDeletedItem(trashItem)
-    }
-
-    private suspend fun softDeleteHabayebTransactionToTrash(tx: HabayebTransaction) {
-        val jsonData = JSONObject().apply {
-            put("id", tx.id)
-            put("customerId", tx.customerId)
-            put("type", tx.type)
-            put("amount", tx.amount)
-            put("timestamp", tx.timestamp)
-            put("description", tx.description)
-            put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
-        }.toString()
-        val trashItem = DeletedItemEntity(
-            id = tx.id,
-            sourceSystem = "حبايب",
-            originalTableName = "habayeb_transactions",
-            jsonData = jsonData
-        )
-        deletedItemDao.insertDeletedItem(trashItem)
-    }
-
-    private suspend fun softDeleteTransactionToTrash(tx: TransactionDb) {
-        val jsonData = JSONObject().apply {
-            put("id", tx.id)
-            put("timestamp", tx.timestamp)
-            put("type", tx.type)
-            put("category", tx.category)
-            put("amount", tx.amount)
-            put("description", tx.description)
-        }.toString()
-        val trashItem = DeletedItemEntity(
-            id = tx.id,
-            sourceSystem = "دار",
-            originalTableName = "transactions",
-            jsonData = jsonData
-        )
-        deletedItemDao.insertDeletedItem(trashItem)
     }
 }

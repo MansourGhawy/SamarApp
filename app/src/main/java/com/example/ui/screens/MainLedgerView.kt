@@ -211,14 +211,15 @@ fun MainLedgerView(
     val diffExp = todayExp.subtract(yesterdayExp)
 
     val linkHabayebDebts by viewModel.linkHabayebDebtsState.collectAsStateWithLifecycle()
-    val habayebOwedByThemTotal by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
+    val habayebOwedByThemTotalState by viewModel.habayebOwedByThemTotalState.collectAsStateWithLifecycle()
+    val habayebOwedByThemTotal = habayebOwedByThemTotalState.toDouble()
 
     // Precompute commitments coverage details
     // تحذير للمطور: يجب الحذر عند تحويل الـ BigDecimal إلى Double في الحسابات المالية لتجنب أخطاء التقريب العشري. تم إبقاء المنطق حالياً لتجنب كسر الوظيفة.
     val computedCommitments = remember(commitments, totalCash, linkHabayebDebts, habayebOwedByThemTotal) {
         var remainingCash = totalCash.toDouble()
         if (linkHabayebDebts) {
-            remainingCash += habayebOwedByThemTotal.toDouble()
+            remainingCash += habayebOwedByThemTotal
         }
         commitments.map { fc ->
             val target = fc.targetAmount

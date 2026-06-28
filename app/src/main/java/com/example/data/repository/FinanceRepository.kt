@@ -18,6 +18,7 @@ class FinanceRepository(internal val database: AppDatabase) {
     private val transactionDao = database.transactionDao()
     private val customCategoryDao = database.customCategoryDao()
     private val deletedItemDao = database.deletedItemDao()
+    private val habayebDao = database.habayebDao()
 
     // Flow Exposures
     val settingsFlow: Flow<AppSettings?> = settingsDao.getSettingsFlow()
@@ -25,165 +26,53 @@ class FinanceRepository(internal val database: AppDatabase) {
     val transactionsFlow: Flow<List<TransactionDb>> = transactionDao.getAllTransactionsFlow()
     val customCategoriesFlow: Flow<List<CustomCategory>> = customCategoryDao.getAllCustomCategoriesFlow()
     val deletedItemsFlow: Flow<List<DeletedItemEntity>> = deletedItemDao.getAllDeletedItemsFlow()
+    val habayebCustomersFlow: Flow<List<HabayebCustomer>> = habayebDao.getAllCustomersFlow()
+    val habayebTransactionsFlow: Flow<List<HabayebTransaction>> = habayebDao.getAllTransactionsFlow()
+
+    fun getTransactionsForCustomerFlow(customerId: String): Flow<List<HabayebTransaction>> = 
+        habayebDao.getTransactionsForCustomerFlow(customerId)
 
     // Deleted Items Trash
-    suspend fun saveDeletedItem(item: DeletedItemEntity): Unit = withContext(Dispatchers.IO) {
-        try {
-            deletedItemDao.insertDeletedItem(item)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside saveDeletedItem: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun removeDeletedItem(item: DeletedItemEntity): Unit = withContext(Dispatchers.IO) {
-        try {
-            deletedItemDao.deleteItem(item)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside removeDeletedItem: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun removeDeletedItemById(id: String): Unit = withContext(Dispatchers.IO) {
-        try {
-            deletedItemDao.deleteItemById(id)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside removeDeletedItemById: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun clearDeletedItems(): Unit = withContext(Dispatchers.IO) {
-        try {
-            deletedItemDao.clearAllDeletedItems()
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside clearDeletedItems: ${e.message}", e)
-            throw e
-        }
-    }
-
+    suspend fun saveDeletedItem(item: DeletedItemEntity) = deletedItemDao.insertDeletedItem(item)
+    suspend fun removeDeletedItem(item: DeletedItemEntity) = deletedItemDao.deleteItem(item)
+    suspend fun removeDeletedItemById(id: String) = deletedItemDao.deleteItemById(id)
+    suspend fun clearDeletedItems() = deletedItemDao.clearAllDeletedItems()
 
     // Settings
-    suspend fun getSettingsDirect(): AppSettings? = withContext(Dispatchers.IO) {
-        try {
-            settingsDao.getSettingsDirect()
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside getSettingsDirect: ${e.message}", e)
-            null
-        }
-    }
-
-    suspend fun saveSettings(settings: AppSettings): Unit = withContext(Dispatchers.IO) {
-        try {
-            settingsDao.insertOrUpdateSettings(settings)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside saveSettings: ${e.message}", e)
-            throw e
-        }
-    }
+    suspend fun getSettingsDirect(): AppSettings? = settingsDao.getSettingsDirect()
+    suspend fun saveSettings(settings: AppSettings) = settingsDao.insertOrUpdateSettings(settings)
 
     // Commitments
-    suspend fun saveCommitment(commitment: FixedCommitment): Unit = withContext(Dispatchers.IO) {
-        try {
-            commitmentDao.insertCommitment(commitment)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside saveCommitment: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun updateCommitments(commitments: List<FixedCommitment>): Unit = withContext(Dispatchers.IO) {
-        try {
-            commitmentDao.updateCommitments(commitments)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside updateCommitments: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun deleteCommitment(name: String): Unit = withContext(Dispatchers.IO) {
-        try {
-            commitmentDao.deleteCommitment(name)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside deleteCommitment: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun clearCommitments(): Unit = withContext(Dispatchers.IO) {
-        try {
-            commitmentDao.clearAllCommitments()
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside clearCommitments: ${e.message}", e)
-            throw e
-        }
-    }
+    suspend fun saveCommitment(commitment: FixedCommitment) = commitmentDao.insertCommitment(commitment)
+    suspend fun updateCommitments(commitments: List<FixedCommitment>) = commitmentDao.updateCommitments(commitments)
+    suspend fun deleteCommitment(name: String) = commitmentDao.deleteCommitment(name)
+    suspend fun clearCommitments() = commitmentDao.clearAllCommitments()
 
     // Transactions
-    suspend fun saveTransaction(transaction: TransactionDb): Unit = withContext(Dispatchers.IO) {
-        try {
-            transactionDao.insertTransaction(transaction)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside saveTransaction: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun deleteTransaction(transaction: TransactionDb): Unit = withContext(Dispatchers.IO) {
-        try {
-            transactionDao.deleteTransaction(transaction)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside deleteTransaction: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun deleteTransactionById(id: String): Unit = withContext(Dispatchers.IO) {
-        try {
-            transactionDao.deleteTransactionById(id)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside deleteTransactionById: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun clearTransactions(): Unit = withContext(Dispatchers.IO) {
-        try {
-            transactionDao.clearAllTransactions()
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside clearTransactions: ${e.message}", e)
-            throw e
-        }
-    }
+    suspend fun saveTransaction(transaction: TransactionDb) = transactionDao.insertTransaction(transaction)
+    suspend fun deleteTransaction(transaction: TransactionDb) = transactionDao.deleteTransaction(transaction)
+    suspend fun deleteTransactionById(id: String) = transactionDao.deleteTransactionById(id)
+    suspend fun clearTransactions() = transactionDao.clearAllTransactions()
 
     // Custom Categories
-    suspend fun saveCustomCategory(category: CustomCategory): Unit = withContext(Dispatchers.IO) {
-        try {
-            customCategoryDao.insertCategory(category)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside saveCustomCategory: ${e.message}", e)
-            throw e
-        }
-    }
+    suspend fun saveCustomCategory(category: CustomCategory) = customCategoryDao.insertCategory(category)
+    suspend fun deleteCustomCategory(category: CustomCategory) = customCategoryDao.deleteCategory(category)
+    suspend fun clearCustomCategories() = customCategoryDao.clearAllCustomCategories()
 
-    suspend fun deleteCustomCategory(category: CustomCategory): Unit = withContext(Dispatchers.IO) {
-        try {
-            customCategoryDao.deleteCategory(category)
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside deleteCustomCategory: ${e.message}", e)
-            throw e
-        }
-    }
-
-    suspend fun clearCustomCategories(): Unit = withContext(Dispatchers.IO) {
-        try {
-            customCategoryDao.clearAllCustomCategories()
-        } catch (e: Exception) {
-            Log.e("FinanceRepository", "Error inside clearCustomCategories: ${e.message}", e)
-            throw e
-        }
-    }
+    // Habayeb (حسابات الحبايب) operations
+    suspend fun insertCustomer(customer: HabayebCustomer) = habayebDao.insertCustomer(customer)
+    suspend fun insertCustomerWithOpeningTransaction(customer: HabayebCustomer, transaction: HabayebTransaction?) = 
+        habayebDao.insertCustomerWithOpeningTransaction(customer, transaction)
+    suspend fun deleteCustomerAndTransactions(customerId: String) = habayebDao.deleteCustomerAndTransactions(customerId)
+    suspend fun updateCustomerName(id: String, newName: String) = habayebDao.updateCustomerName(id, newName)
+    suspend fun insertHabayebTransaction(transaction: HabayebTransaction) = habayebDao.insertTransaction(transaction)
+    suspend fun deleteHabayebTransaction(transaction: HabayebTransaction) = habayebDao.deleteTransaction(transaction)
+    suspend fun deleteHabayebTransactionById(id: String) = habayebDao.deleteTransactionById(id)
+    suspend fun getHabayebTransactionById(id: String): HabayebTransaction? = habayebDao.getTransactionById(id)
+    suspend fun getAllCustomersDirect(): List<HabayebCustomer> = habayebDao.getAllCustomersDirect()
+    suspend fun getAllTransactionsDirect(): List<HabayebTransaction> = habayebDao.getAllTransactionsDirect()
+    suspend fun clearAllCustomers() = habayebDao.clearAllCustomers()
+    suspend fun clearAllTransactions() = habayebDao.clearAllTransactions()
 
     // Clean critical master reset
     suspend fun deleteAllData(): Unit = withContext(Dispatchers.IO) {
@@ -192,6 +81,9 @@ class FinanceRepository(internal val database: AppDatabase) {
                 transactionDao.clearAllTransactions()
                 commitmentDao.clearAllCommitments()
                 customCategoryDao.clearAllCustomCategories()
+                deletedItemDao.clearAllDeletedItems()
+                habayebDao.clearAllCustomers()
+                habayebDao.clearAllTransactions()
                 settingsDao.insertOrUpdateSettings(AppSettings(isFirstLaunch = false))
             }
         } catch (e: Exception) {
@@ -303,8 +195,8 @@ class FinanceRepository(internal val database: AppDatabase) {
         saveDeletedItem(trashItem)
     }
 
-    suspend fun populateDefaultCategoriesIfNeeded(sharedPrefs: android.content.SharedPreferences) = withContext(Dispatchers.IO) {
-        if (!sharedPrefs.getBoolean("categories_populated", false)) {
+    suspend fun populateDefaultCategoriesIfNeeded(shouldPopulate: Boolean) = withContext(Dispatchers.IO) {
+        if (shouldPopulate) {
             val defaults = listOf(
                 CustomCategory(name = "دقيق", tabType = "أغذية الدار", iconEmoji = "🌾"),
                 CustomCategory(name = "سكر", tabType = "أغذية الدار", iconEmoji = "🍬"),
@@ -327,7 +219,6 @@ class FinanceRepository(internal val database: AppDatabase) {
                 CustomCategory(name = "أثاث ومستلزمات", tabType = "أخرى ومخصص", iconEmoji = "🛋️")
             )
             defaults.forEach { saveCustomCategory(it) }
-            sharedPrefs.edit().putBoolean("categories_populated", true).apply()
         }
     }
 }

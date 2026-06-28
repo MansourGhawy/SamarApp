@@ -46,24 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.example.R
-import com.example.ui.screens.AutoScaleText
-import com.example.ui.screens.formatCurrency
+import com.example.ui.helper.AutoScaleText
+import com.example.ui.helper.formatCurrency
+import com.example.ui.helper.getInitialColor
+import androidx.compose.material3.MaterialTheme
 
-// Pastel Colors for Initials
-val PastelColors = listOf(
-    Color(0xFFFCA5A5), Color(0xFFFDBA74), Color(0xFFFDE047),
-    Color(0xFF86EFAC), Color(0xFF93C5FD), Color(0xFFC4B5FD),
-    Color(0xFFF472B6), Color(0xFF2DD4BF)
-)
-
-fun getInitialColor(name: String): Color {
-    val hash = name.hashCode().coerceAtLeast(0)
-    return PastelColors[hash % PastelColors.size]
-}
-
-val DarkPurpleText = Color(0xFF1E1B4B)
-val HabayebTextSecondary = Color(0xFF4B5563)
-val SoftLavender = Color(0xFFE8EAF6)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -80,6 +67,8 @@ fun CustomerItemRow(
     onQuickAdd: () -> Unit
 ) {
     val lastTxTime = customer.lastTransactionTimestamp
+    val onSurfaceTextColor = MaterialTheme.colorScheme.onBackground
+    val textSecondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
     val sdf = remember { java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", java.util.Locale.ENGLISH) }
     val formattedDate = remember(lastTxTime) {
         val formatted = sdf.format(java.util.Date(lastTxTime * 1000))
@@ -142,7 +131,7 @@ fun CustomerItemRow(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(id = R.string.ledger_done_btn),
-                                    tint = SoftLavender,
+                                    tint = activeThemeColor,
                                     modifier = Modifier.size(14.dp).padding(end = 4.dp)
                                 )
                             }
@@ -150,7 +139,7 @@ fun CustomerItemRow(
                                 text = customer.name,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = DarkPurpleText
+                                color = onSurfaceTextColor
                             )
                         }
                         Spacer(modifier = Modifier.height(2.dp))
@@ -158,7 +147,7 @@ fun CustomerItemRow(
                             text = stringResource(id = R.string.habayeb_last_modified, formattedDate),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,
-                            color = HabayebTextSecondary
+                            color = textSecondaryColor
                         )
                     }
                 }
@@ -181,7 +170,7 @@ fun CustomerItemRow(
                             text = stringResource(id = R.string.habayeb_status_owed_by),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,
-                            color = HabayebTextSecondary
+                            color = textSecondaryColor
                         )
                     } else if (netDebt < 0.0) {
                         AutoScaleText(
@@ -195,21 +184,21 @@ fun CustomerItemRow(
                             text = stringResource(id = R.string.habayeb_status_owed_to),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,
-                            color = HabayebTextSecondary
+                            color = textSecondaryColor
                         )
                     } else {
                         Text(
                             text = stringResource(id = R.string.habayeb_pdf_balance_balanced).replace("الرصيد الصافي (متساوي):", "خالص").trim(),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = HabayebTextSecondary
+                            color = textSecondaryColor
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_status_balanced),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,
-                            color = HabayebTextSecondary
+                            color = textSecondaryColor
                         )
                     }
                 }
@@ -245,7 +234,7 @@ fun CustomerItemRow(
                             Text(
                                 text = customer.phone,
                                 fontSize = 12.sp,
-                                color = DarkPurpleText
+                                color = onSurfaceTextColor
                             )
                         }
                     }
@@ -263,7 +252,7 @@ fun CustomerItemRow(
                             Text(
                                 text = customer.notes,
                                 fontSize = 12.sp,
-                                color = DarkPurpleText
+                                color = onSurfaceTextColor
                             )
                         }
                     }
@@ -280,7 +269,7 @@ fun CustomerItemRow(
                         Text(
                             text = stringResource(id = R.string.habayeb_tx_history) + ": ${customer.totalTransactions}",
                             fontSize = 12.sp,
-                            color = DarkPurpleText
+                            color = onSurfaceTextColor
                         )
                     }
                 }

@@ -45,3 +45,27 @@ fun openGoogleDriveApp(context: Context) {
         }
     }
 }
+
+// Helper to dial a phone number
+fun dialPhoneNumber(context: Context, phoneNumber: String) {
+    try {
+        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "تعذر إطلاق واجهة الاتصال: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Helper to open WhatsApp chat with a message
+fun openWhatsAppChat(context: Context, phoneNumber: String, message: String) {
+    try {
+        val cleanNumber = phoneNumber.replace("+", "").replace(" ", "").trim()
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse("https://api.whatsapp.com/send?phone=$cleanNumber&text=${Uri.encode(message)}")
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "تعذر فتح واتساب: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+

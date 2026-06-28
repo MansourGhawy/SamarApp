@@ -34,7 +34,7 @@ object PdfReportGenerator {
         width: Int,
         paint: Paint,
         alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL
-    ) {
+    ): Int {
         val textPaint = TextPaint(paint)
         val layout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             StaticLayout.Builder.obtain(text, 0, text.length, textPaint, width)
@@ -50,6 +50,7 @@ object PdfReportGenerator {
         canvas.translate(x, y)
         layout.draw(canvas)
         canvas.restore()
+        return layout.height
     }
 
     fun generateAndHandleCustomerPdfReport(
@@ -57,15 +58,17 @@ object PdfReportGenerator {
         customer: HabayebCustomer,
         netDebt: Double,
         transactions: List<HabayebTransaction>,
-        action: String // "VIEW" or "SHARE"
+        action: String, // "VIEW" or "SHARE"
+        primaryColorHex: String = "#0F4C43"
     ) {
         val pdfDocument = PdfDocument()
         val pageWidth = 595
         val pageHeight = 842
 
-        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-        val page = pdfDocument.startPage(pageInfo)
-        val canvas = page.canvas
+        var currentPageNumber = 1
+        var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
+        var page = pdfDocument.startPage(pageInfo)
+        var canvas = page.canvas
 
         // Load business profile details
         val prefs = context.getSharedPreferences("business_profile", Context.MODE_PRIVATE)
@@ -83,18 +86,17 @@ object PdfReportGenerator {
             e.printStackTrace()
         }
 
-        // Colors & Paints
-        val primaryColorHex = "#3F51B5"
-
         // Draw dynamic business profile header
         val displayedName = if (bizName.isNotBlank()) bizName else "ميزان الدار"
         val displayedDesc = if (bizDesc.isNotBlank()) bizDesc else "التطبيق المالي للتدابير وتنسيق الميزانية"
 
+        var rawBitmap: Bitmap? = null
+        var scaledLogo: Bitmap? = null
         if (bizLogoPath.isNotEmpty()) {
             try {
                 val logoFile = File(bizLogoPath)
                 if (logoFile.exists()) {
-                    val rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath)
+                    rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath)
                     if (rawBitmap != null) {
                         val maxW = 45f
                         val maxH = 45f
@@ -103,7 +105,7 @@ object PdfReportGenerator {
                         val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
                         val finalW = (originalWidth * scale).coerceAtLeast(1f)
                         val finalH = (originalHeight * scale).coerceAtLeast(1f)
-                        val scaledLogo = Bitmap.createScaledBitmap(rawBitmap, finalW.toInt(), finalH.toInt(), true)
+                        scaledLogo = Bitmap.createScaledBitmap(rawBitmap, finalW.toInt(), finalH.toInt(), true)
                         
                         val logoX = 35f + ((maxW - finalW) / 2f)
                         val logoY = 40f + ((maxH - finalH) / 2f)
@@ -112,6 +114,17 @@ object PdfReportGenerator {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                try {
+                    rawBitmap?.recycle()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                try {
+                    scaledLogo?.recycle()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
 
@@ -196,6 +209,11 @@ object PdfReportGenerator {
             isAntiAlias = true
         }
 
+        fun finishCurrentPage(p: PdfDocument.Page, c: Canvas) {
+            drawArabicText(c, context.getString(R.string.habayeb_pdf_footer), 35f, (pageHeight - 35).toFloat(), 525, paintFooter, Layout.Alignment.ALIGN_CENTER)
+            pdfDocument.finishPage(p)
+        }
+
         var currentY = 140f
 
         // Draw Report Main Title
@@ -247,11 +265,6 @@ object PdfReportGenerator {
 
         // Loop transactions
         for (tx in transactions) {
-            if (currentY > pageHeight - 65f) break
-
-            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY + 18f, 6f, 6f, paintBoxFill)
-            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY + 18f, 6f, 6f, paintBorder)
-
             val txTypeStr = when (tx.type) {
                 "OWED_BY_THEM" -> context.getString(R.string.habayeb_pdf_tx_owed_by)
                 "PAYMENT_BY_THEM" -> context.getString(R.string.habayeb_pdf_tx_payment_by)
@@ -274,19 +287,93 @@ object PdfReportGenerator {
 
             paintLabel.textSize = 10f
             paintLabel.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            drawArabicText(canvas, txLabel, 50f, currentY, 495, paintLabel, Layout.Alignment.ALIGN_NORMAL)
 
             paintValue.textSize = 10f
             paintValue.color = Color.parseColor("#34495E")
-            drawArabicText(canvas, txValue, 50f, currentY, 495, paintValue, Layout.Alignment.ALIGN_OPPOSITE)
 
-            currentY += 34f
+            // Multi-page page checking and column drawing
+            // 1. First, measure description text height and amount text height (width of desc = 350, amount = 135)
+            val textPaintDesc = TextPaint(paintLabel)
+            val layoutDesc = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                StaticLayout.Builder.obtain(txLabel, 0, txLabel.length, textPaintDesc, 350)
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(0f, 1f)
+                    .setIncludePad(false)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                StaticLayout(txLabel, textPaintDesc, 350, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
+            }
+            val descHeight = layoutDesc.height
+
+            val textPaintVal = TextPaint(paintValue)
+            val layoutVal = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                StaticLayout.Builder.obtain(txValue, 0, txValue.length, textPaintVal, 135)
+                    .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
+                    .setLineSpacing(0f, 1f)
+                    .setIncludePad(false)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                StaticLayout(txValue, textPaintVal, 135, Layout.Alignment.ALIGN_OPPOSITE, 1f, 0f, false)
+            }
+            val valHeight = layoutVal.height
+
+            val maxHeight = Math.max(descHeight, valHeight)
+            val cardHeight = maxHeight + 16f // 8f padding top and 8f padding bottom
+
+            // Check if this card fits on the page (currentY + cardHeight > pageHeight - 80f)
+            if (currentY + cardHeight > pageHeight - 80f) {
+                // Finish current page and create new page!
+                finishCurrentPage(page, canvas)
+                
+                currentPageNumber++
+                pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
+                page = pdfDocument.startPage(pageInfo)
+                canvas = page.canvas
+                
+                currentY = 80f
+                
+                // Redraw subtle mini header on the new page
+                val paintMiniHeader = Paint().apply {
+                    color = Color.parseColor(primaryColorHex)
+                    textSize = 10f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    isAntiAlias = true
+                }
+                val miniHeaderText = customer.name + " - " + context.getString(R.string.habayeb_pdf_title)
+                drawArabicText(canvas, miniHeaderText, 35f, 45f, 525, paintMiniHeader, Layout.Alignment.ALIGN_NORMAL)
+                
+                val paintMiniLine = Paint().apply {
+                    strokeWidth = 0.5f
+                    style = Paint.Style.STROKE
+                }
+                paintMiniLine.color = Color.parseColor(primaryColorHex)
+                paintMiniLine.alpha = 80
+                canvas.drawLine(35f, 60f, (pageWidth - 35).toFloat(), 60f, paintMiniLine)
+            }
+
+            // Draw card background with dynamic height
+            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY - 8f + cardHeight, 6f, 6f, paintBoxFill)
+            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY - 8f + cardHeight, 6f, 6f, paintBorder)
+
+            // Draw description text at X = 50f
+            canvas.save()
+            canvas.translate(50f, currentY)
+            layoutDesc.draw(canvas)
+            canvas.restore()
+
+            // Draw amount text at X = 410f
+            canvas.save()
+            canvas.translate(410f, currentY)
+            layoutVal.draw(canvas)
+            canvas.restore()
+
+            currentY += cardHeight + 8f // step to next item with an 8f margin
         }
 
-        // Footer
-        drawArabicText(canvas, context.getString(R.string.habayeb_pdf_footer), 35f, (pageHeight - 35).toFloat(), 525, paintFooter, Layout.Alignment.ALIGN_CENTER)
-
-        pdfDocument.finishPage(page)
+        // Finish the last page
+        finishCurrentPage(page, canvas)
 
         // Save and Share or View
         val fileName = "habayeb_${customer.name}_${System.currentTimeMillis() % 100000}.pdf"

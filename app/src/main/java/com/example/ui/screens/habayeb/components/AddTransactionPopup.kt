@@ -503,7 +503,12 @@ fun AddTransactionPopup(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Detail comments area with leading Hamburger symbol
+                val formattedSelectedDate = remember(dateMillis) {
+                    val sdf = SimpleDateFormat("yyyy/MM/dd", Locale("ar"))
+                    sdf.format(Date(dateMillis))
+                }
+
+                // Detail comments area with leading Calendar symbol
                 OutlinedTextField(
                     value = descStr,
                     onValueChange = { descStr = it },
@@ -527,6 +532,19 @@ fun AddTransactionPopup(
                     leadingIcon = {
                         Icon(Icons.Default.Menu, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
                     },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formattedSelectedDate,
+                                fontSize = 9.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            IconButton(onClick = { datePickerDialog.show() }) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = stringResource(id = R.string.habayeb_tx_date), tint = dynamicThemeColor, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
                     shape = RoundedCornerShape(18.dp),
                     singleLine = false,
                     maxLines = 2,
@@ -539,50 +557,6 @@ fun AddTransactionPopup(
                         onDone = { focusManager.clearFocus() }
                     )
                 )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Date displays container
-                val formattedSelectedDate = remember(dateMillis) {
-                    val sdf = SimpleDateFormat("yyyy/MM/dd - hh:mm a", Locale("ar"))
-                    sdf.format(Date(dateMillis))
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(dynamicSubColor)
-                        .clickable { datePickerDialog.show() }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(id = R.string.habayeb_edit_date),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = dynamicThemeColor
-                        )
-
-                        Text(
-                            text = formattedSelectedDate,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-
-                        Icon(
-                            imageVector = Icons.Default.CalendarToday,
-                            contentDescription = stringResource(id = R.string.habayeb_tx_date),
-                            tint = dynamicThemeColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
 
                 // 5. Sync Option checkbox for Main Mizan Al-Dar Income
                 if (selectedType == "PAYMENT_BY_THEM") {

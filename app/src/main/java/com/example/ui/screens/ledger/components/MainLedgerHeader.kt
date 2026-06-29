@@ -170,9 +170,9 @@ fun MainLedgerHeader(
             .padding(bottom = 4.dp)
     ) {
         val topRowHeight = if (isDaySelectionMode) {
-            52.dp
+            50.dp
         } else {
-            (46 * (1f - collapseFraction)).dp
+            (50 * (1f - collapseFraction)).dp
         }
         val topRowAlpha = if (isDaySelectionMode) 1f else (1f - collapseFraction)
 
@@ -256,38 +256,35 @@ fun MainLedgerHeader(
                     }
                 }
             } else {
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterStart),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Right/Start Element: Menu button
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onMenuClick()
+                        },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
                     ) {
-                        IconButton(
-                            onClick = onMenuClick,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
 
+                    // Centered Element
                     Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(top = 12.dp, bottom = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
                             text = stringResource(id = R.string.ledger_title),
@@ -305,19 +302,22 @@ fun MainLedgerHeader(
                         )
                     }
 
+                    // Left/End Element: Search button
                     IconButton(
-                        onClick = onSearchClick,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSearchClick()
+                        },
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .size(32.dp)
-                            .clip(CircleShape)
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(Color.White.copy(alpha = 0.15f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = stringResource(id = R.string.habayeb_search_label),
                             tint = Color.White,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -340,7 +340,7 @@ fun MainLedgerHeader(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                        .padding(vertical = 8.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(

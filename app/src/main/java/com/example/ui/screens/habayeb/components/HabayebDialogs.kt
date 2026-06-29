@@ -29,30 +29,24 @@ import com.example.ui.viewmodel.FinanceViewModel
 
 @Composable
 fun DeleteConfirmDialog(
-    customerToDelete: HabayebCustomer?,
     selectedCustomerIds: List<String>,
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
     onSuccessBulkDelete: () -> Unit
 ) {
     val context = LocalContext.current
-    val isSingleDelete = customerToDelete != null
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (isSingleDelete) stringResource(id = R.string.habayeb_delete_account_title) else stringResource(id = R.string.habayeb_bulk_delete_title),
+                text = stringResource(id = R.string.habayeb_bulk_delete_title),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
         },
         text = {
             Text(
-                text = if (isSingleDelete) {
-                    stringResource(id = R.string.habayeb_delete_account_confirm, customerToDelete?.name ?: "")
-                } else {
-                    stringResource(id = R.string.habayeb_bulk_delete_confirm, selectedCustomerIds.size)
-                },
+                text = stringResource(id = R.string.habayeb_bulk_delete_confirm, selectedCustomerIds.size),
                 fontSize = 13.sp,
                 color = Color.Gray
             )
@@ -60,16 +54,9 @@ fun DeleteConfirmDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (isSingleDelete) {
-                        customerToDelete?.let {
-                            viewModel.deleteHabayebCustomer(it.id)
-                            Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        viewModel.deleteMultipleHabayebCustomers(selectedCustomerIds)
-                        Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
-                        onSuccessBulkDelete()
-                    }
+                    viewModel.deleteMultipleHabayebCustomers(selectedCustomerIds)
+                    Toast.makeText(context, context.getString(R.string.habayeb_toast_delete_success), Toast.LENGTH_SHORT).show()
+                    onSuccessBulkDelete()
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)

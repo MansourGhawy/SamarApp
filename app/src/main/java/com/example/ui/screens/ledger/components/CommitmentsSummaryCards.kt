@@ -44,40 +44,7 @@ fun CommitmentsSummaryCards(
             .padding(horizontal = 16.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Card 1: Remaining Commitments Capsule
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFDEDED).copy(alpha = 0.5f))
-                .border(
-                    BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                    RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            ) {
-                Text(
-                    text = "${stringResource(R.string.ledger_remaining_commitments)} ",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFFC62828)
-                )
-                Text(
-                    text = formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFC62828)
-                )
-            }
-        }
-
-        // Card 2: Net Amount Capsule
+        // Card 1: Net Amount Capsule
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -106,6 +73,39 @@ fun CommitmentsSummaryCards(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF2E7D32)
+                )
+            }
+        }
+
+        // Card 2: Remaining Commitments Capsule
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFFDEDED).copy(alpha = 0.5f))
+                .border(
+                    BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = "${stringResource(R.string.ledger_remaining_commitments)} ",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFC62828)
+                )
+                Text(
+                    text = formatCurrency(BigDecimal.valueOf(totalRemainingCommitments), currencySymbol),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFC62828)
                 )
             }
         }

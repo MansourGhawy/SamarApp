@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -459,7 +460,7 @@ fun CustomerHistoryOverlay(
                             } else {
                                 // Standard Mode: Centered / Start-aligned account full name written by the user
                                 Text(
-                                    text = activeCustomer.name,
+                                    text = "تفاصيل الحساب",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF1E293B),
@@ -468,7 +469,7 @@ fun CustomerHistoryOverlay(
                                     modifier = Modifier.weight(1f)
                                 )
 
-                                // Action icons: Search, PDF, SMS (moved to header with standard icons)
+                                // Action icons: Search
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -481,44 +482,6 @@ fun CustomerHistoryOverlay(
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-
-                                    IconButton(
-                                        onClick = {
-                                            PdfReportGenerator.generateAndHandleCustomerPdfReport(context, activeCustomer, netDebt, allCustomerTxs, "SHARE")
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Description,
-                                            contentDescription = "مشاركة PDF",
-                                            tint = activeThemeColor,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-
-                                    val isPhoneAvailable = activeCustomer.phone.isNotBlank()
-                                    IconButton(
-                                        enabled = isPhoneAvailable,
-                                        onClick = { triggerWhatsAppStatement(activeCustomer, netDebt) }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Chat,
-                                            contentDescription = "واتساب",
-                                            tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-
-                                    IconButton(
-                                        enabled = isPhoneAvailable,
-                                        onClick = { triggerSmsStatement(activeCustomer, netDebt) }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Sms,
-                                            contentDescription = "SMS",
-                                            tint = if (isPhoneAvailable) Color(0xFF0F766E) else Color.Gray.copy(alpha = 0.35f),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -526,160 +489,172 @@ fun CustomerHistoryOverlay(
                         if (!isSearchActive) {
                             HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
 
-                            // Account Details Card directly under top bar
-                            Row(
+                            // Compact Account Details & Financial Summary Card
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                    .background(Color.White)
+                                    .padding(10.dp)
                             ) {
-                                val avatarColor = getInitialColor(activeCustomer.name)
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(avatarColor.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = avatarColor
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    Text(
-                                        text = activeCustomer.name,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B)
-                                    )
-                                    Text(
-                                        text = activeCustomer.phone.ifEmpty { "لا يوجد هاتف مسجل" },
-                                        fontSize = 11.sp,
-                                        color = Color.Gray,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                // Distribute Edit & Delete icons under name with professional resizing and world-class symbols
+                                // Top row: Avatar, Name/Phone, Balance
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val avatarColor = getInitialColor(activeCustomer.name)
                                     Box(
                                         modifier = Modifier
-                                            .size(30.dp)
+                                            .size(38.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFFF1F5F9))
-                                            .clickable { showEditNameDialog = true },
+                                            .background(avatarColor.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "تعديل",
-                                            tint = Color(0xFF475569),
-                                            modifier = Modifier.size(14.dp)
+                                        Text(
+                                            text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = avatarColor
                                         )
                                     }
 
-                                    Box(
-                                        modifier = Modifier
-                                            .size(30.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFEF4444).copy(alpha = 0.1f))
-                                            .clickable { confirmDeleteCust = true },
-                                        contentAlignment = Alignment.Center
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.Start
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "حذف",
-                                            tint = Color(0xFFEF4444),
-                                            modifier = Modifier.size(14.dp)
+                                        Text(
+                                            text = activeCustomer.name,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E293B)
                                         )
+                                        Text(
+                                            text = activeCustomer.phone.ifEmpty { "لا يوجد هاتف مسجل" },
+                                            fontSize = 11.sp,
+                                            color = Color.Gray,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    val textBalanceColor = when {
+                                        netDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
+                                        netDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
+                                        else -> Color(0xFF334155)
+                                    }
+                                    val stateLabel = when {
+                                        netDebt > 0.0 -> "مطلوب منه"
+                                        netDebt < 0.0 -> "مطلوب له"
+                                        else -> "متعادل"
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = textBalanceColor
+                                        )
+                                        Text(
+                                            text = stateLabel,
+                                            fontSize = 10.sp,
+                                            color = textBalanceColor,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+                                HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Bottom row: Actions & Sub-totals
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Actions
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val isPhoneAvailable = activeCustomer.phone.isNotBlank()
+                                        val iconModifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+
+                                        // PDF
+                                        Box(
+                                            modifier = iconModifier
+                                                .background(activeThemeColor.copy(alpha = 0.1f))
+                                                .clickable { PdfReportGenerator.generateAndHandleCustomerPdfReport(context, activeCustomer, netDebt, allCustomerTxs, "SHARE") },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Description, contentDescription = "مشاركة PDF", tint = activeThemeColor, modifier = Modifier.size(16.dp))
+                                        }
+                                        
+                                        // WhatsApp
+                                        Box(
+                                            modifier = iconModifier
+                                                .background(if (isPhoneAvailable) Color(0xFF16A34A).copy(alpha = 0.1f) else Color.Gray.copy(alpha = 0.1f))
+                                                .clickable(enabled = isPhoneAvailable) { triggerWhatsAppStatement(activeCustomer, netDebt) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Chat, contentDescription = "واتساب", tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f), modifier = Modifier.size(16.dp))
+                                        }
+
+                                        // Edit
+                                        Box(
+                                            modifier = iconModifier
+                                                .background(Color(0xFFF1F5F9))
+                                                .clickable { showEditNameDialog = true },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", tint = Color(0xFF475569), modifier = Modifier.size(16.dp))
+                                        }
+
+                                        // Delete
+                                        Box(
+                                            modifier = iconModifier
+                                                .background(Color(0xFFEF4444).copy(alpha = 0.1f))
+                                                .clickable { confirmDeleteCust = true },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+
+                                    // Small sub-totals
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("ديون", fontSize = 9.sp, color = Color.Gray)
+                                            Text(
+                                                text = formatCurrency(owedByThem, currencySymbol),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFDC2626)
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("سداد", fontSize = 9.sp, color = Color.Gray)
+                                            Text(
+                                                text = formatCurrency(paymentByThem + owedToThem, currencySymbol),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF16A34A)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                }
-
-                // 2. FINANCIAL STATUS SUMMARY CARD (COMPACT AND SPACIOUS)
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(horizontalAlignment = Alignment.Start) {
-                                Text("مجموع ديونك (له)", fontSize = 11.sp, color = Color.Gray)
-                                Text(
-                                    text = formatCurrency(owedByThem, currencySymbol),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFDC2626)
-                                )
-                            }
-
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("مجموع سدادك (عليه)", fontSize = 11.sp, color = Color.Gray)
-                                Text(
-                                    text = formatCurrency(paymentByThem + owedToThem, currencySymbol),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF16A34A)
-                                )
-                            }
-
-                            val textBalanceColor = when {
-                                netDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
-                                netDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
-                                else -> Color(0xFF334155)
-                            }
-                            val stateLabel = when {
-                                netDebt > 0.0 -> "مطلوب منه"
-                                netDebt < 0.0 -> "مطلوب له"
-                                else -> "متعادل"
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("الرصيد الإجمالي", fontSize = 11.sp, color = textBalanceColor, fontWeight = FontWeight.Bold)
-                                Text(
-                                    text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = textBalanceColor
-                                )
-                                Text(
-                                    text = stateLabel,
-                                    fontSize = 11.sp,
-                                    color = textBalanceColor,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
+                    } // Close Column(modifier = Modifier.fillMaxWidth())
+                } // Close Surface
 
                 // 3. TABLE GRID COLUMN HEADER STRIP
                 Surface(

@@ -173,7 +173,6 @@ fun HabayebScreen(
     var defaultTransactionTypeForDialog by remember { mutableStateOf("OWED_BY_THEM") }
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var customerToDelete by remember { mutableStateOf<HabayebCustomer?>(null) }
     var showEditCustomerDialog by remember { mutableStateOf(false) }
     var editingCustomerForDialog by remember { mutableStateOf<HabayebCustomer?>(null) }
     var financialSortMode by remember { mutableStateOf(0) }
@@ -388,75 +387,40 @@ fun HabayebScreen(
                         items(filteredCustomers, key = { it.id }) { customer ->
                             val isSelected = selectedCustomerIds.contains(customer.id)
 
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { dismissValue ->
-                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                        customerToDelete = customer.originalCustomer
-                                        showDeleteConfirmDialog = true
-                                    }
-                                    false // Do not dismiss visually immediately
-                                },
-                                positionalThreshold = { distance -> distance * 0.4f }
-                            )
-
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                enableDismissFromStartToEnd = false,
-                                enableDismissFromEndToStart = true,
-                                backgroundContent = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFFEF5350)), // Soft primary-red card
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                },
-                                content = {
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                        CustomerItemRow(
-                                            isPrivacyMode = isPrivacyModeState.value,
-                                            customer = customer,
-                                            isSelected = isSelected,
-                                            isMultiSelectActive = isMultiSelectActive,
-                                            activeThemeColor = activeThemeColor,
-                                            activeSubColor = activeSubColor,
-                                            currencySymbol = currencySymbol,
-                                            haptic = haptic,
-                                            onCustomerClick = {
-                                                if (isMultiSelectActive) {
-                                                    if (isSelected) {
-                                                        selectedCustomerIds.remove(customer.id)
-                                                        if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
-                                                    } else {
-                                                        selectedCustomerIds.add(customer.id)
-                                                    }
-                                                } else {
-                                                    activeCustomerForHistory = customer.originalCustomer
-                                                }
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            },
-                                            onCustomerLongClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                isMultiSelectActive = true
-                                                if (!isSelected) selectedCustomerIds.add(customer.id)
-                                            },
-                                            onQuickAdd = {
-                                                defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
-                                                showAddTransactionDialogForCustomer = customer.originalCustomer
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                CustomerItemRow(
+                                    isPrivacyMode = isPrivacyModeState.value,
+                                    customer = customer,
+                                    isSelected = isSelected,
+                                    isMultiSelectActive = isMultiSelectActive,
+                                    activeThemeColor = activeThemeColor,
+                                    activeSubColor = activeSubColor,
+                                    currencySymbol = currencySymbol,
+                                    haptic = haptic,
+                                    onCustomerClick = {
+                                        if (isMultiSelectActive) {
+                                            if (isSelected) {
+                                                selectedCustomerIds.remove(customer.id)
+                                                if (selectedCustomerIds.isEmpty()) isMultiSelectActive = false
+                                            } else {
+                                                selectedCustomerIds.add(customer.id)
                                             }
-                                        )
+                                        } else {
+                                            activeCustomerForHistory = customer.originalCustomer
+                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    },
+                                    onCustomerLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        isMultiSelectActive = true
+                                        if (!isSelected) selectedCustomerIds.add(customer.id)
+                                    },
+                                    onQuickAdd = {
+                                        defaultTransactionTypeForDialog = if (customer.netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
+                                        showAddTransactionDialogForCustomer = customer.originalCustomer
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -542,12 +506,10 @@ fun HabayebScreen(
         // 4. MULTI-DELETE / SINGLE DELETE CONFIRMATION DIALOG
         if (showDeleteConfirmDialog) {
             com.example.ui.screens.habayeb.components.DeleteConfirmDialog(
-                customerToDelete = customerToDelete,
                 selectedCustomerIds = selectedCustomerIds.toList(),
                 viewModel = viewModel,
                 onDismiss = {
                     showDeleteConfirmDialog = false
-                    customerToDelete = null
                 },
                 onSuccessBulkDelete = {
                     selectedCustomerIds.clear()

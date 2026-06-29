@@ -90,25 +90,59 @@ object PdfReportGenerator {
         val displayedName = if (bizName.isNotBlank()) bizName else "ميزان الدار"
         val displayedDesc = if (bizDesc.isNotBlank()) bizDesc else "التطبيق المالي للتدابير وتنسيق الميزانية"
 
+        var hasLogo = false
+        var logoW = 0f
+        var logoH = 0f
+
         var rawBitmap: Bitmap? = null
         var scaledLogo: Bitmap? = null
         if (bizLogoPath.isNotEmpty()) {
             try {
                 val logoFile = File(bizLogoPath)
                 if (logoFile.exists()) {
-                    rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath)
+                    // Safe decoding to avoid OOM for large files (like 6MB or 10MB)
+                    val options = BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                    }
+                    BitmapFactory.decodeFile(logoFile.absolutePath, options)
+                    
+                    // Decode to a max target resolution of 400x400 for high density and crispness
+                    val reqW = 400
+                    val reqH = 400
+                    var inSampleSize = 1
+                    val (w: Int, h: Int) = options.outWidth to options.outHeight
+                    if (h > reqH || w > reqW) {
+                        val halfHeight = h / 2
+                        val halfWidth = w / 2
+                        while (halfHeight / inSampleSize >= reqH && halfWidth / inSampleSize >= reqW) {
+                            inSampleSize *= 2
+                        }
+                    }
+                    
+                    options.inJustDecodeBounds = false
+                    options.inSampleSize = inSampleSize
+                    rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath, options)
+                    
                     if (rawBitmap != null) {
-                        val maxW = 45f
-                        val maxH = 45f
+                        // Max visual bounds on the PDF canvas inside the header
+                        val maxW = 90f
+                        val maxH = 65f
                         val originalWidth = rawBitmap.width.toFloat()
                         val originalHeight = rawBitmap.height.toFloat()
                         val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
                         val finalW = (originalWidth * scale).coerceAtLeast(1f)
                         val finalH = (originalHeight * scale).coerceAtLeast(1f)
+                        
+                        // Scale with bilinear filtering (filter = true) for gorgeous smooth lines and zero pixelation
                         scaledLogo = Bitmap.createScaledBitmap(rawBitmap, finalW.toInt(), finalH.toInt(), true)
                         
+                        logoW = finalW
+                        logoH = finalH
+                        hasLogo = true
+                        
+                        // Left-aligned inside the header, vertically centered
                         val logoX = 35f + ((maxW - finalW) / 2f)
-                        val logoY = 40f + ((maxH - finalH) / 2f)
+                        val logoY = 35f + ((maxH - finalH) / 2f)
                         canvas.drawBitmap(scaledLogo, logoX, logoY, null)
                     }
                 }
@@ -127,6 +161,12 @@ object PdfReportGenerator {
                 }
             }
         }
+
+        val nameY = 40f
+        val descY = 60f
+        val phonesY = 76f
+        val dividerY = 100f
+        val reportStartY = 120f
 
         val paintBizName = Paint().apply {
             color = Color.parseColor(primaryColorHex)
@@ -147,12 +187,17 @@ object PdfReportGenerator {
             isAntiAlias = true
         }
 
-        drawArabicText(canvas, displayedName, 35f, 45f, 525, paintBizName, Layout.Alignment.ALIGN_NORMAL)
-        drawArabicText(canvas, displayedDesc, 35f, 65f, 525, paintBizDesc, Layout.Alignment.ALIGN_NORMAL)
+        // Determine horizontal bounding box for text to prevent any overlap with the logo on the left
+        val textX = if (hasLogo) 145f else 35f
+        val textWidth = if (hasLogo) 415 else 525
+        val headerAlignment = Layout.Alignment.ALIGN_NORMAL
+
+        drawArabicText(canvas, displayedName, textX, nameY, textWidth, paintBizName, headerAlignment)
+        drawArabicText(canvas, displayedDesc, textX, descY, textWidth, paintBizDesc, headerAlignment)
 
         val phonesToDraw = if (bizPhones.isNotEmpty()) bizPhones else listOf("هوية بصرية معتمدة")
-        val phonesStr = "📞 " + phonesToDraw.joinToString("  |  ")
-        drawArabicText(canvas, phonesStr, 35f, 82f, 525, paintBizPhones, Layout.Alignment.ALIGN_NORMAL)
+        val phonesStr = if (bizPhones.isNotEmpty()) "هاتف: " + phonesToDraw.joinToString("  |  ") else phonesToDraw.joinToString("  |  ")
+        drawArabicText(canvas, phonesStr, textX, phonesY, textWidth, paintBizPhones, headerAlignment)
 
         // Divider Line under Header
         val paintDivider = Paint().apply {
@@ -160,7 +205,7 @@ object PdfReportGenerator {
             strokeWidth = 1f
             style = Paint.Style.STROKE
         }
-        canvas.drawLine(35f, 115f, (pageWidth - 35).toFloat(), 115f, paintDivider)
+        canvas.drawLine(35f, dividerY, (pageWidth - 35).toFloat(), dividerY, paintDivider)
 
         // Prepare content paints
         val paintTitle = Paint().apply {
@@ -214,7 +259,7 @@ object PdfReportGenerator {
             pdfDocument.finishPage(p)
         }
 
-        var currentY = 140f
+        var currentY = reportStartY
 
         // Draw Report Main Title
         drawArabicText(canvas, context.getString(R.string.habayeb_pdf_title), 35f, currentY, 525, paintTitle, Layout.Alignment.ALIGN_CENTER)

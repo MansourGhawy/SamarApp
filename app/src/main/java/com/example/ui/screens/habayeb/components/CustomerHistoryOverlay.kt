@@ -692,7 +692,7 @@ fun CustomerHistoryOverlay(
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "الرصيد",
+                            text = "المتبقي",
                             modifier = Modifier.weight(1.0f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

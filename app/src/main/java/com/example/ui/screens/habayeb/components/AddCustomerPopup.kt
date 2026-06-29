@@ -206,7 +206,7 @@ fun AddCustomerPopup(
         if (showConfirmPopup) {
             kotlinx.coroutines.delay(350)
             try {
-                secondStepPhoneFocusRequester.requestFocus()
+                secondStepNotesFocusRequester.requestFocus()
                 softwareKeyboardController?.show()
             } catch (e: Exception) {}
         }
@@ -461,6 +461,39 @@ fun AddCustomerPopup(
                                 color = activeThemeColor
                             )
 
+                            // 1. Details/Notes field (Required - First now!)
+                            Column {
+                                OutlinedTextField(
+                                    value = notesStr,
+                                    onValueChange = { notesStr = it },
+                                    label = { Text(stringResource(id = R.string.habayeb_details_required), fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
+                                    placeholder = { Text(stringResource(id = R.string.habayeb_starting_balance), fontSize = 13.sp) },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    isError = notesStr.isBlank(),
+                                    modifier = Modifier.fillMaxWidth().focusRequester(secondStepNotesFocusRequester),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                    keyboardActions = KeyboardActions(
+                                        onNext = { secondStepPhoneFocusRequester.requestFocus() }
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = activeThemeColor,
+                                        focusedLabelColor = activeThemeColor,
+                                        cursorColor = activeThemeColor,
+                                        unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f)
+                                    )
+                                )
+                                if (notesStr.isBlank()) {
+                                    Text(
+                                        text = stringResource(id = R.string.habayeb_required_field),
+                                        color = Color.Red,
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                                    )
+                                }
+                            }
+
+                            // 2. Phone field (Optional - Second now!)
                             OutlinedTextField(
                                 value = phoneStr,
                                 onValueChange = { phoneStr = it },
@@ -468,13 +501,37 @@ fun AddCustomerPopup(
                                 placeholder = { Text(stringResource(id = R.string.habayeb_contact_picker), fontSize = 13.sp) },
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { secondStepNotesFocusRequester.requestFocus() }),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (notesStr.isNotBlank()) {
+                                            focusManager.clearFocus()
+                                            isSavingCustomer = true
+                                            val initialAmount = initialAmountStr.toDoubleOrNull() ?: 0.0
+                                            val transactionTimestamp = selectedCalendar.timeInMillis / 1000
+
+                                            val newCustomer = HabayebCustomer(
+                                                id = "cust_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(4)}",
+                                                name = nameStr.trim(),
+                                                phone = phoneStr.trim(),
+                                                notes = notesStr.trim(),
+                                                createdAt = transactionTimestamp
+                                            )
+                                            viewModel.saveHabayebCustomer(newCustomer, initialAmount, initialType, transactionTimestamp, notesStr.trim())
+                                            Toast.makeText(context, context.getString(R.string.habayeb_toast_save_success), Toast.LENGTH_SHORT).show()
+                                            showConfirmPopup = false
+                                            onDismiss()
+                                        } else {
+                                            focusManager.clearFocus()
+                                        }
+                                    }
+                                ),
                                 modifier = Modifier.fillMaxWidth().focusRequester(secondStepPhoneFocusRequester),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = activeThemeColor,
                                     focusedLabelColor = activeThemeColor,
-                                    cursorColor = activeThemeColor
+                                    cursorColor = activeThemeColor,
+                                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f)
                                 ),
                                 trailingIcon = {
                                     IconButton(onClick = {
@@ -489,60 +546,11 @@ fun AddCustomerPopup(
                                             imageVector = Icons.Default.Contacts,
                                             contentDescription = stringResource(id = R.string.habayeb_contact_picker),
                                             tint = activeThemeColor,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(22.dp)
                                         )
                                     }
                                 }
                             )
-
-                            Column {
-                                OutlinedTextField(
-                                    value = notesStr,
-                                    onValueChange = { notesStr = it },
-                                    label = { Text(stringResource(id = R.string.habayeb_details_required), fontSize = 13.sp) },
-                                    placeholder = { Text(stringResource(id = R.string.habayeb_starting_balance), fontSize = 13.sp) },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    isError = notesStr.isBlank(),
-                                    modifier = Modifier.fillMaxWidth().focusRequester(secondStepNotesFocusRequester),
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = { 
-                                            if (notesStr.isNotBlank()) {
-                                                focusManager.clearFocus()
-                                                isSavingCustomer = true
-                                                val initialAmount = initialAmountStr.toDoubleOrNull() ?: 0.0
-                                                val transactionTimestamp = selectedCalendar.timeInMillis / 1000
-
-                                                val newCustomer = HabayebCustomer(
-                                                    id = "cust_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(4)}",
-                                                    name = nameStr.trim(),
-                                                    phone = phoneStr.trim(),
-                                                    notes = notesStr.trim(),
-                                                    createdAt = transactionTimestamp
-                                                )
-                                                viewModel.saveHabayebCustomer(newCustomer, initialAmount, initialType, transactionTimestamp, notesStr.trim())
-                                                Toast.makeText(context, context.getString(R.string.habayeb_toast_save_success), Toast.LENGTH_SHORT).show()
-                                                showConfirmPopup = false
-                                                onDismiss()
-                                            }
-                                        }
-                                    ),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = activeThemeColor,
-                                        focusedLabelColor = activeThemeColor,
-                                        cursorColor = activeThemeColor
-                                    )
-                                )
-                                if (notesStr.isBlank()) {
-                                    Text(
-                                        text = stringResource(id = R.string.habayeb_required_field),
-                                        color = Color.Red,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
-                                    )
-                                }
-                            }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

@@ -554,7 +554,7 @@ fun CustomerHistoryOverlay(
 
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                                            text = formatCurrency(netDebt, currencySymbol),
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Black,
                                             color = textBalanceColor
@@ -786,15 +786,33 @@ fun CustomerHistoryOverlay(
                                     }
 
                                     // 2. Details (Middle-Right)
-                                    Text(
-                                        text = tx.description.ifEmpty { if (isPositive) "سداد" else "دين" },
+                                    Column(
                                         modifier = Modifier.weight(1.4f),
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF1E293B),
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        val typeStr = when (tx.type) {
+                                            "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by) // دين عليه
+                                            "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by) // استلام دفعة
+                                            "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to) // دين له
+                                            "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to) // سداد دفعة
+                                            else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
+                                        }
+                                        Text(
+                                            text = typeStr,
+                                            fontSize = 9.sp,
+                                            color = indicatorColor.copy(alpha = 0.8f),
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Text(
+                                            text = tx.description.ifEmpty { "لا يوجد ملاحظات" },
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF1E293B),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
 
                                     // 3. Amount with colorful indicator arrow (Middle-Left)
                                     Row(

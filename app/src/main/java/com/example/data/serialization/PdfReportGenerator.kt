@@ -281,7 +281,8 @@ object PdfReportGenerator {
                 ""
             }
 
-            val txLabel = context.getString(R.string.habayeb_pdf_tx_format, txTypeStr, tx.description, formattedDate)
+            val txDesc = if (tx.description.isNotEmpty()) " - ${tx.description}" else ""
+            val txLabel = "$txTypeStr$txDesc [$formattedDate]"
             val formattedAmount = String.format(Locale.ENGLISH, "%,.2f", tx.amount)
             val txValue = context.getString(R.string.habayeb_pdf_val_format, formattedAmount)
 

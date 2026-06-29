@@ -28,7 +28,8 @@ fun formatCurrency(amount: Double, currencySymbol: String): String {
     val absVal = kotlin.math.abs(amount)
     val symbols = DecimalFormatSymbols(Locale.ENGLISH)
     val formatter = DecimalFormat("#,##0", symbols)
-    return "${formatter.format(absVal)} $currencySymbol"
+    val sign = if (amount < 0.0) "-" else ""
+    return "$sign${formatter.format(absVal)} $currencySymbol"
 }
 
 @Composable

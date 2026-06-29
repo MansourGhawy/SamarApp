@@ -277,6 +277,34 @@ fun BusinessProfileScreen(
                                 )
                             }
                         }
+
+                        // Delete Overlay Icon (Only when logo is selected/exists)
+                        if (logoBitmapState != null) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.BottomStart
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF4444))
+                                        .clickable {
+                                            logoPath = ""
+                                            logoBitmapState = null
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "حذف الشعار",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     if (logoBitmapState != null) {
@@ -715,11 +743,14 @@ fun BusinessProfileScreen(
                                     cropShapeIsCircle
                                 )
 
+                                // Scale down the logo to a max of 400px to ensure tiny file sizes (e.g., ~30KB) and prevent huge reports
+                                val scaledResult = scaleBitmap(croppedResult, 400)
+
                                 // Save locally
-                                val localPath = saveBitmapToInternalStorage(context, croppedResult)
+                                val localPath = saveBitmapToInternalStorage(context, scaledResult)
                                 if (localPath != null) {
                                     logoPath = localPath
-                                    logoBitmapState = croppedResult
+                                    logoBitmapState = scaledResult
                                     Toast.makeText(context, context.getString(R.string.biz_toast_logo_success), Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, context.getString(R.string.biz_toast_logo_save_err), Toast.LENGTH_SHORT).show()

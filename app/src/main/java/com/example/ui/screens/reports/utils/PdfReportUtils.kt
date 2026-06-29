@@ -2,6 +2,7 @@ package com.example.ui.screens.reports.utils
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Paint
@@ -211,25 +212,262 @@ fun generateModernPdfReport(
     var totalOwed = 0.0
     var totalPaid = 0.0
     var runningBalance = 0.0
-    val processedRows = mutableListOf<List<String>>()
 
-    for ((index, tx) in sortedTxs.withIndex()) {
+    for (tx in sortedTxs) {
         val isOwed = tx.type == "OWED_BY_TEM" || tx.type == "OWED_BY_THEM" || tx.type == "OWED_TO_THEM"
         val isPaid = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
 
         if (isOwed) {
             totalOwed += tx.amount
-            runningBalance += tx.amount
         } else if (isPaid) {
             totalPaid += tx.amount
-            runningBalance -= tx.amount
+        }
+    }
+
+    val finalNetBalance = Math.abs(totalOwed - totalPaid)
+    val netStatus = if (isSupplierMode) {
+        if (totalOwed >= totalPaid) "له" else "عليه"
+    } else {
+        if (totalOwed >= totalPaid) "عليه" else "له"
+    }
+
+    // 4. إعداد مستند الـ PDF ومقاس الصفحة (A4)
+    val pdfDocument = PdfDocument()
+    val pageWidth = 595
+    val pageHeight = 842
+
+    var pageNum = 1
+    var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create()
+    var activePage = pdfDocument.startPage(pageInfo)
+    var activeCanvas = activePage.canvas
+
+    // 5. أقلام وألوان الرسم البنكي المطور
+    val primaryColorHex = "#0F5257"
+    val slateGrayHex = "#E2E8F0"
+    val debitRedHex = "#DC2626"
+    val creditGreenHex = "#16A34A"
+    val headerBgHex = "#F8FAFC"
+    val textDarkHex = "#1E293B"
+    val textGrayHex = "#64748B"
+
+    val paintTextRightBold = Paint().apply {
+        color = Color.parseColor(primaryColorHex)
+        textSize = 12f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.RIGHT
+        isAntiAlias = true
+    }
+    
+    val paintTextRightRegular = Paint().apply {
+        color = Color.parseColor(textGrayHex)
+        textSize = 9f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        textAlign = Paint.Align.RIGHT
+        isAntiAlias = true
+    }
+
+    val paintTextLeftBold = Paint().apply {
+        color = Color.parseColor(textDarkHex)
+        textSize = 10f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.LEFT
+        isAntiAlias = true
+    }
+
+    val paintTextLeftRegular = Paint().apply {
+        color = Color.parseColor(textGrayHex)
+        textSize = 9f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        textAlign = Paint.Align.LEFT
+        isAntiAlias = true
+    }
+
+    val paintTitle = Paint().apply {
+        color = Color.parseColor(textDarkHex)
+        textSize = 14f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    val paintLine = Paint().apply {
+        color = Color.parseColor(slateGrayHex)
+        strokeWidth = 1f
+    }
+
+    val rightMargin = (pageWidth - 40).toFloat()
+    val leftMargin = 40f
+    val centerWidth = (pageWidth / 2).toFloat()
+
+    fun drawHeaderForPage(canvas: android.graphics.Canvas, isFirstPage: Boolean, pageNumber: Int) {
+        if (isFirstPage) {
+            var y = 45f
+
+            // 3. Draw Logo in the absolute center
+            if (logoPath != null) {
+                try {
+                    val file = File(logoPath)
+                    if (file.exists()) {
+                        val bitmap = decodeSampledBitmap(file.absolutePath)
+                        if (bitmap != null) {
+                            val maxW = 80f
+                            val maxH = 55f
+                            val originalWidth = bitmap.width.toFloat()
+                            val originalHeight = bitmap.height.toFloat()
+                            val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
+                            val finalW = (originalWidth * scale).coerceAtLeast(1f)
+                            val finalH = (originalHeight * scale).coerceAtLeast(1f)
+                            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, finalW.toInt(), finalH.toInt(), true)
+                            
+                            val logoX = centerWidth - (finalW / 2f)
+                            val logoY = y + ((maxH - finalH) / 2f)
+                            canvas.drawBitmap(scaledBitmap, logoX, logoY, null)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // 4. Draw business details on the right top
+            canvas.drawText(businessName, rightMargin, y + 12f, paintTextRightBold)
+            if (businessSlogan.isNotEmpty()) {
+                canvas.drawText(businessSlogan, rightMargin, y + 28f, paintTextRightRegular)
+            }
+            if (businessPhone.isNotEmpty()) {
+                canvas.drawText("📞 هاتف: $businessPhone", rightMargin, y + 42f, paintTextRightRegular)
+            }
+
+            // 5. Draw report number and date
+            val dayNameToday = SimpleDateFormat("EEEE", Locale("ar")).format(Date())
+            val dateNumbersToday = SimpleDateFormat("yyyy/MM/dd hh:mm", Locale.ENGLISH).format(Date())
+            val amPmToday = SimpleDateFormat("a", Locale("ar")).format(Date())
+            val reportDateStrToday = "$dayNameToday - $dateNumbersToday $amPmToday"
+            canvas.drawText("سجل رقم ($reportNumber)", leftMargin, y + 12f, paintTextLeftBold)
+            canvas.drawText("التاريخ: $reportDateStrToday", leftMargin, y + 28f, paintTextLeftRegular)
+
+            y += 70f
+            canvas.drawLine(leftMargin, y, rightMargin, y, paintLine)
+
+            y += 25f
+            canvas.drawText(title, centerWidth, y, paintTitle)
+
+            y += 20f
+
+            // Summary box
+            val paintSummaryBg = Paint().apply {
+                color = Color.parseColor(headerBgHex)
+                style = Paint.Style.FILL
+            }
+            val paintSummaryBorder = Paint().apply {
+                color = Color.parseColor(slateGrayHex)
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+            }
+            canvas.drawRoundRect(leftMargin, y, rightMargin, y + 55f, 10f, 10f, paintSummaryBg)
+            canvas.drawRoundRect(leftMargin, y, rightMargin, y + 55f, 10f, 10f, paintSummaryBorder)
+
+            val paintSummaryLabel = Paint().apply {
+                color = Color.parseColor(textGrayHex)
+                textSize = 9f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            }
+            val paintSummaryValue = Paint().apply {
+                color = Color.parseColor(primaryColorHex)
+                textSize = 12f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+
+            val (sumLabelRight, sumLabelCenter, sumLabelLeft) = if (isSupplierMode) {
+                Triple("إجمالي له علينا (دين)", "إجمالي سددناه له (سداد)", "صافي المتبقي للمورد")
+            } else {
+                Triple("إجمالي عليه (دين)", "إجمالي سدده لنا (سداد)", "صافي المتبقي عليه")
+            }
+
+            // Right
+            paintSummaryLabel.textAlign = Paint.Align.RIGHT
+            paintSummaryValue.textAlign = Paint.Align.RIGHT
+            canvas.drawText(sumLabelRight, rightMargin - 20f, y + 22f, paintSummaryLabel)
+            canvas.drawText("${formatReportNumber(totalOwed)} ر.ي", rightMargin - 20f, y + 41f, paintSummaryValue)
+
+            // Center
+            paintSummaryLabel.textAlign = Paint.Align.CENTER
+            paintSummaryValue.textAlign = Paint.Align.CENTER
+            canvas.drawText(sumLabelCenter, centerWidth, y + 22f, paintSummaryLabel)
+            canvas.drawText("${formatReportNumber(totalPaid)} ر.ي", centerWidth, y + 41f, paintSummaryValue)
+
+            // Left
+            paintSummaryLabel.textAlign = Paint.Align.LEFT
+            paintSummaryValue.textAlign = Paint.Align.LEFT
+            canvas.drawText(sumLabelLeft, leftMargin + 20f, y + 22f, paintSummaryLabel)
+            canvas.drawText("${formatReportNumber(finalNetBalance)} ر.ي ($netStatus)", leftMargin + 20f, y + 41f, paintSummaryValue)
+        } else {
+            var y = 45f
+
+            canvas.drawText("$title - تابع الصفحة ($pageNumber)", rightMargin, y + 12f, paintTextRightBold)
+            val sdfDate = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
+            canvas.drawText("التاريخ: ${sdfDate.format(Date())}", leftMargin, y + 12f, paintTextLeftRegular)
+            
+            y += 20f
+            canvas.drawLine(leftMargin, y, rightMargin, y, paintLine)
+        }
+    }
+
+    // Coordinates of columns in RTL
+    val columnsX = listOf(
+        rightMargin,             // اليوم
+        rightMargin - 55f,       // التاريخ
+        rightMargin - 125f,      // التفاصيل
+        rightMargin - 310f,      // المبلغ
+        leftMargin               // المتبقي
+    )
+
+    val headers = listOf("اليوم", "التاريخ", "البيان / التفاصيل", "المبلغ", "المبلغ المتبقي")
+
+    fun drawTableHeaders(canvas: android.graphics.Canvas, y: Float) {
+        val paintHeaderBg = Paint().apply {
+            color = Color.parseColor(headerBgHex)
+            style = Paint.Style.FILL
+        }
+        val paintHeaderBorder = Paint().apply {
+            color = Color.parseColor(slateGrayHex)
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+        canvas.drawRoundRect(leftMargin, y - 14f, rightMargin, y + 10f, 6f, 6f, paintHeaderBg)
+        canvas.drawRoundRect(leftMargin, y - 14f, rightMargin, y + 10f, 6f, 6f, paintHeaderBorder)
+
+        val paintHeader = Paint().apply {
+            color = Color.parseColor(primaryColorHex)
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
         }
 
-        // إرفاق اسم اليوم مع التاريخ تلقائياً للوضوح العالي مع بوابة فحص أمان للأمواج الزمنية (تحويل الثواني لملي ثانية إذا لزم)
+        headers.forEachIndexed { i, headerText ->
+            paintHeader.textAlign = if (i == 4) Paint.Align.LEFT else Paint.Align.RIGHT
+            canvas.drawText(headerText, columnsX[i], y + 2f, paintHeader)
+        }
+    }
+
+    val paintCellText = Paint().apply {
+        color = Color.parseColor(textDarkHex)
+        textSize = 9f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        isAntiAlias = true
+    }
+
+    val paintRowSeparator = Paint().apply {
+        color = Color.parseColor("#F1F5F9")
+        strokeWidth = 0.8f
+    }
+
+    fun drawRow(canvas: android.graphics.Canvas, y: Float, tx: PdfTransaction, index: Int, runningBal: Double) {
+        canvas.drawLine(leftMargin, y + 14f, rightMargin, y + 14f, paintRowSeparator)
+
         val txTime = if (tx.timestamp < 10000000000L) tx.timestamp * 1000 else tx.timestamp
         val dayName = SimpleDateFormat("EEEE", Locale("ar")).format(Date(txTime))
         val dateNumbers = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH).format(Date(txTime))
-        val formattedDateWithDay = "$dayName - $dateNumbers"
 
         val finalDesc = if (tx.description.isNotEmpty()) tx.description else {
             when (tx.type) {
@@ -241,282 +479,116 @@ fun generateModernPdfReport(
             }
         }
 
-        // إزالة النصوص الزائدة (له/عليه) من سطور الجدول وإظهار الأرقام فقط للتناسق البصري
-        val balanceStr = "${formatReportNumber(Math.abs(runningBalance))} ر.ي"
+        // Column 0: اليوم
+        paintCellText.textAlign = Paint.Align.RIGHT
+        paintCellText.color = Color.parseColor(textDarkHex)
+        paintCellText.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        canvas.drawText(dayName, columnsX[0], y + 4f, paintCellText)
 
-        processedRows.add(
-            listOf(
-                (index + 1).toString(),
-                formattedDateWithDay,
-                finalDesc,
-                if (isOwed) "${formatReportNumber(tx.amount)} ر.ي" else "-",
-                if (isPaid) "${formatReportNumber(tx.amount)} ر.ي" else "-",
-                balanceStr
-            )
-        )
-    }
+        // Column 1: التاريخ
+        canvas.drawText(dateNumbers, columnsX[1], y + 4f, paintCellText)
 
-    val finalNetBalance = Math.abs(runningBalance)
-    val netStatus = if (isSupplierMode) {
-        if (runningBalance >= 0) "له" else "عليه"
-    } else {
-        if (runningBalance >= 0) "عليه" else "له"
-    }
-
-    // 4. إعداد مستند الـ PDF ومقاس الصفحة (A4)
-    val pdfDocument = PdfDocument()
-    val pageWidth = 595
-    val pageHeight = 842
-    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-    val page = pdfDocument.startPage(pageInfo)
-    val canvas = page.canvas
-
-    // 5. أقلام وألوان الرسم البنكي
-    val primaryColorHex = "#0F5257"
-    val paintPrimaryBold = Paint().apply {
-        color = Color.parseColor(primaryColorHex)
-        textSize = 12f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.RIGHT
-    }
-    val paintTextRightRegular = Paint().apply {
-        color = Color.DKGRAY
-        textSize = 9f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        textAlign = Paint.Align.RIGHT
-    }
-    val paintTextLeftBold = Paint().apply {
-        color = Color.BLACK
-        textSize = 10f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.LEFT
-    }
-    val paintTextLeftRegular = Paint().apply {
-        color = Color.GRAY
-        textSize = 9f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        textAlign = Paint.Align.LEFT
-    }
-
-    var currentY = 40f
-    val rightMargin = (pageWidth - 40).toFloat()
-    val leftMargin = 40f
-    val centerWidth = (pageWidth / 2).toFloat()
-
-    // 6. رسم الهوية البصرية (Logo) بالمنتصف تماماً دون أي إطار دائري أو شكل هندسي يفرضه (تحجيم تناسبي دقيق لجمال تام)
-    if (logoPath != null) {
-        try {
-            val file = File(logoPath)
-            if (file.exists()) {
-                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                if (bitmap != null) {
-                    val maxW = 80f
-                    val maxH = 55f
-                    val originalWidth = bitmap.width.toFloat()
-                    val originalHeight = bitmap.height.toFloat()
-                    val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
-                    val finalW = (originalWidth * scale).coerceAtLeast(1f)
-                    val finalH = (originalHeight * scale).coerceAtLeast(1f)
-                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, finalW.toInt(), finalH.toInt(), true)
-                    
-                    val logoX = centerWidth - (finalW / 2f)
-                    val logoY = currentY + ((maxH - finalH) / 2f)
-                    canvas.drawBitmap(scaledBitmap, logoX, logoY, null)
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        // Column 2: البيان / التفاصيل
+        val maxDetailsWidth = 175f
+        val truncatedDetails = if (paintCellText.measureText(finalDesc) > maxDetailsWidth) {
+            val length = paintCellText.breakText(finalDesc, true, maxDetailsWidth - 10f, null)
+            finalDesc.substring(0, length) + "..."
+        } else {
+            finalDesc
         }
+        canvas.drawText(truncatedDetails, columnsX[2], y + 4f, paintCellText)
+
+        // Column 3: المبلغ
+        val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
+        val pillBgColor = if (isPositive) "#F0FDF4" else "#FFF5F5"
+        val pillTextColor = if (isPositive) "#16A34A" else "#DC2626"
+        val prefix = if (isPositive) "+" else "-"
+        val formattedAmount = "$prefix ${formatReportNumber(tx.amount)} ر.ي"
+
+        val paintPillBg = Paint().apply {
+            color = Color.parseColor(pillBgColor)
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+        val paintPillText = Paint().apply {
+            color = Color.parseColor(pillTextColor)
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.RIGHT
+            isAntiAlias = true
+        }
+
+        val textWidth = paintPillText.measureText(formattedAmount)
+        val pillLeft = columnsX[3] - textWidth - 12f
+        val pillRight = columnsX[3]
+        canvas.drawRoundRect(pillLeft, y - 8f, pillRight, y + 10f, 4f, 4f, paintPillBg)
+        canvas.drawText(formattedAmount, columnsX[3] - 6f, y + 4f, paintPillText)
+
+        // Column 4: المبلغ المتبقي (الرصيد التراكمي بلون الرمادي)
+        val balanceStr = "${formatReportNumber(Math.abs(runningBal))} ر.ي"
+        val paintBalanceText = Paint().apply {
+            color = Color.parseColor(textGrayHex)
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.LEFT
+            isAntiAlias = true
+        }
+        canvas.drawText(balanceStr, columnsX[4], y + 4f, paintBalanceText)
     }
 
-    // 7. رسم بيانات النشاط التجاري جهة اليمين (RTL ومتناسقة)
-    canvas.drawText(businessName, rightMargin, currentY + 14f, paintPrimaryBold)
-    if (businessSlogan.isNotEmpty()) {
-        canvas.drawText(businessSlogan, rightMargin, currentY + 32f, paintTextRightRegular)
-    }
-    if (businessPhone.isNotEmpty()) {
-        canvas.drawText("📞 هاتف: $businessPhone", rightMargin, currentY + 48f, paintTextRightRegular)
-    }
-
-    // 8. رسم رقم التقرير وتاريخ اصداره اللحظي باليوم والساعة جهة اليسار
-    val dayName = SimpleDateFormat("EEEE", Locale("ar")).format(Date())
-    val dateNumbers = SimpleDateFormat("yyyy/MM/dd hh:mm", Locale.ENGLISH).format(Date())
-    val amPm = SimpleDateFormat("a", Locale("ar")).format(Date())
-    val reportDateStr = "$dayName - $dateNumbers $amPm"
-    canvas.drawText("سجل رقم: #$reportNumber", leftMargin, currentY + 14f, paintTextLeftBold)
-    canvas.drawText("حُرر في: $reportDateStr", leftMargin, currentY + 32f, paintTextLeftRegular)
-
-    currentY += 75f
-
-    // 9. خط فاصل رقيق وناعم جداً أسفل الترويسة الموحدة
-    val paintLine = Paint().apply {
-        color = Color.parseColor("#E2E8F0")
-        strokeWidth = 1f
-    }
-    canvas.drawLine(leftMargin, currentY, rightMargin, currentY, paintLine)
-
+    var currentY = 240f // Page 1 start
+    drawHeaderForPage(activeCanvas, isFirstPage = true, pageNumber = 1)
+    drawTableHeaders(activeCanvas, currentY)
     currentY += 25f
 
-    // 10. عنوان كشف الحساب بالمنتصف
-    val paintTitle = Paint().apply {
-        color = Color.BLACK
-        textSize = 14f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText(title, centerWidth, currentY, paintTitle)
+    for ((index, tx) in sortedTxs.withIndex()) {
+        val isOwed = tx.type == "OWED_BY_TEM" || tx.type == "OWED_BY_THEM" || tx.type == "OWED_TO_THEM"
+        val isPaid = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
 
-    currentY += 20f
-
-    // 11. رسم كرت ملخص المؤشرات المالي الخالي من السوالب والمعاد صياغته محاسبياً وبطريقة ذكية تفرق بين المورد والعميل
-    val paintSummaryBg = Paint().apply {
-        color = Color.parseColor("#F8FAFC")
-        style = Paint.Style.FILL
-    }
-    val paintSummaryBorder = Paint().apply {
-        color = Color.parseColor("#E2E8F0")
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-    }
-    canvas.drawRoundRect(leftMargin, currentY, rightMargin, currentY + 55f, 10f, 10f, paintSummaryBg)
-    canvas.drawRoundRect(leftMargin, currentY, rightMargin, currentY + 55f, 10f, 10f, paintSummaryBorder)
-
-    val paintSummaryLabel = Paint().apply {
-        color = Color.GRAY
-        textSize = 9f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    }
-    val paintSummaryValue = Paint().apply {
-        color = Color.parseColor(primaryColorHex)
-        textSize = 12f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-
-    val (sumLabelRight, sumLabelCenter, sumLabelLeft) = if (isSupplierMode) {
-        Triple("إجمالي له علينا (دين)", "إجمالي سددناه له (سداد)", "صافي المتبقي للمورد")
-    } else {
-        Triple("إجمالي عليه (دين)", "إجمالي سدده لنا (سداد)", "صافي المتبقي عليه")
-    }
-
-    // أ. اليمين (إجمالي عليه)
-    paintSummaryLabel.textAlign = Paint.Align.RIGHT
-    paintSummaryValue.textAlign = Paint.Align.RIGHT
-    canvas.drawText(sumLabelRight, rightMargin - 20f, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("${formatReportNumber(totalOwed)} ر.ي", rightMargin - 20f, currentY + 41f, paintSummaryValue)
-
-    // ب. المنتصف (إجمالي له)
-    paintSummaryLabel.textAlign = Paint.Align.CENTER
-    paintSummaryValue.textAlign = Paint.Align.CENTER
-    canvas.drawText(sumLabelCenter, centerWidth, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("${formatReportNumber(totalPaid)} ر.ي", centerWidth, currentY + 41f, paintSummaryValue)
-
-    // ج. اليسار (المبلغ المتبقي الحالي)
-    paintSummaryLabel.textAlign = Paint.Align.LEFT
-    paintSummaryValue.textAlign = Paint.Align.LEFT
-    canvas.drawText(sumLabelLeft, leftMargin + 20f, currentY + 22f, paintSummaryLabel)
-    canvas.drawText("${formatReportNumber(finalNetBalance)} ر.ي ($netStatus)", leftMargin + 20f, currentY + 41f, paintSummaryValue)
-
-    currentY += 80f
-
-    // 12. إحداثيات الأعمدة لتبدأ عربياً بالكامل (RTL من اليمين لليسار) وتجعل مسلسل مستقلاً
-    val columnsX = listOf(
-        rightMargin,        // مسلسل (أول عمود يمين) - مستقل بفراغ
-        rightMargin - 40f,  // التاريخ
-        rightMargin - 150f, // البيان / التفاصيل
-        rightMargin - 290f, // عليه (دين)
-        rightMargin - 370f, // له (سداد)
-        leftMargin          // المبلغ المتبقي (أول عمود يسار)
-    )
-
-    val headers = listOf("مسلسل", "التاريخ", "البيان / التفاصيل", "عليه (دين)", "له (سداد)", "المبلغ المتبقي")
-    
-    val paintHeader = Paint().apply {
-        color = Color.parseColor(primaryColorHex)
-        textSize = 9f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-    val paintCell = Paint().apply {
-        color = Color.BLACK
-        textSize = 8.5f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    }
-
-    // رسم ترويسة الجدول من اليمين لليسار
-    headers.forEachIndexed { i, headerText ->
-        paintHeader.textAlign = if (i == 5) Paint.Align.LEFT else Paint.Align.RIGHT
-        canvas.drawText(headerText, columnsX[i], currentY, paintHeader)
-    }
-
-    currentY += 12f
-    canvas.drawLine(leftMargin, currentY, rightMargin, currentY, paintLine)
-
-    // رسم فاصل عمودي ناعم جداً لفصل المسلسل كلياً عن الجدول
-    canvas.drawLine(rightMargin - 28f, currentY - 18f, rightMargin - 28f, pageHeight - 60f, paintLine)
-
-    currentY += 20f
-
-    // 13. رسم الخلايا والصفوف بدقة فائقة وبمستطيلات رشيقة ملونة خلف المبالغ لمنع التداخل
-    val paintCellBg = Paint().apply {
-        style = Paint.Style.FILL
-    }
-
-    for (row in processedRows) {
-        if (currentY > pageHeight - 60f) {
-            break 
+        if (isOwed) {
+            runningBalance += tx.amount
+        } else if (isPaid) {
+            runningBalance -= tx.amount
         }
 
-        row.forEachIndexed { i, cellText ->
-            paintCell.textAlign = if (i == 5) Paint.Align.LEFT else Paint.Align.RIGHT
-            
-            // تهيئة الخطوط والألوان والخلفيات الرشيقة للخلايا
-            when (i) {
-                3 -> { // عليه (دين) - مستطيل أحمر ناعم وخفيف جداً خلف المبلغ
-                    if (cellText != "-") {
-                        paintCellBg.color = Color.parseColor("#FFF5F5") // خلفية ناعمة جداً
-                        canvas.drawRoundRect(columnsX[i] - 70f, currentY - 10f, columnsX[i] + 5f, currentY + 4f, 4f, 4f, paintCellBg)
-                        paintCell.color = Color.parseColor("#DC2626")
-                    } else {
-                        paintCell.color = Color.BLACK
-                    }
-                }
-                4 -> { // له (سداد) - مستطيل أخضر ناعم وخفيف جداً خلف المبلغ
-                    if (cellText != "-") {
-                        paintCellBg.color = Color.parseColor("#F0FDF4") // خلفية ناعمة جداً
-                        canvas.drawRoundRect(columnsX[i] - 70f, currentY - 10f, columnsX[i] + 5f, currentY + 4f, 4f, 4f, paintCellBg)
-                        paintCell.color = Color.parseColor("#16A34A")
-                    } else {
-                        paintCell.color = Color.BLACK
-                    }
-                }
-                5 -> { // المبلغ المتبقي (الرصيد التراكمي بدون نصوص زائدة لتفادي التداخل)
-                    paintCell.color = Color.parseColor(primaryColorHex)
-                    paintCell.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                }
-                else -> {
-                    paintCell.color = Color.BLACK
-                    paintCell.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-                }
+        if (currentY > pageHeight - 65f) {
+            val paintFooter = Paint().apply {
+                color = Color.parseColor(textGrayHex)
+                textSize = 8f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+                isAntiAlias = true
             }
-            canvas.drawText(cellText, columnsX[i], currentY, paintCell)
+            activeCanvas.drawText("صفحة $pageNum | كشف حساب آلي معتمد - صادر بواسطة تطبيق ميزان الدار", centerWidth, (pageHeight - 30).toFloat(), paintFooter)
+
+            pdfDocument.finishPage(activePage)
+            
+            pageNum++
+            pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create()
+            activePage = pdfDocument.startPage(pageInfo)
+            activeCanvas = activePage.canvas
+            
+            drawHeaderForPage(activeCanvas, isFirstPage = false, pageNumber = pageNum)
+            
+            currentY = 100f
+            drawTableHeaders(activeCanvas, currentY)
+            currentY += 25f
         }
 
-        currentY += 12f
-        canvas.drawLine(leftMargin, currentY, rightMargin, currentY, paintLine)
-        currentY += 16f
+        drawRow(activeCanvas, currentY, tx, index, runningBalance)
+        currentY += 25f
     }
 
-    // 14. تذييل التقرير
     val paintFooter = Paint().apply {
-        color = Color.GRAY
+        color = Color.parseColor(textGrayHex)
         textSize = 8f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
         textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+        isAntiAlias = true
     }
-    canvas.drawText("كشف حساب آلي معتمد - صادر بواسطة تطبيق ميزان الدار", centerWidth, (pageHeight - 30).toFloat(), paintFooter)
+    activeCanvas.drawText("صفحة $pageNum | كشف حساب آلي معتمد - صادر بواسطة تطبيق ميزان الدار 🌸", centerWidth, (pageHeight - 30).toFloat(), paintFooter)
+    pdfDocument.finishPage(activePage)
 
-    pdfDocument.finishPage(page)
-
-    // 15. ميزة الحفظ التلقائي الآمن الخالي من الانهيار والمطابق لكافة الصلاحيات (في مجلد Downloads الخاص بالتطبيق)
     val fileName = "mizan_report_${System.currentTimeMillis() % 100000}.pdf"
     
     try {
@@ -653,7 +725,7 @@ fun generateGenericPdfReport(
         try {
             val file = File(logoPath)
             if (file.exists()) {
-                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                val bitmap = decodeSampledBitmap(file.absolutePath)
                 if (bitmap != null) {
                     val maxW = 80f
                     val maxH = 55f
@@ -922,5 +994,31 @@ fun generateGenericPdfReport(
     } catch (e: Exception) {
         Toast.makeText(context, context.getString(R.string.pdf_export_failed, e.message), Toast.LENGTH_LONG).show()
         pdfDocument.close()
+    }
+}
+
+private fun decodeSampledBitmap(path: String, reqWidth: Int = 300, reqHeight: Int = 300): Bitmap? {
+    return try {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeFile(path, options)
+        
+        var inSampleSize = 1
+        val (w: Int, h: Int) = options.outWidth to options.outHeight
+        if (h > reqHeight || w > reqWidth) {
+            val halfHeight = h / 2
+            val halfWidth = w / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        
+        options.inJustDecodeBounds = false
+        options.inSampleSize = inSampleSize
+        BitmapFactory.decodeFile(path, options)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

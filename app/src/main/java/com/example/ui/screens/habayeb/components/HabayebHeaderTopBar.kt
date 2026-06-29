@@ -40,11 +40,7 @@ fun HabayebHeaderTopBar(
     onSearchActiveChanged: (Boolean) -> Unit,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
-    isMultiSelectActive: Boolean,
-    selectedCount: Int,
-    onDeleteBulkClick: () -> Unit,
     onMenuClick: () -> Unit,
-    onSelectAllClick: () -> Unit,
     haptic: HapticFeedback,
     netDebt: Double,
     isPrivacyMode: Boolean,
@@ -143,41 +139,22 @@ fun HabayebHeaderTopBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Right/Start Element: Wallet icon button that goes back, or Delete button when multi-selecting
-                if (isMultiSelectActive) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onDeleteBulkClick()
-                        },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(Color.Red.copy(alpha = 0.2f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.habayeb_delete_bulk),
-                            tint = Color.Red,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                } else {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onMenuClick()
-                        },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                // Right/Start Element: Menu icon button
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onMenuClick()
+                    },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = stringResource(id = R.string.ledger_nav_menu_desc),
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
                 // Centered head title
@@ -185,93 +162,64 @@ fun HabayebHeaderTopBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (isMultiSelectActive) {
+                    val titleText = if (netDebt >= 0.0) stringResource(R.string.habayeb_net_total_for_you) else stringResource(R.string.habayeb_net_total_on_you)
+                    val formattedBalanceText = if (isPrivacyMode) {
+                        "*****"
+                    } else {
+                        val sign = if (netDebt < 0.0) "-" else ""
+                        val formatted = String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
+                        "$sign$formatted $currencySymbol"
+                    }
+
+                    Text(
+                        text = titleText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.75f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(
+                            onClick = onTogglePrivacy,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = stringResource(id = R.string.ledger_visibility_desc),
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = stringResource(id = R.string.habayeb_selected_count, selectedCount),
-                            fontSize = 20.sp,
+                            text = formattedBalanceText,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                    } else {
-                        val titleText = if (netDebt >= 0.0) stringResource(R.string.habayeb_net_total_for_you) else stringResource(R.string.habayeb_net_total_on_you)
-                        val formattedBalanceText = if (isPrivacyMode) {
-                            "*****"
-                        } else {
-                            val sign = if (netDebt < 0.0) "-" else ""
-                            val formatted = String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
-                            "$sign$formatted $currencySymbol"
-                        }
-
-                        Text(
-                            text = titleText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White.copy(alpha = 0.75f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            IconButton(
-                                onClick = onTogglePrivacy,
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isPrivacyMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = stringResource(id = R.string.ledger_visibility_desc),
-                                    tint = Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = formattedBalanceText,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
                     }
                 }
 
-                // Left/End Element: Search glass icon, or Check icon when multi-selecting
-                if (isMultiSelectActive) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onSelectAllClick()
-                        },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.25f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(id = R.string.habayeb_select_all),
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                } else {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onSearchActiveChanged(true)
-                        },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.15f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(id = R.string.habayeb_search_label),
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                // Left/End Element: Search glass icon
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSearchActiveChanged(true)
+                    },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(id = R.string.habayeb_search_label),
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

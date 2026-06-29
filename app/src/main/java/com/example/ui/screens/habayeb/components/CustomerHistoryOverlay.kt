@@ -6,9 +6,17 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,11 +32,15 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.*
@@ -40,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -58,11 +71,13 @@ import com.example.data.local.entities.HabayebTransaction
 import com.example.data.serialization.PdfReportGenerator
 import com.example.ui.helper.formatCurrency
 import com.example.ui.helper.getInitialColor
+import com.example.ui.screens.habayeb.utils.HabayebRecurringManager
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun CustomerHistoryOverlay(
     customer: HabayebCustomer,
@@ -135,6 +150,27 @@ fun CustomerHistoryOverlay(
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
     var showAddTransactionDialogFromHistory by remember { mutableStateOf<HabayebCustomer?>(null) }
     var defaultTransactionTypeFromHistory by remember { mutableStateOf("OWED_BY_THEM") }
+
+    var transactionForOptionsDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
+    var transactionForAutoRepeatDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
+
+    var isTxMultiSelectActive by remember { mutableStateOf(false) }
+    val selectedTxIds = remember { mutableStateListOf<String>() }
+    var showDeleteBulkTxConfirmDialog by remember { mutableStateOf(false) }
+
+    var refreshRecurringTrigger by remember { mutableStateOf(0) }
+    val activeRecurringTxIds = remember(activeCustomer.id, refreshRecurringTrigger, allCustomerTxs) {
+        HabayebRecurringManager.getAllConfigs(context)
+            .filter { it.isActive && it.customerId == activeCustomer.id }
+            .map { it.originalTxId }
+            .toSet()
+    }
+
+    LaunchedEffect(activeCustomer.id) {
+        HabayebRecurringManager.checkAndExecuteRecurring(context, viewModel) { count ->
+            Toast.makeText(context, "تم تسجيل عدد $count معاملات مكررة تلقائياً لحساب ${activeCustomer.name} بنجاح! 🌸", Toast.LENGTH_LONG).show()
+        }
+    }
 
     var confirmDeleteCust by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
@@ -669,7 +705,7 @@ fun CustomerHistoryOverlay(
                     ) {
                         Text(
                             text = "التاريخ",
-                            modifier = Modifier.weight(1.0f),
+                            modifier = Modifier.weight(0.8f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -677,7 +713,7 @@ fun CustomerHistoryOverlay(
                         )
                         Text(
                             text = "التفاصيل",
-                            modifier = Modifier.weight(1.4f),
+                            modifier = Modifier.weight(1.6f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -739,111 +775,188 @@ fun CustomerHistoryOverlay(
 
                             val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
                             val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
-                            val rowBgColor = Color.White
+                            val isSelected = selectedTxIds.contains(tx.id)
+                            val rowBgColor = if (isSelected) activeThemeColor.copy(alpha = 0.08f) else Color.White
+                            val borderColor = if (isSelected) activeThemeColor else Color(0xFFE2E8F0)
 
                             // Historical running balance at this exact transaction
                             val currentHistBalance = runningBalances[tx.id] ?: 0.0
                             val formattedHistBal = try { String.format(Locale.ENGLISH, "%,.0f", currentHistBalance) } catch (e: Exception) { currentHistBalance.toString() }
                             val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", tx.amount) } catch (e: Exception) { tx.amount.toString() }
 
+                            val hasActiveRecurring = tx.id in activeRecurringTxIds
+
                             // Clean table-row layout
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .clickable {
-                                        editingTransactionForDialog = tx
-                                        defaultTransactionTypeFromHistory = tx.type
-                                        showAddTransactionDialogFromHistory = activeCustomer
-                                    },
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (isTxMultiSelectActive) {
+                                                if (isSelected) selectedTxIds.remove(tx.id)
+                                                else selectedTxIds.add(tx.id)
+                                                
+                                                if (selectedTxIds.isEmpty()) {
+                                                    isTxMultiSelectActive = false
+                                                }
+                                            } else {
+                                                transactionForOptionsDialog = tx
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!isTxMultiSelectActive) {
+                                                isTxMultiSelectActive = true
+                                                selectedTxIds.add(tx.id)
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            }
+                                        }
+                                    ),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = rowBgColor),
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                border = BorderStroke(1.dp, borderColor),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // 1. Date/Time (Rightmost)
-                                    Column(
-                                        modifier = Modifier.weight(1.0f),
-                                        horizontalAlignment = Alignment.Start
-                                    ) {
-                                        Text(
-                                            text = formattedDate,
-                                            fontSize = 11.sp,
-                                            color = Color(0xFF334155),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = formattedTime,
-                                            fontSize = 10.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-
-                                    // 2. Details (Middle-Right)
-                                    Column(
-                                        modifier = Modifier.weight(1.4f),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        val typeStr = when (tx.type) {
-                                            "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by) // دين عليه
-                                            "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by) // استلام دفعة
-                                            "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to) // دين له
-                                            "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to) // سداد دفعة
-                                            else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
-                                        }
-                                        Text(
-                                            text = typeStr,
-                                            fontSize = 9.sp,
-                                            color = indicatorColor.copy(alpha = 0.8f),
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Text(
-                                            text = tx.description.ifEmpty { "لا يوجد ملاحظات" },
-                                            fontSize = 12.sp,
-                                            color = Color(0xFF1E293B),
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-
-                                    // 3. Amount with colorful indicator arrow (Middle-Left)
+                                Box(modifier = Modifier.fillMaxWidth()) {
                                     Row(
-                                        modifier = Modifier.weight(1.2f),
-                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                                            contentDescription = null,
-                                            tint = indicatorColor,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        // 1. Date/Time (Rightmost)
+                                        Column(
+                                            modifier = Modifier.weight(0.8f),
+                                            horizontalAlignment = Alignment.Start
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            ) {
+                                                Text(
+                                                    text = formattedDate,
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF334155),
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                if (hasActiveRecurring) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(16.dp)
+                                                            .background(activeThemeColor.copy(alpha = 0.12f), CircleShape)
+                                                            .clickable {
+                                                                // Clicking the clock button directly opens scheduler config
+                                                                transactionForAutoRepeatDialog = tx
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Schedule,
+                                                            contentDescription = "تعديل التكرار التلقائي",
+                                                            tint = activeThemeColor,
+                                                            modifier = Modifier.size(10.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Text(
+                                                text = formattedTime,
+                                                fontSize = 10.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+
+                                        // 2. Details (Middle-Right)
+                                        Column(
+                                            modifier = Modifier.weight(1.6f),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            val typeStr = when (tx.type) {
+                                                "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by) // دين عليه
+                                                "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by) // استلام دفعة
+                                                "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to) // دين له
+                                                "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to) // سداد دفعة
+                                                else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
+                                            }
+                                            Text(
+                                                text = typeStr,
+                                                fontSize = 9.sp,
+                                                color = indicatorColor.copy(alpha = 0.8f),
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = tx.description.ifEmpty { "لا يوجد ملاحظات" },
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF1E293B),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        // 3. Amount with colorful indicator arrow (Middle-Left)
+                                        Row(
+                                            modifier = Modifier.weight(1.2f),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                                contentDescription = null,
+                                                tint = indicatorColor,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = formattedAmount,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = indicatorColor
+                                            )
+                                        }
+
+                                        // 4. Running Balance (Leftmost)
                                         Text(
-                                            text = formattedAmount,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = indicatorColor
+                                            text = formattedHistBal,
+                                            modifier = Modifier.weight(1.0f),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF64748B),
+                                            textAlign = TextAlign.Left
                                         )
                                     }
 
-                                    // 4. Running Balance (Leftmost)
-                                    Text(
-                                        text = formattedHistBal,
-                                        modifier = Modifier.weight(1.0f),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (currentHistBalance > 0) Color(0xFFDC2626) else if (currentHistBalance < 0) Color(0xFF16A34A) else Color(0xFF334155),
-                                        textAlign = TextAlign.Left
-                                    )
+                                    // Subtle, elegant corner badge for automatically generated transactions
+                                    if (tx.linkedMainTxId != null) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd) // aligns to top-right corner in RTL (which is physically top-left)
+                                                .background(
+                                                    Color(0xFFEFF6FF),
+                                                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
+                                                )
+                                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Sync,
+                                                    contentDescription = "تلقائي",
+                                                    tint = Color(0xFF2563EB),
+                                                    modifier = Modifier.size(7.dp)
+                                                )
+                                                Text(
+                                                    text = "تلقائي ⚙️",
+                                                    fontSize = 7.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF2563EB)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -851,28 +964,122 @@ fun CustomerHistoryOverlay(
                 }
             }
 
+            // --- Multi-Select Floating Bar ---
+            AnimatedVisibility(
+                visible = isTxMultiSelectActive,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = contentPadding.calculateBottomPadding() + 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp)
+                        .shadow(16.dp, RoundedCornerShape(30.dp), spotColor = Color.Black.copy(alpha = 0.1f))
+                        .background(Color.White, RoundedCornerShape(30.dp))
+                        .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Cancel Button
+                    IconButton(
+                        onClick = {
+                            isTxMultiSelectActive = false
+                            selectedTxIds.clear()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "إلغاء التحديد",
+                            tint = Color(0xFF64748B),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Selection Info & Select All
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable {
+                                val allSelected = displayedTxs.isNotEmpty() && displayedTxs.all { selectedTxIds.contains(it.id) }
+                                if (allSelected) {
+                                    selectedTxIds.clear()
+                                } else {
+                                    displayedTxs.forEach { if (!selectedTxIds.contains(it.id)) selectedTxIds.add(it.id) }
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        val allSelected = displayedTxs.isNotEmpty() && displayedTxs.all { selectedTxIds.contains(it.id) }
+                        Icon(
+                            imageVector = if (allSelected) Icons.Default.Check else Icons.Default.List,
+                            contentDescription = "تحديد الكل",
+                            tint = if (allSelected) activeThemeColor else Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (allSelected) "تم تحديد الكل" else "${selectedTxIds.size} محدد",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF334155)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Delete Button
+                    IconButton(
+                        onClick = {
+                            if (selectedTxIds.isNotEmpty()) {
+                                showDeleteBulkTxConfirmDialog = true
+                            }
+                        },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFFEF2F2), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "حذف المحدد",
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
             // 6. DELUXE PERSISTENT FLOATING ADDING ACTION BUTTON
-            FloatingActionButton(
-                onClick = {
-                    val defaultType = if (netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
-                    onAddTransaction(activeCustomer, defaultType)
-                },
-                containerColor = activeThemeColor,
-                contentColor = Color.White,
+            AnimatedVisibility(
+                visible = !isTxMultiSelectActive,
+                enter = fadeIn(),
+                exit = fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomStart) // BottomStart = Right side in RTL
                     .padding(
                         bottom = contentPadding.calculateBottomPadding() + 16.dp,
                         start = 20.dp
                     )
-                    .size(56.dp),
-                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "إضافة معاملة",
-                    modifier = Modifier.size(28.dp)
-                )
+                FloatingActionButton(
+                    onClick = {
+                        val defaultType = if (netDebt >= 0.0) "OWED_BY_THEM" else "OWED_TO_THEM"
+                        onAddTransaction(activeCustomer, defaultType)
+                    },
+                    containerColor = activeThemeColor,
+                    contentColor = Color.White,
+                    modifier = Modifier.size(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "إضافة معاملة",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }
@@ -890,6 +1097,91 @@ fun CustomerHistoryOverlay(
             },
             activeThemeColor = activeThemeColor,
             activeSubColor = activeSubColor
+        )
+    }
+
+    if (transactionForOptionsDialog != null) {
+        val isRecurringOriginal = transactionForOptionsDialog!!.id in activeRecurringTxIds
+        TransactionOptionsDialog(
+            transaction = transactionForOptionsDialog!!,
+            customerName = activeCustomer.name,
+            onDismiss = { transactionForOptionsDialog = null },
+            onEdit = {
+                editingTransactionForDialog = transactionForOptionsDialog
+                defaultTransactionTypeFromHistory = transactionForOptionsDialog!!.type
+                showAddTransactionDialogFromHistory = activeCustomer
+                transactionForOptionsDialog = null
+            },
+            onDelete = {
+                val txId = transactionForOptionsDialog!!.id
+                viewModel.deleteHabayebTransaction(txId)
+                HabayebRecurringManager.deleteConfigForTransaction(context, txId)
+                Toast.makeText(context, "تم حذف المعاملة ونقلها لسلة المهملات بنجاح 🗑️", Toast.LENGTH_SHORT).show()
+                refreshRecurringTrigger++
+                transactionForOptionsDialog = null
+            },
+            onAutoRepeat = {
+                transactionForAutoRepeatDialog = transactionForOptionsDialog
+                transactionForOptionsDialog = null
+            },
+            activeThemeColor = activeThemeColor,
+            activeSubColor = activeSubColor,
+            isRecurringOriginal = isRecurringOriginal,
+            onDeleteAutoRepeat = {
+                val txId = transactionForOptionsDialog!!.id
+                HabayebRecurringManager.deleteConfigForTransaction(context, txId)
+                Toast.makeText(context, "تم إيقاف وحذف الجدولة التلقائية لهذه المعاملة بنجاح ⚙️", Toast.LENGTH_SHORT).show()
+                refreshRecurringTrigger++
+                transactionForOptionsDialog = null
+            }
+        )
+    }
+
+    if (transactionForAutoRepeatDialog != null) {
+        RecurringTransactionPopup(
+            transaction = transactionForAutoRepeatDialog!!,
+            customerName = activeCustomer.name,
+            onDismiss = { 
+                transactionForAutoRepeatDialog = null 
+                refreshRecurringTrigger++
+            },
+            activeThemeColor = activeThemeColor,
+            activeSubColor = activeSubColor
+        )
+    }
+
+    if (showDeleteBulkTxConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteBulkTxConfirmDialog = false },
+            title = { Text("تأكيد الحذف", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = { Text("هل أنت متأكد أنك تريد حذف ${selectedTxIds.size} معاملات نهائياً؟") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val idsToDelete = selectedTxIds.toList()
+                        idsToDelete.forEach { txId ->
+                            viewModel.deleteHabayebTransaction(txId)
+                            HabayebRecurringManager.deleteConfigForTransaction(context, txId)
+                        }
+                        Toast.makeText(context, "تم حذف المعاملات المحددة بنجاح", Toast.LENGTH_SHORT).show()
+                        selectedTxIds.clear()
+                        isTxMultiSelectActive = false
+                        refreshRecurringTrigger++
+                        showDeleteBulkTxConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("حذف", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteBulkTxConfirmDialog = false }) {
+                    Text(stringResource(id = R.string.habayeb_cancel), color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
         )
     }
 }

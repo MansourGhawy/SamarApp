@@ -292,26 +292,7 @@ fun HabayebScreen(
                             onSearchActiveChanged = { isSearchActive = it },
                             searchQuery = searchQuery,
                             onSearchQueryChanged = { searchQuery = it },
-                            isMultiSelectActive = isMultiSelectActive,
-                            selectedCount = selectedCustomerIds.size,
-                            onDeleteBulkClick = {
-                                showDeleteConfirmDialog = true
-                            },
                             onMenuClick = onMenuClick,
-                            onSelectAllClick = {
-                                val allInListSelected = filteredCustomers.isNotEmpty() &&
-                                        filteredCustomers.all { selectedCustomerIds.contains(it.id) }
-                                if (allInListSelected) {
-                                    selectedCustomerIds.clear()
-                                    isMultiSelectActive = false
-                                } else {
-                                    filteredCustomers.forEach { customer ->
-                                        if (!selectedCustomerIds.contains(customer.id)) {
-                                            selectedCustomerIds.add(customer.id)
-                                        }
-                                    }
-                                }
-                            },
                             haptic = haptic,
                             netDebt = totalOwedByThem - totalOwedToThem,
                             isPrivacyMode = isPrivacyModeState.value,
@@ -448,6 +429,94 @@ fun HabayebScreen(
                     modifier = Modifier.size(28.dp),
                     tint = Color.White
                 )
+            }
+        }
+
+        // --- Multi-Select Floating Bar ---
+        AnimatedVisibility(
+            visible = isMultiSelectActive,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = contentPadding.calculateBottomPadding() + 16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .shadow(16.dp, RoundedCornerShape(30.dp), spotColor = Color.Black.copy(alpha = 0.1f))
+                    .background(Color.White, RoundedCornerShape(30.dp))
+                    .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(30.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Cancel Button
+                IconButton(
+                    onClick = {
+                        isMultiSelectActive = false
+                        selectedCustomerIds.clear()
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "إلغاء التحديد",
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Selection Info & Select All
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable {
+                            val allSelected = filteredCustomers.isNotEmpty() && filteredCustomers.all { selectedCustomerIds.contains(it.id) }
+                            if (allSelected) {
+                                selectedCustomerIds.clear()
+                            } else {
+                                filteredCustomers.forEach { if (!selectedCustomerIds.contains(it.id)) selectedCustomerIds.add(it.id) }
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    val allSelected = filteredCustomers.isNotEmpty() && filteredCustomers.all { selectedCustomerIds.contains(it.id) }
+                    Icon(
+                        imageVector = if (allSelected) Icons.Default.Check else Icons.Default.List,
+                        contentDescription = "تحديد الكل",
+                        tint = if (allSelected) activeThemeColor else Color(0xFF94A3B8),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (allSelected) "تم تحديد الكل" else "${selectedCustomerIds.size} محدد",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF334155)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Delete Button
+                IconButton(
+                    onClick = {
+                        if (selectedCustomerIds.isNotEmpty()) {
+                            showDeleteConfirmDialog = true
+                        }
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color(0xFFFEF2F2), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "حذف المحدد",
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 

@@ -89,9 +89,6 @@ fun CustomerHistoryOverlay(
     currencySymbol: String,
     contentPadding: PaddingValues = PaddingValues()
 ) {
-    // Intercept back presses to dismiss this full-screen overlay beautifully
-    BackHandler(onBack = onDismiss)
-
     val customers by viewModel.habayebCustomersState.collectAsStateWithLifecycle()
     val activeCustomer = customers.find { it.id == customer.id } ?: customer
 
@@ -146,6 +143,12 @@ fun CustomerHistoryOverlay(
         balancesMap
     }
 
+    // Calculate sequential sequence numbers (chronological order)
+    val txSequenceNumbers = remember(allCustomerTxs) {
+        val chronological = allCustomerTxs.sortedBy { it.timestamp }
+        chronological.mapIndexed { idx, tx -> tx.id to (idx + 1) }.toMap()
+    }
+
     // Dialogs States
     var editingTransactionForDialog by remember { mutableStateOf<HabayebTransaction?>(null) }
     var showAddTransactionDialogFromHistory by remember { mutableStateOf<HabayebCustomer?>(null) }
@@ -157,6 +160,18 @@ fun CustomerHistoryOverlay(
     var isTxMultiSelectActive by remember { mutableStateOf(false) }
     val selectedTxIds = remember { mutableStateListOf<String>() }
     var showDeleteBulkTxConfirmDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        if (isTxMultiSelectActive) {
+            isTxMultiSelectActive = false
+            selectedTxIds.clear()
+        } else if (isSearchActive) {
+            isSearchActive = false
+            txSearchQuery = ""
+        } else {
+            onDismiss()
+        }
+    }
 
     var refreshRecurringTrigger by remember { mutableStateOf(0) }
     val activeRecurringTxIds = remember(activeCustomer.id, refreshRecurringTrigger, allCustomerTxs) {
@@ -713,7 +728,7 @@ fun CustomerHistoryOverlay(
                         )
                         Text(
                             text = "التفاصيل",
-                            modifier = Modifier.weight(1.6f),
+                            modifier = Modifier.weight(2.0f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -721,7 +736,7 @@ fun CustomerHistoryOverlay(
                         )
                         Text(
                             text = "المبلغ",
-                            modifier = Modifier.weight(1.2f),
+                            modifier = Modifier.weight(1.0f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -729,7 +744,7 @@ fun CustomerHistoryOverlay(
                         )
                         Text(
                             text = "المتبقي",
-                            modifier = Modifier.weight(1.0f),
+                            modifier = Modifier.weight(0.8f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -785,6 +800,12 @@ fun CustomerHistoryOverlay(
                             val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", tx.amount) } catch (e: Exception) { tx.amount.toString() }
 
                             val hasActiveRecurring = tx.id in activeRecurringTxIds
+                            val txSeqNo = txSequenceNumbers[tx.id] ?: 0
+                            val parentTxSeq = remember(tx.linkedMainTxId, txSequenceNumbers) {
+                                if (tx.linkedMainTxId != null) {
+                                    txSequenceNumbers[tx.linkedMainTxId]
+                                } else null
+                            }
 
                             // Clean table-row layout
                             Card(
@@ -831,8 +852,18 @@ fun CustomerHistoryOverlay(
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
+                                                // Chronological Sequence Badge
+                                                Text(
+                                                    text = "#$txSeqNo",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = activeThemeColor,
+                                                    modifier = Modifier
+                                                        .background(activeThemeColor.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
                                                 Text(
                                                     text = formattedDate,
                                                     fontSize = 11.sp,
@@ -868,7 +899,7 @@ fun CustomerHistoryOverlay(
 
                                         // 2. Details (Middle-Right)
                                         Column(
-                                            modifier = Modifier.weight(1.6f),
+                                            modifier = Modifier.weight(2.0f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             val typeStr = when (tx.type) {
@@ -893,11 +924,44 @@ fun CustomerHistoryOverlay(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            
+                                            // Rich Badges explaining recurring status
+                                            if (hasActiveRecurring) {
+                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(Color(0xFFFEF3C7), RoundedCornerShape(6.dp))
+                                                        .border(0.5.dp, Color(0xFFF59E0B), RoundedCornerShape(6.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "مصدر تكرار مجدول 🔄",
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFFB45309)
+                                                    )
+                                                }
+                                            } else if (tx.linkedMainTxId != null) {
+                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(Color(0xFFEFF6FF), RoundedCornerShape(6.dp))
+                                                        .border(0.5.dp, Color(0xFF3B82F6), RoundedCornerShape(6.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "توليد تلقائي (تابع للمعامله #${parentTxSeq ?: "?"}) ⚙️",
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF1D4ED8)
+                                                    )
+                                                }
+                                            }
                                         }
 
                                         // 3. Amount with colorful indicator arrow (Middle-Left)
                                         Row(
-                                            modifier = Modifier.weight(1.2f),
+                                            modifier = Modifier.weight(1.0f),
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
@@ -919,43 +983,12 @@ fun CustomerHistoryOverlay(
                                         // 4. Running Balance (Leftmost)
                                         Text(
                                             text = formattedHistBal,
-                                            modifier = Modifier.weight(1.0f),
+                                            modifier = Modifier.weight(0.8f),
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF64748B),
                                             textAlign = TextAlign.Left
                                         )
-                                    }
-
-                                    // Subtle, elegant corner badge for automatically generated transactions
-                                    if (tx.linkedMainTxId != null) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd) // aligns to top-right corner in RTL (which is physically top-left)
-                                                .background(
-                                                    Color(0xFFEFF6FF),
-                                                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
-                                                )
-                                                .padding(horizontal = 5.dp, vertical = 2.dp)
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(1.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Sync,
-                                                    contentDescription = "تلقائي",
-                                                    tint = Color(0xFF2563EB),
-                                                    modifier = Modifier.size(7.dp)
-                                                )
-                                                Text(
-                                                    text = "تلقائي ⚙️",
-                                                    fontSize = 7.5.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF2563EB)
-                                                )
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -1102,8 +1135,10 @@ fun CustomerHistoryOverlay(
 
     if (transactionForOptionsDialog != null) {
         val isRecurringOriginal = transactionForOptionsDialog!!.id in activeRecurringTxIds
+        val optTx = transactionForOptionsDialog!!
+        val parentSeq = if (optTx.linkedMainTxId != null) txSequenceNumbers[optTx.linkedMainTxId] else null
         TransactionOptionsDialog(
-            transaction = transactionForOptionsDialog!!,
+            transaction = optTx,
             customerName = activeCustomer.name,
             onDismiss = { transactionForOptionsDialog = null },
             onEdit = {
@@ -1133,7 +1168,8 @@ fun CustomerHistoryOverlay(
                 Toast.makeText(context, "تم إيقاف وحذف الجدولة التلقائية لهذه المعاملة بنجاح ⚙️", Toast.LENGTH_SHORT).show()
                 refreshRecurringTrigger++
                 transactionForOptionsDialog = null
-            }
+            },
+            parentSeqNumber = parentSeq
         )
     }
 

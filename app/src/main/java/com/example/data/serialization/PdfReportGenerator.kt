@@ -18,6 +18,7 @@ import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.data.local.entities.HabayebTransaction
 import org.json.JSONArray
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -53,6 +54,84 @@ object PdfReportGenerator {
         return layout.height
     }
 
+    private fun drawTableHeader(canvas: Canvas, y: Float) {
+        val paintHeaderBg = Paint().apply {
+            color = Color.parseColor("#F9FAFB")
+            style = Paint.Style.FILL
+        }
+        canvas.drawRect(42f, y, 553f, y + 30f, paintHeaderBg)
+
+        // Draw header border lines
+        val paintHeaderBorder = Paint().apply {
+            color = Color.parseColor("#E5E7EB")
+            strokeWidth = 0.5f
+            style = Paint.Style.STROKE
+        }
+        canvas.drawLine(42f, y, 553f, y, paintHeaderBorder)
+        canvas.drawLine(42f, y + 30f, 553f, y + 30f, paintHeaderBorder)
+
+        val paintHeaderText = Paint().apply {
+            color = Color.parseColor("#374151")
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        // 1. [ م ] (التسلسل): X = 523 to 553 (عرض 30)
+        drawArabicText(canvas, "م", 523f, y + 9f, 30, paintHeaderText, Layout.Alignment.ALIGN_CENTER)
+
+        // 2. [ التاريخ ]: X = 433 to 523 (عرض 90)
+        drawArabicText(canvas, "التاريخ", 433f, y + 9f, 90, paintHeaderText, Layout.Alignment.ALIGN_CENTER)
+
+        // 3. [ البيان / التفاصيل ]: X = 242 to 433 (عرض 191)
+        drawArabicText(canvas, "البيان / التفاصيل", 242f, y + 9f, 191, paintHeaderText, Layout.Alignment.ALIGN_NORMAL)
+
+        // 4. [ عليه (دين) ]: X = 177 to 242 (عرض 65)
+        drawArabicText(canvas, "عليه (دين)", 177f, y + 9f, 65, paintHeaderText, Layout.Alignment.ALIGN_CENTER)
+
+        // 5. [ له (سداد) ]: X = 112 to 177 (عرض 65)
+        drawArabicText(canvas, "له (سداد)", 112f, y + 9f, 65, paintHeaderText, Layout.Alignment.ALIGN_CENTER)
+
+        // 6. [ المبلغ المتبقي ]: X = 42 to 112 (عرض 70)
+        drawArabicText(canvas, "المتبقي", 42f, y + 9f, 70, paintHeaderText, Layout.Alignment.ALIGN_CENTER)
+    }
+
+    private fun drawSubsequentPageHeader(canvas: Canvas, customerName: String, primaryColorHex: String) {
+        val paintMiniHeader = Paint().apply {
+            color = Color.parseColor(primaryColorHex)
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val miniHeaderText = "$customerName - كشف حساب مالي"
+        drawArabicText(canvas, miniHeaderText, 42f, 25f, 511, paintMiniHeader, Layout.Alignment.ALIGN_NORMAL)
+
+        val paintMiniLine = Paint().apply {
+            color = Color.parseColor("#E5E7EB")
+            strokeWidth = 0.5f
+            style = Paint.Style.STROKE
+        }
+        canvas.drawLine(42f, 38f, 553f, 38f, paintMiniLine)
+    }
+
+    private fun drawFooter(canvas: Canvas, pageNum: Int, totalPages: Int, primaryColorHex: String, context: Context) {
+        val paintFooterText = Paint().apply {
+            color = Color.parseColor("#9CA3AF")
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+            isAntiAlias = true
+        }
+
+        val footerTextLeft = "صفحة $pageNum من $totalPages"
+        val footerTextRight = "كشف حساب معتمد ومولد آلياً بواسطة تطبيق ميزان الدار"
+
+        // Draw left aligned footer text (page number)
+        drawArabicText(canvas, footerTextLeft, 42f, 800f, 150, paintFooterText, Layout.Alignment.ALIGN_OPPOSITE)
+
+        // Draw right aligned footer text (verification line)
+        drawArabicText(canvas, footerTextRight, 200f, 800f, 353, paintFooterText, Layout.Alignment.ALIGN_NORMAL)
+    }
+
     fun generateAndHandleCustomerPdfReport(
         context: Context,
         customer: HabayebCustomer,
@@ -64,6 +143,17 @@ object PdfReportGenerator {
         val pdfDocument = PdfDocument()
         val pageWidth = 595
         val pageHeight = 842
+
+        val sortedTxs = transactions.sortedBy { it.timestamp }
+        val totalItems = sortedTxs.size
+
+        // Calculate total pages dynamically
+        // Page 1 fits up to 14 rows, subsequent pages fit up to 20 rows
+        val totalPages = if (totalItems <= 14) {
+            1
+        } else {
+            1 + ((totalItems - 14 + 19) / 20)
+        }
 
         var currentPageNumber = 1
         var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
@@ -100,216 +190,311 @@ object PdfReportGenerator {
             try {
                 val logoFile = File(bizLogoPath)
                 if (logoFile.exists()) {
-                    // Safe decoding to avoid OOM for large files (like 6MB or 10MB)
-                    val options = BitmapFactory.Options().apply {
-                        inJustDecodeBounds = true
-                    }
-                    BitmapFactory.decodeFile(logoFile.absolutePath, options)
-                    
-                    // Decode to a max target resolution of 400x400 for high density and crispness
-                    val reqW = 400
-                    val reqH = 400
-                    var inSampleSize = 1
-                    val (w: Int, h: Int) = options.outWidth to options.outHeight
-                    if (h > reqH || w > reqW) {
-                        val halfHeight = h / 2
-                        val halfWidth = w / 2
-                        while (halfHeight / inSampleSize >= reqH && halfWidth / inSampleSize >= reqW) {
-                            inSampleSize *= 2
+                    // Check file size and compress/decode efficiently to avoid OutOfMemoryError
+                    if (logoFile.length() > 1024 * 1024) {
+                        val original = BitmapFactory.decodeFile(logoFile.absolutePath)
+                        if (original != null) {
+                            val stream = ByteArrayOutputStream()
+                            original.compress(Bitmap.CompressFormat.JPEG, 85, stream)
+                            val byteArray = stream.toByteArray()
+                            rawBitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
                         }
+                    } else {
+                        rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath)
                     }
-                    
-                    options.inJustDecodeBounds = false
-                    options.inSampleSize = inSampleSize
-                    rawBitmap = BitmapFactory.decodeFile(logoFile.absolutePath, options)
                     
                     if (rawBitmap != null) {
-                        // Max visual bounds on the PDF canvas inside the header
-                        val maxW = 90f
-                        val maxH = 65f
+                        val maxW = 70f
+                        val maxH = 55f
                         val originalWidth = rawBitmap.width.toFloat()
                         val originalHeight = rawBitmap.height.toFloat()
                         val scale = (maxW / originalWidth).coerceAtMost(maxH / originalHeight)
                         val finalW = (originalWidth * scale).coerceAtLeast(1f)
                         val finalH = (originalHeight * scale).coerceAtLeast(1f)
                         
-                        // Scale with bilinear filtering (filter = true) for gorgeous smooth lines and zero pixelation
                         scaledLogo = Bitmap.createScaledBitmap(rawBitmap, finalW.toInt(), finalH.toInt(), true)
                         
                         logoW = finalW
                         logoH = finalH
                         hasLogo = true
-                        
-                        // Left-aligned inside the header, vertically centered
-                        val logoX = 35f + ((maxW - finalW) / 2f)
-                        val logoY = 35f + ((maxH - finalH) / 2f)
-                        canvas.drawBitmap(scaledLogo, logoX, logoY, null)
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-            } finally {
-                try {
-                    rawBitmap?.recycle()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                try {
-                    scaledLogo?.recycle()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
             }
         }
 
-        val nameY = 40f
-        val descY = 60f
-        val phonesY = 76f
-        val dividerY = 100f
-        val reportStartY = 120f
-
+        // 3. Header Distribution (RTL, from Y = 42 pt to Y = 110 pt)
         val paintBizName = Paint().apply {
-            color = Color.parseColor(primaryColorHex)
+            color = Color.parseColor("#111827")
             textSize = 15f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
         val paintBizDesc = Paint().apply {
-            color = Color.parseColor("#475569")
+            color = Color.parseColor("#4B5563")
             textSize = 10f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
         val paintBizPhones = Paint().apply {
-            color = Color.parseColor("#64748B")
+            color = Color.parseColor("#6B7280")
             textSize = 9f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
 
-        // Determine horizontal bounding box for text to prevent any overlap with the logo on the left
-        val textX = if (hasLogo) 145f else 35f
-        val textWidth = if (hasLogo) 415 else 525
-        val headerAlignment = Layout.Alignment.ALIGN_NORMAL
-
-        drawArabicText(canvas, displayedName, textX, nameY, textWidth, paintBizName, headerAlignment)
-        drawArabicText(canvas, displayedDesc, textX, descY, textWidth, paintBizDesc, headerAlignment)
-
+        // Right Column (Business Info - Right-aligned at X = 553 pt, width = 180)
+        val rightColX = 373f
+        drawArabicText(canvas, displayedName, rightColX, 42f, 180, paintBizName, Layout.Alignment.ALIGN_NORMAL)
+        drawArabicText(canvas, displayedDesc, rightColX, 60f, 180, paintBizDesc, Layout.Alignment.ALIGN_NORMAL)
         val phonesToDraw = if (bizPhones.isNotEmpty()) bizPhones else listOf("هوية بصرية معتمدة")
         val phonesStr = if (bizPhones.isNotEmpty()) "هاتف: " + phonesToDraw.joinToString("  |  ") else phonesToDraw.joinToString("  |  ")
-        drawArabicText(canvas, phonesStr, textX, phonesY, textWidth, paintBizPhones, headerAlignment)
+        drawArabicText(canvas, phonesStr, rightColX, 76f, 180, paintBizPhones, Layout.Alignment.ALIGN_NORMAL)
+
+        // Middle Column (Logo - Centered)
+        if (hasLogo && scaledLogo != null) {
+            val logoX = 297.5f - (logoW / 2f)
+            val logoY = 42f + ((55f - logoH) / 2f)
+            canvas.drawBitmap(scaledLogo, logoX, logoY, null)
+        }
+
+        // Left Column (Documentation Time - Left-aligned at X = 42 pt, width = 180)
+        val dayNameFormatted = SimpleDateFormat("EEEE", Locale("ar")).format(Date())
+        val dateOnlyFormatted = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH).format(Date())
+        val timeFormatted = SimpleDateFormat("hh:mm a", Locale("ar")).format(Date())
+
+        val docDateText = "حرر في: $dayNameFormatted - $dateOnlyFormatted"
+        val docTimeText = "الوقت: $timeFormatted"
+
+        val paintLeft1 = Paint().apply {
+            color = Color.parseColor("#4B5563")
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+        val paintLeft2 = Paint().apply {
+            color = Color.parseColor("#6B7280")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+
+        drawArabicText(canvas, docDateText, 42f, 45f, 180, paintLeft1, Layout.Alignment.ALIGN_OPPOSITE)
+        drawArabicText(canvas, docTimeText, 42f, 62f, 180, paintLeft2, Layout.Alignment.ALIGN_OPPOSITE)
 
         // Divider Line under Header
         val paintDivider = Paint().apply {
-            color = Color.parseColor(primaryColorHex)
+            color = Color.parseColor("#E5E7EB")
             strokeWidth = 1f
             style = Paint.Style.STROKE
         }
-        canvas.drawLine(35f, dividerY, (pageWidth - 35).toFloat(), dividerY, paintDivider)
+        canvas.drawLine(42f, 110f, 553f, 110f, paintDivider)
 
-        // Prepare content paints
+        // 4. Title Area (Y = 140 pt)
         val paintTitle = Paint().apply {
-            color = Color.parseColor(primaryColorHex)
-            textSize = 18f
+            color = Color.parseColor("#111827")
+            textSize = 20f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
-        val paintSectionHeader = Paint().apply {
-            color = Color.parseColor(primaryColorHex)
-            textSize = 13f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
+        drawArabicText(canvas, "كشف حساب: ${customer.name}", 42f, 130f, 511, paintTitle, Layout.Alignment.ALIGN_CENTER)
+
+        // Calculate Totals precisely
+        var totalDebts = 0.0
+        var totalPayments = 0.0
+        for (tx in sortedTxs) {
+            if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
+                totalDebts += tx.amount
+            } else if (tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM") {
+                totalPayments += tx.amount
+            }
         }
-        val paintLabel = Paint().apply {
-            color = Color.BLACK
-            textSize = 11f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
+
+        val currencySymbol = "ريال"
+        val formattedDebts = String.format(Locale.ENGLISH, "%,.2f", totalDebts) + " " + currencySymbol
+        val formattedPayments = String.format(Locale.ENGLISH, "%,.2f", totalPayments) + " " + currencySymbol
+        val formattedNet = String.format(Locale.ENGLISH, "%,.2f", Math.abs(netDebt)) + " " + currencySymbol
+
+        val netStatus = if (netDebt > 0) {
+            "(مطلوب منه)"
+        } else if (netDebt < 0) {
+            "(مطلوب له)"
+        } else {
+            "(متعادل)"
         }
-        val paintValue = Paint().apply {
-            color = Color.parseColor(primaryColorHex)
-            textSize = 11f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        val paintMetadata = Paint().apply {
-            color = Color.GRAY
-            textSize = 9f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
-        }
-        val paintBoxFill = Paint().apply {
-            color = Color.parseColor("#F8F9FA")
+
+        // Summary Cards (Y = 180 pt to Y = 230 pt)
+        val paintCardBg = Paint().apply {
+            color = Color.parseColor("#FBFBFB")
             style = Paint.Style.FILL
         }
-        val paintBorder = Paint().apply {
-            color = Color.parseColor("#E9ECEF")
+        val paintCardBorder = Paint().apply {
+            color = Color.parseColor("#E5E7EB")
+            strokeWidth = 0.75f
             style = Paint.Style.STROKE
-            strokeWidth = 1f
         }
-        val paintFooter = Paint().apply {
-            color = Color.GRAY
-            textSize = 9f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+
+        canvas.drawRoundRect(396f, 180f, 553f, 230f, 6f, 6f, paintCardBg)
+        canvas.drawRoundRect(396f, 180f, 553f, 230f, 6f, 6f, paintCardBorder)
+
+        canvas.drawRoundRect(219f, 180f, 376f, 230f, 6f, 6f, paintCardBg)
+        canvas.drawRoundRect(219f, 180f, 376f, 230f, 6f, 6f, paintCardBorder)
+
+        canvas.drawRoundRect(42f, 180f, 199f, 230f, 6f, 6f, paintCardBg)
+        canvas.drawRoundRect(42f, 180f, 199f, 230f, 6f, 6f, paintCardBorder)
+
+        val paintCardLabel = Paint().apply {
+            color = Color.parseColor("#6B7280")
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+        val paintCardVal = Paint().apply {
+            color = Color.parseColor("#111827")
+            textSize = 12f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintCardValNet = Paint().apply {
+            color = Color.parseColor("#1E3A8A") // Dark Blue/Navy
+            textSize = 11f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
 
-        fun finishCurrentPage(p: PdfDocument.Page, c: Canvas) {
-            drawArabicText(c, context.getString(R.string.habayeb_pdf_footer), 35f, (pageHeight - 35).toFloat(), 525, paintFooter, Layout.Alignment.ALIGN_CENTER)
-            pdfDocument.finishPage(p)
+        // Card 1 (Right):
+        drawArabicText(canvas, "إجمالي ما عليه", 396f, 188f, 157, paintCardLabel, Layout.Alignment.ALIGN_CENTER)
+        drawArabicText(canvas, formattedDebts, 396f, 207f, 157, paintCardVal, Layout.Alignment.ALIGN_CENTER)
+
+        // Card 2 (Middle):
+        drawArabicText(canvas, "إجمالي ما له", 219f, 188f, 157, paintCardLabel, Layout.Alignment.ALIGN_CENTER)
+        drawArabicText(canvas, formattedPayments, 219f, 207f, 157, paintCardVal, Layout.Alignment.ALIGN_CENTER)
+
+        // Card 3 (Left):
+        drawArabicText(canvas, "صافي المتبقي", 42f, 188f, 157, paintCardLabel, Layout.Alignment.ALIGN_CENTER)
+        val netText = "$formattedNet $netStatus"
+        drawArabicText(canvas, netText, 42f, 207f, 157, paintCardValNet, Layout.Alignment.ALIGN_CENTER)
+
+        // 5. Dynamic Table starts at Y = 250 pt
+        drawTableHeader(canvas, 250f)
+
+        val paintCellNormal = Paint().apply {
+            color = Color.parseColor("#374151")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+        val paintCellBold = Paint().apply {
+            color = Color.parseColor("#111827")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintEmptyDash = Paint().apply {
+            color = Color.parseColor("#9CA3AF")
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
         }
 
-        var currentY = reportStartY
-
-        // Draw Report Main Title
-        drawArabicText(canvas, context.getString(R.string.habayeb_pdf_title), 35f, currentY, 525, paintTitle, Layout.Alignment.ALIGN_CENTER)
-        currentY += 28f
-
-        // Metadata
-        val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ENGLISH)
-        val dateString = format.format(Date())
-        
-        val nameText = context.getString(R.string.habayeb_pdf_client_name, customer.name)
-        drawArabicText(canvas, nameText, 35f, currentY, 525, paintMetadata, Layout.Alignment.ALIGN_NORMAL)
-        currentY += 14f
-        
-        val phoneText = context.getString(R.string.habayeb_pdf_phone, customer.phone.ifEmpty { context.getString(R.string.habayeb_no_phone) })
-        drawArabicText(canvas, phoneText, 35f, currentY, 525, paintMetadata, Layout.Alignment.ALIGN_NORMAL)
-        currentY += 14f
-        
-        val dateText = context.getString(R.string.habayeb_pdf_date, dateString)
-        drawArabicText(canvas, dateText, 35f, currentY, 525, paintMetadata, Layout.Alignment.ALIGN_NORMAL)
-        currentY += 22f
-
-        // Net value header card
-        canvas.drawRoundRect(35f, currentY - 10f, (pageWidth - 35).toFloat(), currentY + 26f, 8f, 8f, paintBoxFill)
-        canvas.drawRoundRect(35f, currentY - 10f, (pageWidth - 35).toFloat(), currentY + 26f, 8f, 8f, paintBorder)
-
-        val balanceLabel = if (netDebt > 0) {
-            context.getString(R.string.habayeb_pdf_balance_owed_by)
-        } else if (netDebt < 0) {
-            context.getString(R.string.habayeb_pdf_balance_owed_to)
-        } else {
-            context.getString(R.string.habayeb_pdf_balance_balanced)
+        // Paints for rounded boxes in cells
+        val paintOwedBg = Paint().apply {
+            color = Color.parseColor("#FEF2F2")
+            style = Paint.Style.FILL
+        }
+        val paintOwedText = Paint().apply {
+            color = Color.parseColor("#B91C1C")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
         }
 
-        val formattedNetDebt = String.format(Locale.ENGLISH, "%,.2f", Math.abs(netDebt))
-        val balanceVal = context.getString(R.string.habayeb_pdf_balance_val, formattedNetDebt)
+        val paintPaymentBg = Paint().apply {
+            color = Color.parseColor("#F0FDF4")
+            style = Paint.Style.FILL
+        }
+        val paintPaymentText = Paint().apply {
+            color = Color.parseColor("#156534")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
 
-        paintLabel.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        drawArabicText(canvas, balanceLabel, 50f, currentY + 2f, 495, paintLabel, Layout.Alignment.ALIGN_NORMAL)
+        val paintDayText = Paint().apply {
+            color = Color.parseColor("#4B5563")
+            textSize = 8f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+        val paintDateText = Paint().apply {
+            color = Color.parseColor("#111827")
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
 
-        paintValue.color = if (netDebt >= 0) Color.parseColor("#10B981") else Color.parseColor("#EF4444")
-        drawArabicText(canvas, balanceVal, 50f, currentY + 2f, 495, paintValue, Layout.Alignment.ALIGN_OPPOSITE)
+        val textPaintDesc = TextPaint(paintCellNormal)
 
-        currentY += 45f
+        var currentY = 280f
+        var runningBal = 0.0
+        val rowHeight = 35f
 
-        // Transactions list header
-        drawArabicText(canvas, context.getString(R.string.habayeb_pdf_history_title), 35f, currentY, 525, paintSectionHeader, Layout.Alignment.ALIGN_NORMAL)
-        currentY += 22f
+        for ((index, tx) in sortedTxs.withIndex()) {
+            if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
+                runningBal += tx.amount
+            } else {
+                runningBal -= tx.amount
+            }
 
-        // Loop transactions
-        for (tx in transactions) {
+            // check page limit (780f maximum for rows)
+            if (currentY + rowHeight > 780f) {
+                // Finish current page
+                drawFooter(canvas, currentPageNumber, totalPages, primaryColorHex, context)
+                pdfDocument.finishPage(page)
+
+                // Start new page
+                currentPageNumber++
+                pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
+                page = pdfDocument.startPage(pageInfo)
+                canvas = page.canvas
+
+                // Draw subtle header on subsequent page
+                drawSubsequentPageHeader(canvas, customer.name, primaryColorHex)
+
+                // Draw table header at Y = 60f
+                currentY = 60f
+                drawTableHeader(canvas, currentY)
+                currentY += 30f
+            }
+
+            // Row background and line decoration (Faint row divider)
+            val paintRowDivider = Paint().apply {
+                color = Color.parseColor("#F3F4F6")
+                strokeWidth = 0.5f
+                style = Paint.Style.STROKE
+            }
+            canvas.drawLine(42f, currentY + rowHeight, 553f, currentY + rowHeight, paintRowDivider)
+
+            // Draw index + 1 as sequence [م]
+            val seqNo = (index + 1).toString()
+            drawArabicText(canvas, seqNo, 523f, currentY + 11f, 30, paintCellNormal, Layout.Alignment.ALIGN_CENTER)
+
+            // Draw Day & Date
+            val dayName = try {
+                SimpleDateFormat("EEEE", Locale("ar")).format(Date(tx.timestamp * 1000))
+            } catch (e: Exception) {
+                ""
+            }
+            val formattedDate = try {
+                SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH).format(Date(tx.timestamp * 1000))
+            } catch (e: Exception) {
+                ""
+            }
+            drawArabicText(canvas, dayName, 433f, currentY + 6f, 90, paintDayText, Layout.Alignment.ALIGN_CENTER)
+            drawArabicText(canvas, formattedDate, 433f, currentY + 19f, 90, paintDateText, Layout.Alignment.ALIGN_CENTER)
+
+            // Draw Description (RTL layout wrapper)
             val txTypeStr = when (tx.type) {
                 "OWED_BY_THEM" -> context.getString(R.string.habayeb_pdf_tx_owed_by)
                 "PAYMENT_BY_THEM" -> context.getString(R.string.habayeb_pdf_tx_payment_by)
@@ -317,111 +502,74 @@ object PdfReportGenerator {
                 "PAYMENT_TO_THEM" -> context.getString(R.string.habayeb_pdf_tx_payment_to)
                 else -> context.getString(R.string.habayeb_pdf_tx_generic)
             }
-
-            val formattedDate = try {
-                val sDate = Date(tx.timestamp * 1000)
-                val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
-                sdf.format(sDate)
-            } catch(e: Exception) {
-                ""
-            }
-
-            val txDesc = if (tx.description.isNotEmpty()) " - ${tx.description}" else ""
-            val txLabel = "$txTypeStr$txDesc [$formattedDate]"
-            val formattedAmount = String.format(Locale.ENGLISH, "%,.2f", tx.amount)
-            val txValue = context.getString(R.string.habayeb_pdf_val_format, formattedAmount)
-
-            paintLabel.textSize = 10f
-            paintLabel.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-
-            paintValue.textSize = 10f
-            paintValue.color = Color.parseColor("#34495E")
-
-            // Multi-page page checking and column drawing
-            // 1. First, measure description text height and amount text height (width of desc = 350, amount = 135)
-            val textPaintDesc = TextPaint(paintLabel)
+            val txLabel = if (tx.description.isNotEmpty()) "$txTypeStr - ${tx.description}" else txTypeStr
+            
             val layoutDesc = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                StaticLayout.Builder.obtain(txLabel, 0, txLabel.length, textPaintDesc, 350)
+                StaticLayout.Builder.obtain(txLabel, 0, txLabel.length, textPaintDesc, 191)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setLineSpacing(0f, 1f)
                     .setIncludePad(false)
                     .build()
             } else {
                 @Suppress("DEPRECATION")
-                StaticLayout(txLabel, textPaintDesc, 350, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
+                StaticLayout(txLabel, textPaintDesc, 191, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
             }
-            val descHeight = layoutDesc.height
-
-            val textPaintVal = TextPaint(paintValue)
-            val layoutVal = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                StaticLayout.Builder.obtain(txValue, 0, txValue.length, textPaintVal, 135)
-                    .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
-                    .setLineSpacing(0f, 1f)
-                    .setIncludePad(false)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                StaticLayout(txValue, textPaintVal, 135, Layout.Alignment.ALIGN_OPPOSITE, 1f, 0f, false)
-            }
-            val valHeight = layoutVal.height
-
-            val maxHeight = Math.max(descHeight, valHeight)
-            val cardHeight = maxHeight + 16f // 8f padding top and 8f padding bottom
-
-            // Check if this card fits on the page (currentY + cardHeight > pageHeight - 80f)
-            if (currentY + cardHeight > pageHeight - 80f) {
-                // Finish current page and create new page!
-                finishCurrentPage(page, canvas)
-                
-                currentPageNumber++
-                pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
-                page = pdfDocument.startPage(pageInfo)
-                canvas = page.canvas
-                
-                currentY = 80f
-                
-                // Redraw subtle mini header on the new page
-                val paintMiniHeader = Paint().apply {
-                    color = Color.parseColor(primaryColorHex)
-                    textSize = 10f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    isAntiAlias = true
-                }
-                val miniHeaderText = customer.name + " - " + context.getString(R.string.habayeb_pdf_title)
-                drawArabicText(canvas, miniHeaderText, 35f, 45f, 525, paintMiniHeader, Layout.Alignment.ALIGN_NORMAL)
-                
-                val paintMiniLine = Paint().apply {
-                    strokeWidth = 0.5f
-                    style = Paint.Style.STROKE
-                }
-                paintMiniLine.color = Color.parseColor(primaryColorHex)
-                paintMiniLine.alpha = 80
-                canvas.drawLine(35f, 60f, (pageWidth - 35).toFloat(), 60f, paintMiniLine)
-            }
-
-            // Draw card background with dynamic height
-            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY - 8f + cardHeight, 6f, 6f, paintBoxFill)
-            canvas.drawRoundRect(35f, currentY - 8f, (pageWidth - 35).toFloat(), currentY - 8f + cardHeight, 6f, 6f, paintBorder)
-
-            // Draw description text at X = 50f
+            val descYOffset = (rowHeight - layoutDesc.height) / 2f
             canvas.save()
-            canvas.translate(50f, currentY)
+            canvas.translate(242f, currentY + descYOffset)
             layoutDesc.draw(canvas)
             canvas.restore()
 
-            // Draw amount text at X = 410f
-            canvas.save()
-            canvas.translate(410f, currentY)
-            layoutVal.draw(canvas)
-            canvas.restore()
+            // Draw Owed or Payment values
+            val formattedAmount = String.format(Locale.ENGLISH, "%,.2f", tx.amount)
+            if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
+                // Owed cell (Red tint badge)
+                val badgeLeft = 182f
+                val badgeTop = currentY + 8.5f
+                val badgeRight = 237f
+                val badgeBottom = currentY + 26.5f
+                canvas.drawRoundRect(badgeLeft, badgeTop, badgeRight, badgeBottom, 4f, 4f, paintOwedBg)
+                drawArabicText(canvas, formattedAmount, 182f, currentY + 11f, 55, paintOwedText, Layout.Alignment.ALIGN_CENTER)
 
-            currentY += cardHeight + 8f // step to next item with an 8f margin
+                // Payment empty cell
+                drawArabicText(canvas, "-", 112f, currentY + 11f, 65, paintEmptyDash, Layout.Alignment.ALIGN_CENTER)
+            } else {
+                // Owed empty cell
+                drawArabicText(canvas, "-", 177f, currentY + 11f, 65, paintEmptyDash, Layout.Alignment.ALIGN_CENTER)
+
+                // Payment cell (Green tint badge)
+                val badgeLeft = 117f
+                val badgeTop = currentY + 8.5f
+                val badgeRight = 172f
+                val badgeBottom = currentY + 26.5f
+                canvas.drawRoundRect(badgeLeft, badgeTop, badgeRight, badgeBottom, 4f, 4f, paintPaymentBg)
+                drawArabicText(canvas, formattedAmount, 117f, currentY + 11f, 55, paintPaymentText, Layout.Alignment.ALIGN_CENTER)
+            }
+
+            // Draw Running Balance
+            val formattedRunning = String.format(Locale.ENGLISH, "%,.2f", runningBal)
+            drawArabicText(canvas, formattedRunning, 42f, currentY + 11f, 70, paintCellBold, Layout.Alignment.ALIGN_CENTER)
+
+            currentY += rowHeight
         }
 
-        // Finish the last page
-        finishCurrentPage(page, canvas)
+        // Draw final page footer and finish page
+        drawFooter(canvas, currentPageNumber, totalPages, primaryColorHex, context)
+        pdfDocument.finishPage(page)
 
-        // Save and Share or View
+        // Recycle bitmaps safely
+        try {
+            rawBitmap?.recycle()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            scaledLogo?.recycle()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Save and share or view the report file
         val fileName = "habayeb_${customer.name}_${System.currentTimeMillis() % 100000}.pdf"
         val file = File(context.cacheDir, fileName)
         try {

@@ -43,13 +43,14 @@ fun TransactionOptionsDialog(
     activeThemeColor: Color,
     activeSubColor: Color,
     isRecurringOriginal: Boolean = false,
-    onDeleteAutoRepeat: (() -> Unit)? = null
+    onDeleteAutoRepeat: (() -> Unit)? = null,
+    parentSeqNumber: Int? = null
 ) {
     Dialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Surface(
                 modifier = Modifier
-                    .wrapContentWidth()
+                    .fillMaxWidth(0.95f)
                     .wrapContentHeight(),
                 shape = RoundedCornerShape(24.dp),
                 color = Color.White,
@@ -60,7 +61,7 @@ fun TransactionOptionsDialog(
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Ultra-compact details tag
                     Row(
@@ -89,11 +90,68 @@ fun TransactionOptionsDialog(
                         val isPositive = transaction.type == "PAYMENT_BY_THEM" || transaction.type == "OWED_TO_THEM"
                         val amountColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
                         Text(
-                            text = "$formattedAmount د.أ",
+                            text = "$formattedAmount ريال",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
                             color = amountColor
                         )
+                    }
+
+                    // Warning / Status Banner for Recurring Relationships
+                    if (isRecurringOriginal) {
+                        Surface(
+                            color = Color(0xFFFEF3C7),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = null,
+                                    tint = Color(0xFFB45309),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "🔄 هذه المعاملة هي مصدر مجدول لتكرار العمليات تلقائياً. أي تعديل أو حذف قد يؤثر على تكرار العمليات.",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF92400E),
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    } else if (parentSeqNumber != null) {
+                        Surface(
+                            color = Color(0xFFEFF6FF),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1D4ED8),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "⚙️ تم إنشاء هذه المعاملة تلقائياً تكراراً للمعامله الأصلية رقم #$parentSeqNumber.",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF1E40AF),
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
                     }
 
                     // Compact Actions Grid/Row

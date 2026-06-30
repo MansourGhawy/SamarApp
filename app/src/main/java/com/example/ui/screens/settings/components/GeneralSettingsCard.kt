@@ -20,7 +20,8 @@ fun GeneralSettingsCard(
     onCurrencySymbolChange: (String) -> Unit
 ) {
     ElevatedCard(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

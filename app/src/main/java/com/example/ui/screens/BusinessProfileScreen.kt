@@ -188,22 +188,23 @@ fun BusinessProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Section 1: Logo Picker & Edit
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -212,11 +213,11 @@ fun BusinessProfileScreen(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1E293B)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(70.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFF1F5F9))
                             .border(2.dp, activeThemeColor.copy(alpha = 0.3f), CircleShape)
@@ -241,17 +242,10 @@ fun BusinessProfileScreen(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.People,
+                                    imageVector = Icons.Default.AddPhotoAlternate,
                                     contentDescription = null,
                                     tint = activeThemeColor,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(id = R.string.biz_add_logo),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = activeThemeColor
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -263,8 +257,8 @@ fun BusinessProfileScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(24.dp)
+                                    .padding(2.dp)
+                                    .size(22.dp)
                                     .clip(CircleShape)
                                     .background(activeThemeColor),
                                 contentAlignment = Alignment.Center
@@ -286,8 +280,8 @@ fun BusinessProfileScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(24.dp)
+                                        .padding(2.dp)
+                                        .size(22.dp)
                                         .clip(CircleShape)
                                         .background(Color(0xFFEF4444))
                                         .clickable {
@@ -306,30 +300,21 @@ fun BusinessProfileScreen(
                             }
                         }
                     }
-
-                    if (logoBitmapState != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(id = R.string.biz_logo_tip),
-                            fontSize = 11.sp,
-                            color = Color(0xFF64748B)
-                        )
-                    }
                 }
             }
 
             // Section 2: Business Profile Information Form
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = stringResource(id = R.string.biz_details_section),
@@ -365,7 +350,9 @@ fun BusinessProfileScreen(
                         onValueChange = { bizDesc = it },
                         label = { Text(text = stringResource(id = R.string.biz_label_desc), fontSize = 13.sp) },
                         placeholder = { Text(text = stringResource(id = R.string.biz_placeholder_desc), fontSize = 13.sp) },
-                        singleLine = true,
+                        singleLine = false,
+                        minLines = 1,
+                        maxLines = 5,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -375,8 +362,7 @@ fun BusinessProfileScreen(
                             focusedLabelColor = activeThemeColor,
                             cursorColor = activeThemeColor
                         ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                         textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right)
                     )
                 }
@@ -385,49 +371,23 @@ fun BusinessProfileScreen(
             // Section 3: Dynamic Phones List
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.biz_phones_section),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E293B),
-                            modifier = Modifier.testTag("biz_phones_section")
-                        )
-                        
-                        if (phoneList.size < 3) {
-                            TextButton(
-                                onClick = { phoneList.add("") },
-                                colors = ButtonDefaults.textButtonColors(contentColor = activeThemeColor),
-                                modifier = Modifier.testTag("biz_add_phone_button")
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Text(
-                                        text = stringResource(id = R.string.biz_btn_add_phone),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        text = stringResource(id = R.string.biz_phones_section),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B),
+                        modifier = Modifier.testTag("biz_phones_section")
+                    )
 
                     phoneList.forEachIndexed { index, phone ->
                         Row(
@@ -470,6 +430,18 @@ fun BusinessProfileScreen(
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = stringResource(id = R.string.biz_desc_delete_phone)
+                                    )
+                                }
+                            }
+                            
+                            if (index == phoneList.lastIndex && phoneList.size < 3) {
+                                IconButton(
+                                    onClick = { phoneList.add("") },
+                                    colors = IconButtonDefaults.iconButtonColors(contentColor = activeThemeColor)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AddCircleOutline,
+                                        contentDescription = stringResource(id = R.string.biz_btn_add_phone)
                                     )
                                 }
                             }
@@ -558,8 +530,9 @@ fun BusinessProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),

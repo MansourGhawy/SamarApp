@@ -527,6 +527,12 @@ fun HabayebScreen(
             AddCustomerPopup(
                 viewModel = viewModel,
                 onDismiss = { showAddCustomerDialog = false },
+                onCustomerAdded = {
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(200)
+                        listState.animateScrollToItem(0)
+                    }
+                },
                 activeThemeColor = activeThemeColor,
                 activeSubColor = activeSubColor
             )

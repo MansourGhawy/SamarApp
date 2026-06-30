@@ -84,6 +84,7 @@ import java.util.UUID
 fun AddCustomerPopup(
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
+    onCustomerAdded: () -> Unit = {},
     activeThemeColor: Color,
     activeSubColor: Color
 ) {
@@ -520,6 +521,7 @@ fun AddCustomerPopup(
                                             viewModel.saveHabayebCustomer(newCustomer, initialAmount, initialType, transactionTimestamp, notesStr.trim())
                                             Toast.makeText(context, context.getString(R.string.habayeb_toast_save_success), Toast.LENGTH_SHORT).show()
                                             showConfirmPopup = false
+                                            onCustomerAdded()
                                             onDismiss()
                                         } else {
                                             focusManager.clearFocus()
@@ -573,6 +575,7 @@ fun AddCustomerPopup(
                                         viewModel.saveHabayebCustomer(newCustomer, initialAmount, initialType, transactionTimestamp, notesStr.trim())
                                         Toast.makeText(context, context.getString(R.string.habayeb_toast_save_success), Toast.LENGTH_SHORT).show()
                                         showConfirmPopup = false
+                                        onCustomerAdded()
                                         onDismiss()
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),

@@ -90,19 +90,9 @@ fun AppNavigationDrawer(
                 
                 Text(
                     text = stringResource(id = R.string.app_name_main),
-                    fontSize = 20.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = stringResource(id = R.string.app_slogan),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center
                 )
             }
         }

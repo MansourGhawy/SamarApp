@@ -77,12 +77,12 @@ fun CustomerItemRow(
     }
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(18.dp),
         border = null,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) activeSubColor.copy(alpha = 0.15f) else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 200))

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ميزان الدار</string>
+    <string name="app_name">الخزينة</string>
     
     <!-- Security / App Lock Screen (شاشة قفل التطبيق) -->
     <string name="lock_recovery_title">استرداد التطبيق المغلق 🔓</string>
@@ -34,8 +34,8 @@
     <string name="trash_empty">السلة فارغة</string>
 
     <!-- Drawer & Navigation (الدرج والقوائم) -->
-    <string name="app_name_main">ميزان الدار</string>
-    <string name="app_slogan">ميزان الدار.. راحة واستقرار</string>
+    <string name="app_name_main">الخزينة</string>
+    <string name="app_slogan">التحكم الذكي بالإيرادات والصرفيات</string>
     <string name="drawer_security_label">الامان وقفل التطبيق</string>
     <string name="drawer_reports_label">التقارير</string>
     <string name="drawer_trash_label">سلة المحذوفات</string>
@@ -43,7 +43,7 @@
     <string name="drawer_business_profile_label">بيانات النشاط التجاري</string>
     <string name="drawer_app_version">الإصدار v%s</string>
     <string name="nav_habayeb_label">🤝 حسابات حبايب</string>
-    <string name="nav_ledger_label">⚖️ ميزان الدار</string>
+    <string name="nav_ledger_label">⚖️ الخزينة</string>
     <string name="nav_makhzan_label">📦 المخزن الذكي</string>
 
     <!-- Second Batch: Toast & Dialog Strings -->
@@ -58,7 +58,7 @@
     <string name="dialog_exit_dont_show_again">عدم إظهار هذه الرسالة مجدداً</string>
     <string name="common_cancel">إلغاء</string>
     <string name="developer_credit">تصميم وتطوير م/ منصور قطينه للبرمجيات</string>
-    <string name="whatsapp_contact_msg">مرحباً م/ منصور قطينه، أود التواصل بخصوص تطبيق ميزان الدار</string>
+    <string name="whatsapp_contact_msg">مرحباً م/ منصور قطينه، أود التواصل بخصوص تطبيق الخزينة</string>
     <string name="support_phone_number">+967774004399</string>
 
     <!-- Calculator Dialog (الآلة الحاسبة) -->
@@ -71,9 +71,9 @@
     <string name="calc_confirm_transfer">تأكيد الترحيل وحفظ الناتج 📥</string>
 
     <!-- Onboarding / Welcome Screens (جولات الترحيب) -->
-    <string name="onboarding_slogan">🏠 ميزان الدار.. أمانٌ، وراحةٌ واستقرار</string>
-    <string name="onboarding_mizan_title">ميزان الدار:</string>
-    <string name="onboarding_mizan_desc">رفيقك الذكي لإدارة ميزانيتك، مصروفاتك، وإيراداتك اليومية لبيتٍ مبروك.</string>
+    <string name="onboarding_slogan">🏠 الخزينة.. تحكم كامل بالإيرادات والمصروفات</string>
+    <string name="onboarding_mizan_title">الخزينة:</string>
+    <string name="onboarding_mizan_desc">رفيقك الذكي لإدارة ميزانيتك، مصروفاتك، وإيراداتك اليومية بدقة فائقة.</string>
     <string name="onboarding_habayeb_title">حسابات حبايب:</string>
     <string name="onboarding_habayeb_desc">تتبع مستحقاتك والتزاماتك المالية مع الزبائن، الموردين، والأصدقاء بكل سهولة وثقة.</string>
     <string name="onboarding_makhzan_title">المخزن الذكي:</string>
@@ -199,7 +199,7 @@
     <string name="habayeb_pdf_tx_generic">حركة مالية</string>
     <string name="habayeb_pdf_tx_format">%1$s - %2$s [%3$s]</string>
     <string name="habayeb_pdf_val_format">%s ريال</string>
-    <string name="habayeb_pdf_footer">ميزان الدار - مستند مالي معتمد وآمن تم إنشاؤه تلقائياً 🌸</string>
+    <string name="habayeb_pdf_footer">الخزينة - مستند مالي معتمد وآمن تم إنشاؤه تلقائياً 🌸</string>
     <string name="toast_delete_success">تم الحذف بنجاح</string>
     <string name="toast_delete_failed">فشل الحذف</string>
 
@@ -219,7 +219,7 @@
     <string name="toast_license_copied">تم نسخ رمز الجهاز للمقطع 📋</string>
     <string name="licensing_copy_desc">نسخ</string>
     <string name="licensing_device_id_label">رمز جهازك الفني</string>
-    <string name="licensing_whatsapp_msg_template">مرحباً م/ منصور قطينه، أود تفعيل النسخة الكاملة لتطبيق ميزان الدار. رمز جهازي الفني هو: %s</string>
+    <string name="licensing_whatsapp_msg_template">مرحباً م/ منصور قطينه، أود تفعيل النسخة الكاملة لتطبيق الخزينة. رمز جهازي الفني هو: %s</string>
     <string name="licensing_contact_dev">💬 تواصل مع المطور عبر واتساب</string>
     <string name="licensing_enter_code_label">أدخل كود التفعيل المزدوج</string>
     <string name="licensing_code_placeholder">ACT-T-XXXXXXXX أو ACT-P-XXXXXXXX</string>
@@ -339,7 +339,7 @@
     <string name="makhzan_movements_count_pattern">%s حركة</string>
     
     <!-- Section 9: Main Ledger View (شاشة دفتر الأستاذ) -->
-    <string name="ledger_title">ميزان الدار</string>
+    <string name="ledger_title">الخزينة</string>
     <string name="ledger_subtitle">صمام أمان التدبير المالي</string>
     <string name="ledger_actual_cash">المبلغ المتاح الفعلي</string>
     <string name="ledger_visibility_desc">عرض المبالغ</string>
@@ -347,7 +347,7 @@
     <string name="ledger_commitments_ratio">نسبة تغطية الالتزامات</string>
     <string name="ledger_net_prefix">الصافي:</string>
     <string name="ledger_remaining_commitments">باقي الالتزامات:</string>
-    <string name="ledger_empty_state_msg">السجل المالي فارغ حالياً!\nقم بتسجيل الإيرادات والمصروفات لتتبع ميزانيتك.</string>
+    <string name="ledger_empty_state_msg">سجل الخزينة فارغ حالياً!\nقم بتسجيل الإيرادات والمصروفات لتتبع ميزانيتك.</string>
     <string name="ledger_daily_record">السجل اليومي 📖</string>
     <string name="ledger_monthly_record">حركات شهر:</string>
     <string name="ledger_details_label">التفاصيل</string>
@@ -425,10 +425,10 @@
     <!-- Section 8: Reports Screen Localization (شاشة التقارير) -->
     <string name="reports_main_title">السجلات والتقارير الشاملة 📈</string>
     <string name="reports_live_data">بيانات حية ⚡</string>
-    <string name="reports_mizan_subtitle">تحليل مصروفات وإيرادات الدار</string>
+    <string name="reports_mizan_subtitle">تحليل الإيرادات والمصروفات</string>
     <string name="reports_habayeb_subtitle">أوضاع الأرباح والديون الجارية</string>
     <string name="reports_makhzan_subtitle">جرد القيمة الرأسمالية وموجودات السلع</string>
-    <string name="reports_tab_mizan">ميزان الدار 📊</string>
+    <string name="reports_tab_mizan">الخزينة 📊</string>
     <string name="reports_tab_habayeb">ديون حبايب 🤝</string>
     <string name="reports_tab_makhzan">بضاعة المخزن 📦</string>
     <string name="reports_share_text">مشاركة كـ نص منسق 💬</string>
@@ -479,7 +479,7 @@
     <string name="reports_back">رجوع</string>
 
     <!-- SettingsView Screen (شاشة الإعدادات) -->
-    <string name="settings_title">إعدادات وتدبير الميزان ⚙️</string>
+    <string name="settings_title">إعدادات الخزينة والميزانية ⚙️</string>
     <string name="settings_subtitle">تهيئة المظاهر وهويات السند وأنظمة النسخ الاحتياطي والأمن</string>
     <string name="settings_currency_title">عملة الحساب الافتراضية 💰</string>
     <string name="settings_currency_hint">رمز العملة المالية (مثال: ر.ي، $)</string>
@@ -517,7 +517,7 @@
     <string name="settings_restore_single_text_placeholder">الصق النص المشفّر هنا...</string>
     <string name="settings_restore_now">استعادة الان</string>
     <string name="settings_local_discovered_backups">ملفات النسخ التاريخية المكتشفة بالهاتف:</string>
-    <string name="settings_no_local_backups">لا توجد نسخ سابقة محفوظة محلياً في مجلد ميزان الدار 📁</string>
+    <string name="settings_no_local_backups">لا توجد نسخ سابقة محفوظة محلياً في مجلد الخزينة 📁</string>
     <string name="settings_auto_backup_daily">النسخ التلقائي اليومي</string>
     <string name="settings_auto_backup_desc">يقوم بأخذ نسخة احتياطية محلية وسحابية (إذا كان الحساب مربوطاً) بشكل يومي في الخلفية.</string>
     <string name="settings_danger_zone_desc">انتبه: سيتم حذف جميع المعاملات ولا مجال للاستعادة إلا بملف النسخة الاحتياطية.</string>
@@ -884,7 +884,7 @@
     <string name="makhzan_search_placeholder">ابحث عن منتج...</string>
 
     <string name="nav_habayeb_plain">حسابات حبايب</string>
-    <string name="nav_ledger_plain">ميزان الدار</string>
+    <string name="nav_ledger_plain">الخزينة</string>
     <string name="toast_save_failed">فشل حفظ البيانات</string>
     <string name="toast_operation_failed">فشلت العملية</string>
     <!-- Habayeb New Strings -->

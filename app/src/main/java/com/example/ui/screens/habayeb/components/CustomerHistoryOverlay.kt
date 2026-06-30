@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
@@ -50,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -96,6 +99,8 @@ fun CustomerHistoryOverlay(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    var isPdfExporting by remember { mutableStateOf(false) }
 
     // Search state
     var txSearchQuery by remember { mutableStateOf("") }
@@ -544,13 +549,13 @@ fun CustomerHistoryOverlay(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 16.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
                                     .background(Color.White)
-                                    .padding(10.dp)
+                                    .padding(6.dp)
                             ) {
-                                // Top row: Avatar, Name/Phone, Balance
+                                // Top row: Avatar, Name/Phone, and Elegant Balance Badge
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -558,20 +563,20 @@ fun CustomerHistoryOverlay(
                                     val avatarColor = getInitialColor(activeCustomer.name)
                                     Box(
                                         modifier = Modifier
-                                            .size(38.dp)
+                                            .size(26.dp)
                                             .clip(CircleShape)
-                                            .background(avatarColor.copy(alpha = 0.15f)),
+                                            .background(avatarColor.copy(alpha = 0.12f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
-                                            fontSize = 16.sp,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = avatarColor
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
 
                                     Column(
                                         modifier = Modifier.weight(1f),
@@ -579,13 +584,15 @@ fun CustomerHistoryOverlay(
                                     ) {
                                         Text(
                                             text = activeCustomer.name,
-                                            fontSize = 15.sp,
+                                            fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B)
+                                            color = Color(0xFF1E293B),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = activeCustomer.phone.ifEmpty { "لا يوجد هاتف مسجل" },
-                                            fontSize = 11.sp,
+                                            fontSize = 9.sp,
                                             color = Color.Gray,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -603,25 +610,33 @@ fun CustomerHistoryOverlay(
                                         else -> "متعادل"
                                     }
 
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = formatCurrency(netDebt, currencySymbol),
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = textBalanceColor
-                                        )
-                                        Text(
-                                            text = stateLabel,
-                                            fontSize = 10.sp,
-                                            color = textBalanceColor,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                    // Compact colored balance badge
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(textBalanceColor.copy(alpha = 0.08f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                text = formatCurrency(netDebt, currencySymbol),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = textBalanceColor
+                                            )
+                                            Text(
+                                                text = stateLabel,
+                                                fontSize = 8.sp,
+                                                color = textBalanceColor,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
                                 // Bottom row: Actions & Sub-totals
                                 Row(
@@ -631,20 +646,39 @@ fun CustomerHistoryOverlay(
                                 ) {
                                     // Actions
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         val isPhoneAvailable = activeCustomer.phone.isNotBlank()
-                                        val iconModifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                                        val iconModifier = Modifier.size(28.dp).clip(RoundedCornerShape(6.dp))
 
                                         // PDF
                                         Box(
                                             modifier = iconModifier
                                                 .background(activeThemeColor.copy(alpha = 0.1f))
-                                                .clickable { PdfReportGenerator.generateAndHandleCustomerPdfReport(context, activeCustomer, netDebt, allCustomerTxs, "SHARE") },
+                                                .clickable(enabled = !isPdfExporting) {
+                                                     isPdfExporting = true
+                                                     PdfReportGenerator.generateAndHandleCustomerPdfReportAsync(
+                                                         context,
+                                                         coroutineScope,
+                                                         activeCustomer,
+                                                         netDebt,
+                                                         allCustomerTxs,
+                                                         "SHARE",
+                                                         onFinished = { isPdfExporting = false }
+                                                     )
+                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Description, contentDescription = "مشاركة PDF", tint = activeThemeColor, modifier = Modifier.size(16.dp))
+                                            if (isPdfExporting) {
+                                                 CircularProgressIndicator(
+                                                     modifier = Modifier.size(14.dp),
+                                                     color = activeThemeColor,
+                                                     strokeWidth = 1.5.dp
+                                                 )
+                                             } else {
+                                                 Icon(Icons.Default.Description, contentDescription = "مشاركة PDF", tint = activeThemeColor, modifier = Modifier.size(14.dp))
+                                             }
                                         }
                                         
                                         // WhatsApp
@@ -654,7 +688,7 @@ fun CustomerHistoryOverlay(
                                                 .clickable(enabled = isPhoneAvailable) { triggerWhatsAppStatement(activeCustomer, netDebt) },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Chat, contentDescription = "واتساب", tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f), modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Chat, contentDescription = "واتساب", tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f), modifier = Modifier.size(14.dp))
                                         }
 
                                         // Edit
@@ -664,7 +698,7 @@ fun CustomerHistoryOverlay(
                                                 .clickable { showEditNameDialog = true },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", tint = Color(0xFF475569), modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", tint = Color(0xFF475569), modifier = Modifier.size(14.dp))
                                         }
 
                                         // Delete
@@ -674,16 +708,20 @@ fun CustomerHistoryOverlay(
                                                 .clickable { confirmDeleteCust = true },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
                                         }
                                     }
 
                                     // Small sub-totals
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text("ديون", fontSize = 9.sp, color = Color.Gray)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Text("ديون:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                                             Text(
                                                 text = formatCurrency(owedByThem, currencySymbol),
                                                 fontSize = 11.sp,
@@ -691,8 +729,11 @@ fun CustomerHistoryOverlay(
                                                 color = Color(0xFFDC2626)
                                             )
                                         }
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text("سداد", fontSize = 9.sp, color = Color.Gray)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Text("سداد:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                                             Text(
                                                 text = formatCurrency(paymentByThem + owedToThem, currencySymbol),
                                                 fontSize = 11.sp,
@@ -719,9 +760,9 @@ fun CustomerHistoryOverlay(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "التاريخ",
+                            text = "التاريخ والوقت",
                             modifier = Modifier.weight(0.8f),
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
                             textAlign = TextAlign.Right
@@ -780,9 +821,10 @@ fun CustomerHistoryOverlay(
                     ) {
                         items(displayedTxs, key = { it.id }) { tx ->
                             val formattedDate = remember(tx.timestamp) {
-                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+                                val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
                                 sdf.format(Date(tx.timestamp * 1000))
                             }
+
                             val formattedTime = remember(tx.timestamp) {
                                 val sdf = SimpleDateFormat("hh:mm a", Locale("ar"))
                                 sdf.format(Date(tx.timestamp * 1000))
@@ -811,7 +853,7 @@ fun CustomerHistoryOverlay(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .padding(horizontal = 16.dp, vertical = 3.dp)
                                     .combinedClickable(
                                         onClick = {
                                             if (isTxMultiSelectActive) {
@@ -836,13 +878,33 @@ fun CustomerHistoryOverlay(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = rowBgColor),
                                 border = BorderStroke(1.dp, borderColor),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Professional indicator bar
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .width(4.dp)
+                                            .background(
+                                                brush = Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        indicatorColor,
+                                                        indicatorColor.copy(alpha = 0.6f)
+                                                    )
+                                                )
+                                            )
+                                    )
+                                    
                                     Row(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            .weight(1f)
+                                            .padding(horizontal = 12.dp, vertical = 1.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         // 1. Date/Time (Rightmost)
@@ -864,12 +926,6 @@ fun CustomerHistoryOverlay(
                                                         .background(activeThemeColor.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
                                                         .padding(horizontal = 4.dp, vertical = 1.dp)
                                                 )
-                                                Text(
-                                                    text = formattedDate,
-                                                    fontSize = 11.sp,
-                                                    color = Color(0xFF334155),
-                                                    fontWeight = FontWeight.Bold
-                                                )
                                                 if (hasActiveRecurring) {
                                                     Box(
                                                         modifier = Modifier
@@ -890,10 +946,25 @@ fun CustomerHistoryOverlay(
                                                     }
                                                 }
                                             }
+
+                                            Spacer(modifier = Modifier.height(2.dp))
+
                                             Text(
                                                 text = formattedTime,
                                                 fontSize = 10.sp,
-                                                color = Color.Gray
+                                                color = Color(0xFF334155),
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1
+                                            )
+
+                                            Spacer(modifier = Modifier.height(0.dp))
+
+                                            Text(
+                                                text = formattedDate,
+                                                fontSize = 9.sp,
+                                                color = Color(0xFF64748B),
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1
                                             )
                                         }
 
@@ -927,12 +998,12 @@ fun CustomerHistoryOverlay(
                                             
                                             // Rich Badges explaining recurring status
                                             if (hasActiveRecurring) {
-                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Box(
                                                     modifier = Modifier
                                                         .background(Color(0xFFFEF3C7), RoundedCornerShape(6.dp))
                                                         .border(0.5.dp, Color(0xFFF59E0B), RoundedCornerShape(6.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        .padding(horizontal = 6.dp, vertical = 1.dp)
                                                 ) {
                                                     Text(
                                                         text = "مصدر تكرار مجدول 🔄",
@@ -942,12 +1013,12 @@ fun CustomerHistoryOverlay(
                                                     )
                                                 }
                                             } else if (tx.linkedMainTxId != null) {
-                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Box(
                                                     modifier = Modifier
                                                         .background(Color(0xFFEFF6FF), RoundedCornerShape(6.dp))
                                                         .border(0.5.dp, Color(0xFF3B82F6), RoundedCornerShape(6.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        .padding(horizontal = 6.dp, vertical = 1.dp)
                                                 ) {
                                                     Text(
                                                         text = "توليد تلقائي (تابع للمعامله #${parentTxSeq ?: "?"}) ⚙️",

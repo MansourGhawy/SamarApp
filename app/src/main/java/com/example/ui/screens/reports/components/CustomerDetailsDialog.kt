@@ -24,9 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -57,6 +61,8 @@ fun CustomerDetailsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isPdfExporting by remember { mutableStateOf(false) }
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
 
     val customerTxs = remember(transactions, customer) {
@@ -145,7 +151,7 @@ fun CustomerDetailsDialog(
                             .weight(1f)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item { Spacer(modifier = Modifier.height(8.dp)) }
 
@@ -294,7 +300,7 @@ fun CustomerDetailsDialog(
                                 val indicatorColor = if (isDebit) SoftRed else SoftGreen
 
                                 Card(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
                                     border = BorderStroke(1.dp, Color(0xFFE9ECEF)),
                                     modifier = Modifier.fillMaxWidth()
@@ -302,45 +308,67 @@ fun CustomerDetailsDialog(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                            .height(IntrinsicSize.Min),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
-                                            Text(
-                                                text = txTypeStr,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF334155)
-                                            )
-                                            if (tx.description.isNotBlank()) {
+                                        // Professional indicator bar
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .width(4.dp)
+                                                .background(
+                                                    brush = Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            indicatorColor,
+                                                            indicatorColor.copy(alpha = 0.6f)
+                                                        )
+                                                    )
+                                                )
+                                        )
+
+                                        Row(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
                                                 Text(
-                                                    text = tx.description,
-                                                    fontSize = 10.sp,
-                                                    color = Color.Gray,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    text = txTypeStr,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF334155)
+                                                )
+                                                if (tx.description.isNotBlank()) {
+                                                    Text(
+                                                        text = tx.description,
+                                                        fontSize = 10.sp,
+                                                        color = Color.Gray,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                                Text(
+                                                    text = dateStr,
+                                                    fontSize = 9.sp,
+                                                    color = Color.LightGray
                                                 )
                                             }
+
                                             Text(
-                                                text = dateStr,
-                                                fontSize = 9.sp,
-                                                color = Color.LightGray
+                                                text = try {
+                                                    val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
+                                                    val formatter = java.text.DecimalFormat("#,##0", symbols)
+                                                    formatter.format(tx.amount) + " " + currencySymbol
+                                                } catch (e: Exception) {
+                                                    "${tx.amount} $currencySymbol"
+                                                },
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = indicatorColor
                                             )
                                         }
-
-                                        Text(
-                                            text = try {
-                                                val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
-                                                val formatter = java.text.DecimalFormat("#,##0", symbols)
-                                                formatter.format(tx.amount) + " " + currencySymbol
-                                            } catch (e: Exception) {
-                                                "${tx.amount} $currencySymbol"
-                                            },
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = indicatorColor
-                                        )
                                     }
                                 }
                             }
@@ -365,25 +393,40 @@ fun CustomerDetailsDialog(
                             // Share PDF Button
                             Button(
                                 onClick = {
+                                    isPdfExporting = true
                                     try {
-                                        PdfReportGenerator.generateAndHandleCustomerPdfReport(
+                                        PdfReportGenerator.generateAndHandleCustomerPdfReportAsync(
+                                            scope = coroutineScope,
                                             context = context,
                                             customer = customer,
                                             netDebt = netDebt,
                                             transactions = customerTxs,
-                                            action = "SHARE"
+                                            action = "SHARE",
+                                            onFinished = { isPdfExporting = false }
                                         )
                                     } catch (e: Exception) {
+                                        isPdfExporting = false
                                         Toast.makeText(context, "فشل تصدير التقرير", Toast.LENGTH_SHORT).show()
                                     }
                                 },
+                                enabled = !isPdfExporting,
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f).height(44.dp)
                             ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "تصدير كشف حساب", modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("تصدير كشف حساب", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                if (isPdfExporting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("جاري التصدير...", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                } else {
+                                    Icon(Icons.Default.PictureAsPdf, contentDescription = "تصدير كشف حساب", modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("تصدير كشف حساب", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
                             }
 
                             // Share Text Button

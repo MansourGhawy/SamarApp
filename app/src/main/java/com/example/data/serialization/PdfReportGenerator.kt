@@ -17,6 +17,10 @@ import androidx.core.content.FileProvider
 import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.data.local.entities.HabayebTransaction
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -132,14 +136,13 @@ object PdfReportGenerator {
         drawArabicText(canvas, footerTextRight, 200f, 800f, 353, paintFooterText, Layout.Alignment.ALIGN_NORMAL)
     }
 
-    fun generateAndHandleCustomerPdfReport(
+    private fun generatePdfFileInternal(
         context: Context,
         customer: HabayebCustomer,
         netDebt: Double,
         transactions: List<HabayebTransaction>,
-        action: String, // "VIEW" or "SHARE"
         primaryColorHex: String = "#0F4C43"
-    ) {
+    ): File? {
         val pdfDocument = PdfDocument()
         val pageWidth = 595
         val pageHeight = 842
@@ -569,13 +572,25 @@ object PdfReportGenerator {
             e.printStackTrace()
         }
 
-        // Save and share or view the report file
+        // Save and return the report file
         val fileName = "habayeb_${customer.name}_${System.currentTimeMillis() % 100000}.pdf"
         val file = File(context.cacheDir, fileName)
-        try {
+        return try {
             pdfDocument.writeTo(FileOutputStream(file))
             pdfDocument.close()
+            file
+        } catch (e: Exception) {
+            pdfDocument.close()
+            null
+        }
+    }
 
+    private fun triggerShareOrViewIntent(context: Context, file: File?, action: String) {
+        if (file == null) {
+            Toast.makeText(context, context.getString(R.string.habayeb_toast_pdf_export_failed, "فشل إنشاء الملف"), Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -600,7 +615,37 @@ object PdfReportGenerator {
             }
         } catch (e: Exception) {
             Toast.makeText(context, context.getString(R.string.habayeb_toast_pdf_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
-            pdfDocument.close()
+        }
+    }
+
+    fun generateAndHandleCustomerPdfReport(
+        context: Context,
+        customer: HabayebCustomer,
+        netDebt: Double,
+        transactions: List<HabayebTransaction>,
+        action: String, // "VIEW" or "SHARE"
+        primaryColorHex: String = "#0F4C43"
+    ) {
+        val file = generatePdfFileInternal(context, customer, netDebt, transactions, primaryColorHex)
+        triggerShareOrViewIntent(context, file, action)
+    }
+
+    fun generateAndHandleCustomerPdfReportAsync(
+        context: Context,
+        scope: CoroutineScope,
+        customer: HabayebCustomer,
+        netDebt: Double,
+        transactions: List<HabayebTransaction>,
+        action: String, // "VIEW" or "SHARE"
+        primaryColorHex: String = "#0F4C43",
+        onFinished: () -> Unit = {}
+    ) {
+        scope.launch(Dispatchers.IO) {
+            val file = generatePdfFileInternal(context, customer, netDebt, transactions, primaryColorHex)
+            withContext(Dispatchers.Main) {
+                triggerShareOrViewIntent(context, file, action)
+                onFinished()
+            }
         }
     }
 }

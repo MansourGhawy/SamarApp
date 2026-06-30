@@ -395,7 +395,8 @@ fun SettingsView(
         // 3. Backup & Cloud Synchronization Card (مركز النسخ السحابي والمحلي الموحد - Quad-Backup)
         item {
             ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -1032,7 +1033,8 @@ fun SettingsView(
         // 4. Danger Zone Card (منطقة الخطر - Outlined red button)
         item {
             ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = SoftRed.copy(alpha = 0.03f)),
                 modifier = Modifier.fillMaxWidth()
             ) {

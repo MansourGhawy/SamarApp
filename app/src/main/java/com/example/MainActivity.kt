@@ -24,6 +24,8 @@ import com.example.ui.screens.AppLockScreen
 import com.example.ui.theme.MizanTheme
 import com.example.ui.viewmodel.FinanceViewModel
 import com.example.ui.screens.habayeb.utils.HabayebRecurringManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,13 +41,17 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
             LaunchedEffect(viewModel) {
-                // Check and execute any recurring transactions on startup
-                HabayebRecurringManager.checkAndExecuteRecurring(context, viewModel) { count ->
-                    android.widget.Toast.makeText(
-                        context,
-                        "تم تسجيل عدد $count معاملات مكررة تلقائياً بنجاح! 🌸",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                withContext(Dispatchers.IO) {
+                    // Check and execute any recurring transactions on startup safely on background thread
+                    HabayebRecurringManager.checkAndExecuteRecurring(context, viewModel) { count ->
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            android.widget.Toast.makeText(
+                                context,
+                                "تم تسجيل عدد $count معاملات مكررة تلقائياً بنجاح! 🌸",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 }
 
                 viewModel.uiEventFlow.collect { event ->

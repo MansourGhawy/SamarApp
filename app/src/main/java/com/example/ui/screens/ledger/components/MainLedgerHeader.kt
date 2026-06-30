@@ -288,17 +288,10 @@ fun MainLedgerHeader(
                     ) {
                         Text(
                             text = stringResource(id = R.string.ledger_title),
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp,
                             color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(1.dp))
-                        Text(
-                            text = stringResource(id = R.string.ledger_subtitle),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Light,
-                            color = Color(0xFFB2DFDB)
                         )
                     }
 

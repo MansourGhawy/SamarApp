@@ -432,13 +432,16 @@ fun ReportsView(
             }
         }
     ) { innerPadding ->
-        Crossfade(
+        AnimatedContent(
             targetState = activeReportTab,
-            animationSpec = tween(durationMillis = 250),
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .background(IvoryBackground)
-                .padding(innerPadding)
+                .padding(innerPadding),
+            label = "ReportTabsFade"
         ) { tabIndex ->
             when (tabIndex) {
                 0 -> {

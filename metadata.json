@@ -1,6 +1,6 @@
 {
-  "name": "ميزان الدار",
-  "description": "تطبيق ميزان الدار لإدارة الميزانية المنزلية واليوميات والالتزامات الأسرية بمرونة ورقي.",
+  "name": "الخزينة",
+  "description": "تطبيق الخزينة لإدارة الميزانية والإيرادات والمصروفات بمرونة ورقي وعملية فائقة.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

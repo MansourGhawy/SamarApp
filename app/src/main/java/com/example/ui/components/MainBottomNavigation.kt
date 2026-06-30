@@ -45,21 +45,21 @@ fun MainBottomNavigation(
             .shadow(
                 elevation = 12.dp,
                 shape = RoundedCornerShape(24.dp),
-                ambientColor = MaterialTheme.colorScheme.primary,
-                spotColor = MaterialTheme.colorScheme.primary
+                ambientColor = Color(0xFF4B36A2).copy(alpha = 0.4f),
+                spotColor = Color(0xFF4B36A2).copy(alpha = 0.4f)
             )
             .border(
                 1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                Color(0xFFF0F3FC),
                 RoundedCornerShape(24.dp)
             )
             .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .background(Color(0xFFFFFFFF))
     ) {
         NavigationBar(
             modifier = Modifier.fillMaxWidth(),
             containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = Color(0xFF1E1A3E).copy(alpha = 0.5f),
             tonalElevation = 0.dp,
             windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
@@ -83,11 +83,11 @@ fun MainBottomNavigation(
                     },
                     alwaysShowLabel = true,
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        selectedIconColor = Color(0xFF4B36A2),
+                        unselectedIconColor = Color(0xFF1E1A3E).copy(alpha = 0.5f),
+                        selectedTextColor = Color(0xFF4B36A2),
+                        unselectedTextColor = Color(0xFF1E1A3E).copy(alpha = 0.5f),
+                        indicatorColor = Color(0xFF8C7CFF).copy(alpha = 0.15f)
                     )
                 )
             }

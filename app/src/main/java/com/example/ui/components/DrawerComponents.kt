@@ -28,38 +28,57 @@ fun DrawerItem(
     label: String,
     onClick: () -> Unit
 ) {
-    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-    val contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = Color(0xFF4B36A2)
+    val accentColor = Color(0xFF00B2FE)
+    val backgroundLight = Color(0xFFF0F3FC)
+    val textPrimary = Color(0xFF1E1A3E)
+
+    val containerColor = if (selected) backgroundLight else Color.Transparent
     val fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
 
     Surface(
         onClick = onClick,
         color = containerColor,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = label,
-                fontSize = 14.sp,
-                fontWeight = fontWeight,
-                color = contentColor
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = primaryColor,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = fontWeight,
+                    color = textPrimary
+                )
+            }
+
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight(0.6f)
+                        .align(Alignment.CenterEnd)
+                        .background(
+                            color = accentColor,
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                )
+            }
         }
     }
 }
@@ -69,19 +88,22 @@ fun ContactIcon(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
+    val primaryColor = Color(0xFF4B36A2)
+    val backgroundLight = Color(0xFFF0F3FC)
+
     Box(
         modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .background(Color.Gray.copy(alpha = 0.12f))
+            .background(backgroundLight)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.Gray,
-            modifier = Modifier.size(16.dp)
+            tint = primaryColor,
+            modifier = Modifier.size(18.dp)
         )
     }
 }

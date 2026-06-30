@@ -3,16 +3,19 @@ package com.example.ui.screens.habayeb.components
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,10 +41,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -100,9 +106,25 @@ fun AddTransactionPopup(
     val haptic = LocalHapticFeedback.current
     val currencySymbol = viewModel.settingsState.collectAsStateWithLifecycle().value.currencySymbol
 
+    val initialCurrencyAndDesc = remember(editingTransaction) {
+        if (editingTransaction != null) {
+            com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(
+                editingTransaction.description,
+                currencySymbol
+            )
+        } else {
+            Pair(currencySymbol, "")
+        }
+    }
+
+    var selectedTransactionCurrency by rememberSaveable {
+        mutableStateOf(initialCurrencyAndDesc.first)
+    }
+
     var amountStr by rememberSaveable { mutableStateOf(editingTransaction?.amount?.toInt()?.toString() ?: "") }
-    var descStr by rememberSaveable { mutableStateOf(editingTransaction?.description ?: "") }
+    var descStr by rememberSaveable { mutableStateOf(if (editingTransaction != null) initialCurrencyAndDesc.second else "") }
     var selectedType by rememberSaveable { mutableStateOf(editingTransaction?.type ?: initialSelectedType) }
+    var showFastActionPopup by remember { mutableStateOf(false) }
     
     val amountFocusRequester = remember { FocusRequester() }
     val descFocusRequester = remember { FocusRequester() }
@@ -155,6 +177,49 @@ fun AddTransactionPopup(
         )
     }
 
+    val executeSave = { finalActionType: String ->
+        softwareKeyboardController?.hide()
+        if (!isSaving) {
+            isSaving = true
+
+            val amount = amountStr.toDoubleOrNull() ?: 0.0
+            if (amount <= 0.0) {
+                Toast.makeText(context, context.getString(R.string.habayeb_toast_valid_amount), Toast.LENGTH_SHORT).show()
+                isSaving = false
+            } else {
+                if (editingTransaction != null) {
+                    viewModel.deleteHabayebTransaction(editingTransaction.id)
+                }
+
+                val presetMainTxId = if (finalActionType == "PAYMENT_BY_THEM" && syncAsMainIncome) {
+                    "tx_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}"
+                } else null
+
+                if (presetMainTxId != null) {
+                    viewModel.addTransaction(
+                        type = "INCOME",
+                        category = context.getString(R.string.habayeb_category_other),
+                        amount = amount,
+                        description = "${context.getString(R.string.habayeb_pdf_tx_payment_by)}: ${customer.name}${if (descStr.isNotBlank()) " - " + descStr.trim() else ""}",
+                        timestamp = dateMillis / 1000,
+                        presetId = presetMainTxId
+                    )
+                }
+
+                viewModel.addHabayebTransaction(
+                    customerId = customer.id,
+                    type = finalActionType,
+                    amount = amount,
+                    desc = com.example.ui.screens.habayeb.utils.CurrencyConfig.formatDescriptionWithCurrency(descStr.trim(), selectedTransactionCurrency),
+                    timestamp = dateMillis / 1000,
+                    linkedMainTxId = presetMainTxId
+                )
+                Toast.makeText(context, context.getString(R.string.habayeb_toast_tx_save_success), Toast.LENGTH_SHORT).show()
+                onDismiss()
+            }
+        }
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val debtInteractionSource = remember { MutableInteractionSource() }
@@ -185,272 +250,48 @@ fun AddTransactionPopup(
                 border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
             Column(
                 modifier = Modifier
-                    .padding(12.dp)
+                    .padding(8.dp)
                     .navigationBarsPadding()
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header (title and back click)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(bottom = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Spacer(modifier = Modifier.size(40.dp)) // centered title spacer
-
-                    Text(
-                        text = if (editingTransaction != null) stringResource(id = R.string.habayeb_edit_tx_title).replace(" 📝","") else stringResource(id = R.string.habayeb_add_tx_button).replace(" ➕",""),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = activeThemeColor
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (editingTransaction != null) "تعديل المعاملة" else "إضافة معاملة جديدة",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = activeThemeColor
+                        )
+                        Text(
+                            text = "الحساب: ${customer.name.take(15)}${if (customer.name.length > 15) ".." else ""}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray
+                        )
+                    }
 
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(activeSubColor, CircleShape)
+                            .align(Alignment.CenterStart)
+                            .size(24.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.habayeb_go_back), tint = activeThemeColor, modifier = Modifier.size(16.dp))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Target Account indicate pill
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = activeSubColor.copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(activeThemeColor),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = customer.name.firstOrNull()?.toString() ?: "ا",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                        Text(
-                            text = stringResource(id = R.string.habayeb_account_name) + ": ${customer.name}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = activeThemeColor
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Primary Operation Class Selector (Lend Mode vs. Borrow Mode) - Super beautiful RTL layout
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(activeSubColor.copy(alpha = 0.5f))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isLendOperationSelected) Color(0xFFEF4444) else Color.Transparent)
-                            .clickable {
-                                isLendOperationSelected = true
-                                selectedType = "OWED_BY_THEM"
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.habayeb_register_owed_by),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isLendOperationSelected) Color.White else Color(0xFFEF4444)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (!isLendOperationSelected) Color(0xFF10B981) else Color.Transparent)
-                            .clickable {
-                                isLendOperationSelected = false
-                                selectedType = "OWED_TO_THEM"
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.habayeb_register_owed_to),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (!isLendOperationSelected) Color.White else Color(0xFF10B981)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Secondary Sub-Selector (Interactive Icon Cards)
-                val isNegativeAct = selectedType == "OWED_BY_THEM" || selectedType == "OWED_TO_THEM"
-                val isPositiveAct = selectedType == "PAYMENT_BY_THEM" || selectedType == "PAYMENT_TO_THEM"
-
                 val dynamicThemeColor = if (isLendOperationSelected) Color(0xFFEF4444) else Color(0xFF10B981)
                 val dynamicSubColor = if (isLendOperationSelected) Color(0xFFFEE2E2) else Color(0xFFD1FAE5)
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // 1. Debt Card (دين جديد)
-                    val debtBg = if (isNegativeAct) Color(0xFF1B3B6F) else Color(0xFFF1F5F9)
-                    val debtContentColor = if (isNegativeAct) Color.White else Color(0xFF475569)
-                    val debtBorder = if (isNegativeAct) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
-                    val debtShadow = if (isNegativeAct) 6.dp else 0.dp
-                    
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = debtBg),
-                        border = debtBorder,
-                        elevation = CardDefaults.cardElevation(defaultElevation = debtShadow),
-                        modifier = Modifier
-                            .weight(1f)
-                            .graphicsLayer {
-                                scaleX = debtScale
-                                scaleY = debtScale
-                            }
-                            .clickable(
-                                interactionSource = debtInteractionSource,
-                                indication = null,
-                                onClick = {
-                                    selectedType = if (isLendOperationSelected) "OWED_BY_THEM" else "OWED_TO_THEM"
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp, horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = "📝", fontSize = 14.sp)
-                                if (isNegativeAct) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Box(
-                                        modifier = Modifier.size(16.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = "✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                                    }
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.width(6.dp))
-                            
-                            Crossfade(targetState = isLendOperationSelected, animationSpec = tween(150), label = "DebtSubLabel") { lendMode ->
-                                val textLabel = if (lendMode) stringResource(id = R.string.habayeb_register_owed_by) else stringResource(id = R.string.habayeb_register_owed_to)
-                                Text(
-                                    text = textLabel,
-                                    color = debtContentColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-
-                    // 2. Payment Card (سداد دفعة)
-                    val payBg = if (isPositiveAct) Color(0xFF1B3B6F) else Color(0xFFF1F5F9)
-                    val payContentColor = if (isPositiveAct) Color.White else Color(0xFF475569)
-                    val payBorder = if (isPositiveAct) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
-                    val payShadow = if (isPositiveAct) 6.dp else 0.dp
-
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = payBg),
-                        border = payBorder,
-                        elevation = CardDefaults.cardElevation(defaultElevation = payShadow),
-                        modifier = Modifier
-                            .weight(1f)
-                            .graphicsLayer {
-                                scaleX = payScale
-                                scaleY = payScale
-                            }
-                            .clickable(
-                                interactionSource = payInteractionSource,
-                                indication = null,
-                                onClick = {
-                                    selectedType = if (isLendOperationSelected) "PAYMENT_BY_THEM" else "PAYMENT_TO_THEM"
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp, horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = "💸", fontSize = 14.sp)
-                                if (isPositiveAct) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Box(
-                                        modifier = Modifier.size(16.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = "✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                                    }
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.width(6.dp))
-                            
-                            Crossfade(targetState = isLendOperationSelected, animationSpec = tween(150), label = "PaySubLabel") { lendMode ->
-                                val textLabel = if (lendMode) stringResource(id = R.string.habayeb_pdf_tx_payment_by) else stringResource(id = R.string.habayeb_pdf_tx_payment_to)
-                                Text(
-                                    text = textLabel,
-                                    color = payContentColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
 
                 // Input box Centered with Calculator leading and YR trailing
                 OutlinedTextField(
@@ -491,17 +332,17 @@ fun AddTransactionPopup(
                     },
                     trailingIcon = {
                         Text(
-                            text = "YR",
+                            text = selectedTransactionCurrency,
                             color = dynamicThemeColor,
                             fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.padding(horizontal = 12.dp),
                             fontSize = 14.sp
                         )
                     },
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 val formattedSelectedDate = remember(dateMillis) {
                     val sdf = SimpleDateFormat("yyyy/MM/dd", Locale("ar"))
@@ -540,12 +381,18 @@ fun AddTransactionPopup(
                                 color = Color.Gray,
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
-                            IconButton(onClick = { datePickerDialog.show() }) {
-                                Icon(Icons.Default.CalendarToday, contentDescription = stringResource(id = R.string.habayeb_tx_date), tint = dynamicThemeColor, modifier = Modifier.size(18.dp))
+                            IconButton(onClick = { datePickerDialog.show() }, modifier = Modifier.size(24.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = stringResource(id = R.string.habayeb_tx_date),
+                                    tint = dynamicThemeColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
                         }
                     },
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(8.dp),
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier
@@ -558,88 +405,160 @@ fun AddTransactionPopup(
                     )
                 )
 
-                // 5. Sync Option checkbox for Main Mizan Al-Dar Income
-                if (selectedType == "PAYMENT_BY_THEM") {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(dynamicSubColor)
-                            .clickable { syncAsMainIncome = !syncAsMainIncome }
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Currency Radio buttons row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val famousCurrencies = listOf(
+                        Pair("ر.ي", "ريال يمني"),
+                        Pair("$", "دولار"),
+                        Pair("ر.س", "ريال سعودي")
+                    )
+                    famousCurrencies.forEachIndexed { index, (sym, label) ->
+                        val isSelected = selectedTransactionCurrency == sym
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    selectedTransactionCurrency = sym
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color(0xFFE91E63) else Color.DarkGray
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            // Custom Radio Button Circle
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, if (isSelected) Color(0xFFE91E63) else Color.Gray, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFE91E63))
+                                    )
+                                }
+                            }
+                        }
+                        if (index < famousCurrencies.size - 1) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Primary Operation Class Selector (Lend Mode vs. Borrow Mode)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(activeSubColor.copy(alpha = 0.5f))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(30.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isLendOperationSelected) Color(0xFFEF4444) else Color.Transparent)
+                            .clickable {
+                                isLendOperationSelected = true
+                                selectedType = "OWED_BY_THEM"
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "عليه دين لي",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLendOperationSelected) Color.White else Color(0xFFEF4444)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(30.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (!isLendOperationSelected) Color(0xFF10B981) else Color.Transparent)
+                            .clickable {
+                                isLendOperationSelected = false
+                                selectedType = "OWED_TO_THEM"
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "له دين عندي",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (!isLendOperationSelected) Color.White else Color(0xFF10B981)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Sync Option checkbox for Main Mizan Al-Dar Income
+                AnimatedVisibility(visible = isLendOperationSelected) {
+                    Column {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { syncAsMainIncome = !syncAsMainIncome }
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("💰", fontSize = 16.sp)
+                            Checkbox(
+                                checked = syncAsMainIncome,
+                                onCheckedChange = { syncAsMainIncome = it },
+                                colors = CheckboxDefaults.colors(checkedColor = dynamicThemeColor),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = stringResource(id = R.string.habayeb_sync_main_income),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = dynamicThemeColor
+                                fontSize = 11.sp,
+                                color = Color.DarkGray
                             )
                         }
-                        Switch(
-                            checked = syncAsMainIncome,
-                            onCheckedChange = { syncAsMainIncome = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = dynamicThemeColor
-                            )
-                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Large action button
                 Button(
                     enabled = !isSaving,
                     onClick = {
-                        softwareKeyboardController?.hide()
-                        if (isSaving) return@Button
-                        isSaving = true
-
                         val amount = amountStr.toDoubleOrNull() ?: 0.0
                         if (amount <= 0.0) {
                             Toast.makeText(context, context.getString(R.string.habayeb_toast_valid_amount), Toast.LENGTH_SHORT).show()
-                            isSaving = false
                             return@Button
                         }
-
-                        if (editingTransaction != null) {
-                            viewModel.deleteHabayebTransaction(editingTransaction.id)
-                        }
-
-                        val presetMainTxId = if (selectedType == "PAYMENT_BY_THEM" && syncAsMainIncome) {
-                            "tx_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}"
-                        } else null
-
-                        if (presetMainTxId != null) {
-                            viewModel.addTransaction(
-                                type = "INCOME",
-                                category = context.getString(R.string.habayeb_category_other),
-                                amount = amount,
-                                description = "${context.getString(R.string.habayeb_pdf_tx_payment_by)}: ${customer.name}${if (descStr.isNotBlank()) " - " + descStr.trim() else ""}",
-                                timestamp = dateMillis / 1000,
-                                presetId = presetMainTxId
-                            )
-                        }
-
-                        viewModel.addHabayebTransaction(
-                            customerId = customer.id,
-                            type = selectedType,
-                            amount = amount,
-                            desc = descStr.trim(),
-                            timestamp = dateMillis / 1000,
-                            linkedMainTxId = presetMainTxId
-                        )
-                        Toast.makeText(context, context.getString(R.string.habayeb_toast_tx_save_success), Toast.LENGTH_SHORT).show()
-                        onDismiss()
+                        showFastActionPopup = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = dynamicThemeColor),
                     shape = RoundedCornerShape(24.dp),
@@ -648,14 +567,54 @@ fun AddTransactionPopup(
                         .height(52.dp)
                 ) {
                     Text(
-                        text = stringResource(id = R.string.habayeb_confirm_save).replace(" 💾",""),
-                        fontSize = 14.sp,
+                        text = "تأكيد",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
                     )
                 }
             }
         }
+        }
+    }
+
+    if (showFastActionPopup) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showFastActionPopup = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { executeSave(if (isLendOperationSelected) "OWED_BY_THEM" else "OWED_TO_THEM") },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp)
+                        ) {
+                            Text("دين جديد", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { executeSave(if (isLendOperationSelected) "PAYMENT_BY_THEM" else "PAYMENT_TO_THEM") },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp)
+                        ) {
+                            Text(if (isLendOperationSelected) "استلام دفعة" else "سداد دفعة", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
     }
 

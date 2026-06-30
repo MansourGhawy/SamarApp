@@ -168,7 +168,7 @@ fun ReportsView(
                 val detailedData = emptyList<Pair<String, String>>()
 
                 if (type == "PDF") {
-                    generateModernPdfReport(context, reportTitle, summaryHeaders, detailedData)
+                    generateModernPdfReport(context, reportTitle, summaryHeaders, detailedData, currencySymbol = currencySymbol)
                 } else {
                     // Share Text
                     val builder = StringBuilder()
@@ -203,7 +203,7 @@ fun ReportsView(
                 }
 
                 if (type == "PDF") {
-                    generateModernPdfReport(context, reportTitle, summaryHeaders, detailedData)
+                    generateModernPdfReport(context, reportTitle, summaryHeaders, detailedData, currencySymbol = currencySymbol)
                 } else {
                     val builder = StringBuilder()
                     builder.append("🤝 *تقرير حبايب للديون والالتزامات والأمانات*\n\n")

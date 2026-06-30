@@ -41,6 +41,7 @@
     <string name="drawer_trash_label">سلة المحذوفات</string>
     <string name="drawer_backup_label1">النسخ الاحتياطي والاسترداد</string>
     <string name="drawer_business_profile_label">بيانات النشاط التجاري</string>
+    <string name="drawer_currency_label">العملة الإفتراضية</string>
     <string name="drawer_app_version">الإصدار v%s</string>
     <string name="nav_habayeb_label">🤝 حسابات حبايب</string>
     <string name="nav_ledger_label">⚖️ الدفتر الذكي</string>
@@ -162,7 +163,7 @@
     <string name="habayeb_new_debt_to">دين جديد له (مطلوب له)</string>
     <string name="habayeb_tx_desc_optional">تفاصيل المعاملة / البيان (اختياري)</string>
     <string name="habayeb_edit_date">تعديل التاريخ</string>
-    <string name="habayeb_sync_main_income">تضمين كإيراد في الحساب الرئيسي</string>
+    <string name="habayeb_sync_main_income">تضمين كإيراد في الدفتر الذكي</string>
     <string name="habayeb_save_confirm">تأكيد وحفظ</string>
     <string name="habayeb_calc_title">حاسبة الديون السريعة 🧮</string>
     <string name="habayeb_calc_formula_error">خطأ في الصيغة</string>

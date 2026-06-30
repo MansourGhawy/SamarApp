@@ -1,5 +1,5 @@
 package com.example.ui.screens.habayeb.components
-
+ 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-
+ 
 @Composable
 fun HabayebFilterToolbar(
     filteredCustomersCount: Int,
@@ -31,6 +31,11 @@ fun HabayebFilterToolbar(
     onScrollToTop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val primaryColor = Color(0xFF4B36A2)
+    val backgroundLight = Color(0xFFF0F3FC)
+    val textPrimary = Color(0xFF1E1A3E)
+    val neutralWhite = Color(0xFFFFFFFF)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -42,18 +47,18 @@ fun HabayebFilterToolbar(
         Box(
             modifier = Modifier
                 .height(28.dp)
-                .background(activeSubColor, RoundedCornerShape(24.dp))
+                .background(backgroundLight, RoundedCornerShape(24.dp))
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = stringResource(id = R.string.habayeb_customers_count, filteredCustomersCount),
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = activeThemeColor
+                fontWeight = FontWeight.Bold,
+                color = primaryColor
             )
         }
-
+ 
         // Left side (RTL right): Filtering and Sorting Actions
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -70,7 +75,7 @@ fun HabayebFilterToolbar(
                 modifier = Modifier
                     .height(28.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (isFinSorted) activeSubColor else activeSubColor.copy(alpha = 0.5f))
+                    .background(if (isFinSorted) primaryColor else backgroundLight)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onHistoricalSortModeChanged(0)
@@ -88,11 +93,11 @@ fun HabayebFilterToolbar(
                 Text(
                     text = finText,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = activeThemeColor
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isFinSorted) neutralWhite else textPrimary
                 )
             }
-
+ 
             // Historical Sorting Button
             val isHistSorted = historicalSortMode != 0
             val histText = when (historicalSortMode) {
@@ -104,7 +109,7 @@ fun HabayebFilterToolbar(
                 modifier = Modifier
                     .height(28.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (isHistSorted) activeSubColor else activeSubColor.copy(alpha = 0.5f))
+                    .background(if (isHistSorted) primaryColor else backgroundLight)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onFinancialSortModeChanged(0)
@@ -122,8 +127,8 @@ fun HabayebFilterToolbar(
                 Text(
                     text = histText,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = activeThemeColor
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isHistSorted) neutralWhite else textPrimary
                 )
             }
         }

@@ -42,7 +42,8 @@ fun generateModernPdfReport(
     context: Context,
     title: String,
     headers: List<String>,
-    data: List<Pair<String, String>>
+    data: List<Pair<String, String>>,
+    currencySymbol: String = "ر.ي"
 ) {
     val isLedger = title.contains("كشف حساب")
     if (isLedger) {
@@ -98,7 +99,7 @@ fun generateModernPdfReport(
                 timestamp = parsedTimestamp
             )
         }
-        generateModernPdfReport(context, title, transactionsList)
+        generateModernPdfReport(context, title, transactionsList, currencySymbol = currencySymbol)
     } else {
         var totalAmountVal = ""
         var paidAmountVal = ""
@@ -160,7 +161,8 @@ fun generateModernPdfReport(
 fun generateModernPdfReport(
     context: Context,
     title: String,
-    transactions: List<PdfTransaction>
+    transactions: List<PdfTransaction>,
+    currencySymbol: String = "ر.ي"
 ) {
     // 1. حساب الـ Hash للبيانات لضبط رقم التقرير تلقائياً حسب المتغيرات
     val sharedPrefs = context.getSharedPreferences("report_counter_prefs", Context.MODE_PRIVATE)
@@ -299,6 +301,25 @@ fun generateModernPdfReport(
     val leftMargin = 40f
     val centerWidth = (pageWidth / 2).toFloat()
 
+    val currencyGroups = sortedTxs.groupBy { com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
+    val currencySummaryList = currencyGroups.map { (currSym, txs) ->
+        var owed = 0.0
+        var paid = 0.0
+        for (tx in txs) {
+            val isOwed = tx.type == "OWED_BY_TEM" || tx.type == "OWED_BY_THEM" || tx.type == "OWED_TO_THEM"
+            val isPaid = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
+            if (isOwed) owed += tx.amount
+            else if (isPaid) paid += tx.amount
+        }
+        val net = Math.abs(owed - paid)
+        val status = if (isSupplierMode) {
+            if (owed >= paid) "له" else "عليه"
+        } else {
+            if (owed >= paid) "عليه" else "له"
+        }
+        Triple(currSym, Triple(owed, paid, net), status)
+    }
+
     fun drawHeaderForPage(canvas: android.graphics.Canvas, isFirstPage: Boolean, pageNumber: Int) {
         if (isFirstPage) {
             var y = 45f
@@ -354,7 +375,7 @@ fun generateModernPdfReport(
 
             y += 20f
 
-            // Summary box
+            // Dynamic Summary box
             val paintSummaryBg = Paint().apply {
                 color = Color.parseColor(headerBgHex)
                 style = Paint.Style.FILL
@@ -364,8 +385,10 @@ fun generateModernPdfReport(
                 style = Paint.Style.STROKE
                 strokeWidth = 1f
             }
-            canvas.drawRoundRect(leftMargin, y, rightMargin, y + 55f, 10f, 10f, paintSummaryBg)
-            canvas.drawRoundRect(leftMargin, y, rightMargin, y + 55f, 10f, 10f, paintSummaryBorder)
+
+            val summaryCardHeight = if (currencySummaryList.size <= 1) 55f else 28f + (25f * currencySummaryList.size)
+            canvas.drawRoundRect(leftMargin, y, rightMargin, y + summaryCardHeight, 10f, 10f, paintSummaryBg)
+            canvas.drawRoundRect(leftMargin, y, rightMargin, y + summaryCardHeight, 10f, 10f, paintSummaryBorder)
 
             val paintSummaryLabel = Paint().apply {
                 color = Color.parseColor(textGrayHex)
@@ -378,29 +401,67 @@ fun generateModernPdfReport(
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
 
-            val (sumLabelRight, sumLabelCenter, sumLabelLeft) = if (isSupplierMode) {
-                Triple("إجمالي له علينا (دين)", "إجمالي سددناه له (سداد)", "صافي المتبقي للمورد")
+            if (currencySummaryList.size <= 1) {
+                val (sumLabelRight, sumLabelCenter, sumLabelLeft) = if (isSupplierMode) {
+                    Triple("إجمالي له علينا (دين)", "إجمالي سددناه له (سداد)", "صافي المتبقي للمورد")
+                } else {
+                    Triple("إجمالي عليه (دين)", "إجمالي سدده لنا (سداد)", "صافي المتبقي عليه")
+                }
+
+                // Right
+                paintSummaryLabel.textAlign = Paint.Align.RIGHT
+                paintSummaryValue.textAlign = Paint.Align.RIGHT
+                canvas.drawText(sumLabelRight, rightMargin - 20f, y + 22f, paintSummaryLabel)
+                canvas.drawText("${formatReportNumber(totalOwed)} $currencySymbol", rightMargin - 20f, y + 41f, paintSummaryValue)
+
+                // Center
+                paintSummaryLabel.textAlign = Paint.Align.CENTER
+                paintSummaryValue.textAlign = Paint.Align.CENTER
+                canvas.drawText(sumLabelCenter, centerWidth, y + 22f, paintSummaryLabel)
+                canvas.drawText("${formatReportNumber(totalPaid)} $currencySymbol", centerWidth, y + 41f, paintSummaryValue)
+
+                // Left
+                paintSummaryLabel.textAlign = Paint.Align.LEFT
+                paintSummaryValue.textAlign = Paint.Align.LEFT
+                canvas.drawText(sumLabelLeft, leftMargin + 20f, y + 22f, paintSummaryLabel)
+                canvas.drawText("${formatReportNumber(finalNetBalance)} $currencySymbol ($netStatus)", leftMargin + 20f, y + 41f, paintSummaryValue)
             } else {
-                Triple("إجمالي عليه (دين)", "إجمالي سدده لنا (سداد)", "صافي المتبقي عليه")
+                // Table header row inside summary box
+                val rowHeaderY = y + 15f
+                paintSummaryLabel.textAlign = Paint.Align.RIGHT
+                canvas.drawText("العملة", rightMargin - 20f, rowHeaderY, paintSummaryLabel)
+                
+                paintSummaryLabel.textAlign = Paint.Align.CENTER
+                canvas.drawText("إجمالي الدين", rightMargin - 150f, rowHeaderY, paintSummaryLabel)
+                canvas.drawText("إجمالي السداد", rightMargin - 280f, rowHeaderY, paintSummaryLabel)
+                
+                paintSummaryLabel.textAlign = Paint.Align.LEFT
+                canvas.drawText("الصافي المتبقي", leftMargin + 20f, rowHeaderY, paintSummaryLabel)
+                
+                // Draw values for each currency
+                var currentCardY = y + 36f
+                for ((currSym, metrics, status) in currencySummaryList) {
+                    val (o, p, n) = metrics
+                    
+                    // Currency Code/Sym
+                    paintSummaryValue.textAlign = Paint.Align.RIGHT
+                    paintSummaryValue.textSize = 10f
+                    canvas.drawText(currSym, rightMargin - 20f, currentCardY, paintSummaryValue)
+                    
+                    // Total Debt
+                    paintSummaryValue.textAlign = Paint.Align.CENTER
+                    canvas.drawText(formatReportNumber(o), rightMargin - 150f, currentCardY, paintSummaryValue)
+                    
+                    // Total Paid
+                    canvas.drawText(formatReportNumber(p), rightMargin - 280f, currentCardY, paintSummaryValue)
+                    
+                    // Net Balance + Status
+                    paintSummaryValue.textAlign = Paint.Align.LEFT
+                    canvas.drawText("${formatReportNumber(n)} $currSym ($status)", leftMargin + 20f, currentCardY, paintSummaryValue)
+                    
+                    currentCardY += 25f
+                }
             }
-
-            // Right
-            paintSummaryLabel.textAlign = Paint.Align.RIGHT
-            paintSummaryValue.textAlign = Paint.Align.RIGHT
-            canvas.drawText(sumLabelRight, rightMargin - 20f, y + 22f, paintSummaryLabel)
-            canvas.drawText("${formatReportNumber(totalOwed)} ر.ي", rightMargin - 20f, y + 41f, paintSummaryValue)
-
-            // Center
-            paintSummaryLabel.textAlign = Paint.Align.CENTER
-            paintSummaryValue.textAlign = Paint.Align.CENTER
-            canvas.drawText(sumLabelCenter, centerWidth, y + 22f, paintSummaryLabel)
-            canvas.drawText("${formatReportNumber(totalPaid)} ر.ي", centerWidth, y + 41f, paintSummaryValue)
-
-            // Left
-            paintSummaryLabel.textAlign = Paint.Align.LEFT
-            paintSummaryValue.textAlign = Paint.Align.LEFT
-            canvas.drawText(sumLabelLeft, leftMargin + 20f, y + 22f, paintSummaryLabel)
-            canvas.drawText("${formatReportNumber(finalNetBalance)} ر.ي ($netStatus)", leftMargin + 20f, y + 41f, paintSummaryValue)
         } else {
             var y = 45f
 
@@ -469,7 +530,11 @@ fun generateModernPdfReport(
         val dayName = SimpleDateFormat("EEEE", Locale("ar")).format(Date(txTime))
         val dateNumbers = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH).format(Date(txTime))
 
-        val finalDesc = if (tx.description.isNotEmpty()) tx.description else {
+        val parsedCurrencyInfo = com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol)
+        val txCurrencySymbol = parsedCurrencyInfo.first
+        val rawDesc = parsedCurrencyInfo.second
+
+        val finalDesc = if (rawDesc.isNotEmpty()) rawDesc else {
             when (tx.type) {
                 "OWED_BY_TEM", "OWED_BY_THEM" -> "دين عليه"
                 "PAYMENT_BY_THEM" -> "سداد"
@@ -503,7 +568,7 @@ fun generateModernPdfReport(
         val pillBgColor = if (isPositive) "#F0FDF4" else "#FFF5F5"
         val pillTextColor = if (isPositive) "#16A34A" else "#DC2626"
         val prefix = if (isPositive) "+" else "-"
-        val formattedAmount = "$prefix ${formatReportNumber(tx.amount)} ر.ي"
+        val formattedAmount = "$prefix ${formatReportNumber(tx.amount)} $txCurrencySymbol"
 
         val paintPillBg = Paint().apply {
             color = Color.parseColor(pillBgColor)
@@ -525,7 +590,7 @@ fun generateModernPdfReport(
         canvas.drawText(formattedAmount, columnsX[3] - 6f, y + 4f, paintPillText)
 
         // Column 4: المبلغ المتبقي (الرصيد التراكمي بلون الرمادي)
-        val balanceStr = "${formatReportNumber(Math.abs(runningBal))} ر.ي"
+        val balanceStr = "${formatReportNumber(Math.abs(runningBal))} $txCurrencySymbol"
         val paintBalanceText = Paint().apply {
             color = Color.parseColor(textGrayHex)
             textSize = 9.5f
@@ -541,15 +606,24 @@ fun generateModernPdfReport(
     drawTableHeaders(activeCanvas, currentY)
     currentY += 25f
 
+    val runningBalancesByCurrency = mutableMapOf<String, Double>()
+
     for ((index, tx) in sortedTxs.withIndex()) {
+        val parsedCurrencyInfo = com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol)
+        val txCurrencySymbol = parsedCurrencyInfo.first
+
         val isOwed = tx.type == "OWED_BY_TEM" || tx.type == "OWED_BY_THEM" || tx.type == "OWED_TO_THEM"
         val isPaid = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
 
+        var currentRunningBal = runningBalancesByCurrency[txCurrencySymbol] ?: 0.0
+
         if (isOwed) {
-            runningBalance += tx.amount
+            currentRunningBal += tx.amount
         } else if (isPaid) {
-            runningBalance -= tx.amount
+            currentRunningBal -= tx.amount
         }
+        
+        runningBalancesByCurrency[txCurrencySymbol] = currentRunningBal
 
         if (currentY > pageHeight - 65f) {
             val paintFooter = Paint().apply {
@@ -575,7 +649,7 @@ fun generateModernPdfReport(
             currentY += 25f
         }
 
-        drawRow(activeCanvas, currentY, tx, index, runningBalance)
+        drawRow(activeCanvas, currentY, tx, index, currentRunningBal)
         currentY += 25f
     }
 

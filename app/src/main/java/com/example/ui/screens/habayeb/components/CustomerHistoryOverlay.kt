@@ -124,25 +124,46 @@ fun CustomerHistoryOverlay(
         }
     }
 
-    // Calculations
-    val owedByThem = allCustomerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
-    val paymentByThem = allCustomerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
-    val owedToThem = allCustomerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
-    val paymentToThem = allCustomerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
-    val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
+    // Calculations for overall grouped by currency
+    val currencyGroups = remember(allCustomerTxs) {
+        allCustomerTxs.groupBy { com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
+    }
+
+    val owedByThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "OWED_BY_THEM" }.sumOf { tx -> tx.amount } } }
+    val paymentByThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "PAYMENT_BY_THEM" }.sumOf { tx -> tx.amount } } }
+    val owedToThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "OWED_TO_THEM" }.sumOf { tx -> tx.amount } } }
+    val paymentToThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "PAYMENT_TO_THEM" }.sumOf { tx -> tx.amount } } }
+    
+    val netDebtMap = remember(currencyGroups) { 
+        currencyGroups.keys.associateWith { curr ->
+            (owedByThemMap[curr] ?: 0.0) - (paymentByThemMap[curr] ?: 0.0) - (owedToThemMap[curr] ?: 0.0) + (paymentToThemMap[curr] ?: 0.0)
+        }
+    }
+
+    // Default to main currency, or first available if main isn't there
+    val primaryDisplayCurrency = if (currencyGroups.containsKey(currencySymbol)) currencySymbol else currencyGroups.keys.firstOrNull() ?: currencySymbol
+    
+    val owedByThem = owedByThemMap[primaryDisplayCurrency] ?: 0.0
+    val paymentByThem = paymentByThemMap[primaryDisplayCurrency] ?: 0.0
+    val owedToThem = owedToThemMap[primaryDisplayCurrency] ?: 0.0
+    val paymentToThem = paymentToThemMap[primaryDisplayCurrency] ?: 0.0
+    val netDebt = netDebtMap[primaryDisplayCurrency] ?: 0.0
 
     // Calculate sequential running balances (chronological order)
     val runningBalances = remember(allCustomerTxs) {
         val chronological = allCustomerTxs.sortedBy { it.timestamp }
         val balancesMap = mutableMapOf<String, Double>()
-        var currentBal = 0.0
+        val currentBalMap = mutableMapOf<String, Double>()
         for (tx in chronological) {
+            val currency = com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol).first
+            var currentBal = currentBalMap[currency] ?: 0.0
             when (tx.type) {
                 "OWED_BY_THEM" -> currentBal += tx.amount
                 "PAYMENT_BY_THEM" -> currentBal -= tx.amount
                 "OWED_TO_THEM" -> currentBal -= tx.amount
                 "PAYMENT_TO_THEM" -> currentBal += tx.amount
             }
+            currentBalMap[currency] = currentBal
             balancesMap[tx.id] = currentBal
         }
         balancesMap
@@ -599,37 +620,45 @@ fun CustomerHistoryOverlay(
                                         )
                                     }
 
-                                    val textBalanceColor = when {
-                                        netDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
-                                        netDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
-                                        else -> Color(0xFF334155)
-                                    }
-                                    val stateLabel = when {
-                                        netDebt > 0.0 -> "مطلوب منه"
-                                        netDebt < 0.0 -> "مطلوب له"
-                                        else -> "متعادل"
-                                    }
-
-                                    // Compact colored balance badge
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(textBalanceColor.copy(alpha = 0.08f))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                text = formatCurrency(netDebt, currencySymbol),
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Black,
-                                                color = textBalanceColor
-                                            )
-                                            Text(
-                                                text = stateLabel,
-                                                fontSize = 8.sp,
-                                                color = textBalanceColor,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                        for (curr in currencyGroups.keys.sorted()) {
+                                            val cNetDebt = netDebtMap[curr] ?: 0.0
+                                            val textBalanceColor = when {
+                                                cNetDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
+                                                cNetDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
+                                                else -> Color(0xFF334155)
+                                            }
+                                            val stateLabel = when {
+                                                cNetDebt > 0.0 -> "مطلوب منه"
+                                                cNetDebt < 0.0 -> "مطلوب له"
+                                                else -> "متعادل"
+                                            }
+
+                                            // Compact colored balance badge
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(textBalanceColor.copy(alpha = 0.08f))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Text(
+                                                        text = formatCurrency(cNetDebt, curr),
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = textBalanceColor
+                                                    )
+                                                    Text(
+                                                        text = stateLabel,
+                                                        fontSize = 7.sp,
+                                                        color = textBalanceColor,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -713,33 +742,43 @@ fun CustomerHistoryOverlay(
                                     }
 
                                     // Small sub-totals
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Text("ديون:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                                            Text(
-                                                text = formatCurrency(owedByThem, currencySymbol),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFDC2626)
-                                            )
-                                        }
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Text("سداد:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                                            Text(
-                                                text = formatCurrency(paymentByThem + owedToThem, currencySymbol),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF16A34A)
-                                            )
+                                        for (curr in currencyGroups.keys.sorted()) {
+                                            val cOwed = owedByThemMap[curr] ?: 0.0
+                                            val cPaid = paymentByThemMap[curr] ?: 0.0
+                                            val cOwedTo = owedToThemMap[curr] ?: 0.0
+                                            val cPaidTo = paymentToThemMap[curr] ?: 0.0
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                ) {
+                                                    Text("ديون:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                                    Text(
+                                                        text = formatCurrency(cOwed, curr),
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFFDC2626)
+                                                    )
+                                                }
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                ) {
+                                                    Text("سداد:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                                    Text(
+                                                        text = formatCurrency(cPaid + cOwedTo, curr),
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF16A34A)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -820,6 +859,12 @@ fun CustomerHistoryOverlay(
                         )
                     ) {
                         items(displayedTxs, key = { it.id }) { tx ->
+                            val parsedCurrencyInfo = remember(tx.description) {
+                                com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol)
+                            }
+                            val txCurrencySymbol = parsedCurrencyInfo.first
+                            val cleanDescription = parsedCurrencyInfo.second
+
                             val formattedDate = remember(tx.timestamp) {
                                 val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.ENGLISH)
                                 sdf.format(Date(tx.timestamp * 1000))
@@ -979,7 +1024,7 @@ fun CustomerHistoryOverlay(
                                                 textAlign = TextAlign.Center
                                             )
                                             Text(
-                                                text = tx.description.ifEmpty { "لا يوجد ملاحظات" },
+                                                text = cleanDescription.ifEmpty { "لا يوجد ملاحظات" },
                                                 fontSize = 12.sp,
                                                 color = Color(0xFF1E293B),
                                                 textAlign = TextAlign.Center,
@@ -1012,7 +1057,7 @@ fun CustomerHistoryOverlay(
                                                         .padding(horizontal = 6.dp, vertical = 1.dp)
                                                 ) {
                                                     Text(
-                                                        text = "توليد تلقائي (تابع للمعامله #${parentTxSeq ?: "?"}) ⚙️",
+                                                        text = "توليد تلقائي (تابع للمعامله #${parentTxSeq ?: "?"})",
                                                         fontSize = 8.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFF1D4ED8)
@@ -1035,7 +1080,7 @@ fun CustomerHistoryOverlay(
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(
-                                                text = formattedAmount,
+                                                text = "$formattedAmount $txCurrencySymbol",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = indicatorColor
@@ -1044,9 +1089,9 @@ fun CustomerHistoryOverlay(
 
                                         // 4. Running Balance (Leftmost)
                                         Text(
-                                            text = formattedHistBal,
+                                            text = "$formattedHistBal $currencySymbol",
                                             modifier = Modifier.weight(0.8f),
-                                            fontSize = 12.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF64748B),
                                             textAlign = TextAlign.Center

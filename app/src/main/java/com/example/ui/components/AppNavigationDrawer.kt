@@ -1,7 +1,9 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +31,7 @@ fun AppNavigationDrawer(
     currentScreen: Screen,
     onScreenSelected: (Screen) -> Unit,
     onBackupClick: () -> Unit,
+    onCurrencyClick: () -> Unit,
     versionName: String,
     modifier: Modifier = Modifier
 ) {
@@ -36,53 +39,40 @@ fun AppNavigationDrawer(
     val supportPhoneNumber = stringResource(id = R.string.support_phone_number)
     
     ModalDrawerSheet(
-        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContainerColor = Color(0xFFFFFFFF),
         modifier = modifier
             .fillMaxWidth(0.85f)
             .widthIn(max = 310.dp)
             .fillMaxHeight(),
-        windowInsets = WindowInsets.systemBars
+        windowInsets = WindowInsets(0, 0, 0, 0)
     ) {
         // Header of Drawer
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF4B36A2)),
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
-                    modifier = Modifier.size(70.dp),
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            color = Color.White.copy(alpha = 0.15f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    androidx.compose.foundation.Canvas(modifier = Modifier.size(60.dp)) {
-                        val radius = size.minDimension / 3.2f
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.15f),
-                            radius = radius * 1.3f,
-                            center = center.copy(x = center.x - 10f)
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.25f),
-                            radius = radius * 1.3f,
-                            center = center.copy(x = center.x + 10f)
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.4f),
-                            radius = radius,
-                            center = center,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
-                        )
-                    }
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 
@@ -90,8 +80,8 @@ fun AppNavigationDrawer(
                 
                 Text(
                     text = stringResource(id = R.string.app_name_main),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
@@ -112,6 +102,13 @@ fun AppNavigationDrawer(
                 icon = Icons.Default.People,
                 label = stringResource(id = R.string.drawer_business_profile_label),
                 onClick = { onScreenSelected(Screen.BUSINESS_PROFILE) }
+            )
+            
+            DrawerItem(
+                selected = false,
+                icon = Icons.Default.Settings,
+                label = stringResource(id = R.string.drawer_currency_label),
+                onClick = onCurrencyClick
             )
             
             DrawerItem(
@@ -151,13 +148,13 @@ fun AppNavigationDrawer(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = Color(0xFFF0F3FC), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = stringResource(id = R.string.drawer_app_version, versionName),
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(0xFF6B7280),
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center
             )
@@ -166,9 +163,9 @@ fun AppNavigationDrawer(
             
             Text(
                 text = stringResource(id = R.string.developer_credit),
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                color = Color(0xFF6B7280),
+                fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center
             )
             

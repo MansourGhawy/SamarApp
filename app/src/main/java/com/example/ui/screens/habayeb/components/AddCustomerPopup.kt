@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -248,10 +249,10 @@ fun AddCustomerPopup(
                             OutlinedTextField(
                                 value = nameStr,
                                 onValueChange = { nameStr = it },
-                                label = { Text(stringResource(id = R.string.habayeb_account_name), fontSize = 13.sp) },
-                                placeholder = { Text(stringResource(id = R.string.habayeb_edit_name_desc), fontSize = 13.sp) },
+                                label = { Text("اسم الحساب", fontSize = 11.sp) },
+                                placeholder = { Text(stringResource(id = R.string.habayeb_edit_name_desc), fontSize = 11.sp) },
                                 singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester),
@@ -265,12 +266,12 @@ fun AddCustomerPopup(
                                 )
                             )
 
-                            // 2. Amount field with calculator trailingIcon
+                            // 2. Amount field with calculator trailingIcon and Date picker leadingIcon
                             OutlinedTextField(
                                 value = initialAmountStr,
                                 onValueChange = { initialAmountStr = it },
-                                label = { Text(stringResource(id = R.string.habayeb_amount), fontSize = 13.sp) },
-                                placeholder = { Text("0.0", fontSize = 13.sp) },
+                                label = { Text("رصيد أولي (اختياري)", fontSize = 11.sp) },
+                                placeholder = { Text("0.0", fontSize = 11.sp) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = {
                                     if (nameStr.isNotBlank()) {
@@ -280,7 +281,7 @@ fun AddCustomerPopup(
                                     }
                                 }),
                                 singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(initialAmountFocusRequester),
@@ -290,14 +291,34 @@ fun AddCustomerPopup(
                                     cursorColor = activeThemeColor,
                                     unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f)
                                 ),
-                                trailingIcon = {
-                                    IconButton(onClick = { showCalculator = true }) {
+                                leadingIcon = {
+                                    IconButton(onClick = { showCalculator = true }, modifier = Modifier.size(24.dp)) {
                                         Icon(
                                             imageVector = Icons.Default.Calculate,
                                             contentDescription = stringResource(id = R.string.habayeb_calculator),
                                             tint = activeThemeColor,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
+                                    }
+                                },
+                                trailingIcon = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = dateStr,
+                                            fontSize = 9.sp,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        )
+                                        IconButton(onClick = { datePickerDialog.show() }, modifier = Modifier.size(24.dp)) {
+                                            Icon(
+                                                imageVector = Icons.Default.CalendarToday,
+                                                contentDescription = stringResource(id = R.string.habayeb_tx_date),
+                                                tint = activeThemeColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
                                     }
                                 }
                             )
@@ -306,16 +327,16 @@ fun AddCustomerPopup(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFFF1F5F9))
-                                    .padding(4.dp),
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(activeSubColor.copy(alpha = 0.5f))
+                                    .padding(2.dp),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(44.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .height(30.dp)
+                                        .clip(RoundedCornerShape(6.dp))
                                         .background(if (initialType == "OWED_BY_THEM") Color(0xFFEF4444) else Color.Transparent)
                                         .clickable {
                                             initialType = "OWED_BY_THEM"
@@ -324,18 +345,18 @@ fun AddCustomerPopup(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = stringResource(id = R.string.habayeb_register_owed_by),
-                                        fontSize = 13.sp,
+                                        text = "عليه دين لي",
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (initialType == "OWED_BY_THEM") Color.White else Color(0xFF475569)
+                                        color = if (initialType == "OWED_BY_THEM") Color.White else Color(0xFFEF4444)
                                     )
                                 }
 
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(44.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .height(30.dp)
+                                        .clip(RoundedCornerShape(6.dp))
                                         .background(if (initialType == "OWED_TO_THEM") Color(0xFF10B981) else Color.Transparent)
                                         .clickable {
                                             initialType = "OWED_TO_THEM"
@@ -344,51 +365,15 @@ fun AddCustomerPopup(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = stringResource(id = R.string.habayeb_register_owed_to),
-                                        fontSize = 13.sp,
+                                        text = "له دين عندي",
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (initialType == "OWED_TO_THEM") Color.White else Color(0xFF475569)
+                                        color = if (initialType == "OWED_TO_THEM") Color.White else Color(0xFF10B981)
                                     )
                                 }
                             }
 
-                            // 4. Interactive Date Picker Row
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(activeSubColor.copy(alpha = 0.5f))
-                                    .clickable { datePickerDialog.show() }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CalendarToday,
-                                        contentDescription = stringResource(id = R.string.habayeb_tx_date),
-                                        tint = activeThemeColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(id = R.string.habayeb_tx_date),
-                                        fontSize = 13.sp,
-                                        color = Color.DarkGray,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                                Text(
-                                    text = dateStr,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = activeThemeColor
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             // Footer Buttons
                             Row(
@@ -448,17 +433,17 @@ fun AddCustomerPopup(
                     } else {
                         Column(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(12.dp)
                                 .navigationBarsPadding()
                                 .imePadding()
                                 .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = stringResource(id = R.string.habayeb_last_step),
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 color = activeThemeColor
                             )
 
@@ -467,10 +452,10 @@ fun AddCustomerPopup(
                                 OutlinedTextField(
                                     value = notesStr,
                                     onValueChange = { notesStr = it },
-                                    label = { Text(stringResource(id = R.string.habayeb_details_required), fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                                    placeholder = { Text(stringResource(id = R.string.habayeb_starting_balance), fontSize = 13.sp) },
+                                    label = { Text(stringResource(id = R.string.habayeb_details_required), fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    placeholder = { Text(stringResource(id = R.string.habayeb_starting_balance), fontSize = 11.sp) },
                                     singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     isError = notesStr.isBlank(),
                                     modifier = Modifier.fillMaxWidth().focusRequester(secondStepNotesFocusRequester),
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -488,8 +473,8 @@ fun AddCustomerPopup(
                                     Text(
                                         text = stringResource(id = R.string.habayeb_required_field),
                                         color = Color.Red,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                                        fontSize = 9.sp,
+                                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
                                     )
                                 }
                             }
@@ -498,10 +483,10 @@ fun AddCustomerPopup(
                             OutlinedTextField(
                                 value = phoneStr,
                                 onValueChange = { phoneStr = it },
-                                label = { Text(stringResource(id = R.string.habayeb_phone_optional), fontSize = 13.sp) },
-                                placeholder = { Text(stringResource(id = R.string.habayeb_contact_picker), fontSize = 13.sp) },
+                                label = { Text(stringResource(id = R.string.habayeb_phone_optional), fontSize = 11.sp) },
+                                placeholder = { Text(stringResource(id = R.string.habayeb_contact_picker), fontSize = 11.sp) },
                                 singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(
                                     onDone = {

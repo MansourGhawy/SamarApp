@@ -1,6 +1,6 @@
 {
-  "name": "الخزينة",
-  "description": "تطبيق الخزينة لإدارة الميزانية والإيرادات والمصروفات بمرونة ورقي وعملية فائقة.",
+  "name": "الدفتر الذكي",
+  "description": "تطبيق الدفتر الذكي لإدارة الميزانية والإيرادات والمصروفات وحسابات الديون والمخزون بمرونة ودقة فائقة.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

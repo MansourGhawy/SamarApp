@@ -26,8 +26,8 @@ import com.example.R
 fun WelcomeOnboardingDialog(
     onDismiss: () -> Unit
 ) {
-    // Dark Olive Green color constant
-    val mizanGreen = Color(0xFF14452F)
+    // Premium Violet Primary color from Theme
+    val mizanGreen = MaterialTheme.colorScheme.primary
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -199,7 +199,7 @@ fun OnboardingFeatureItem(
         Spacer(modifier = Modifier.width(12.dp))
 
         // Text portion
-        val mizanGreen = Color(0xFF14452F)
+        val mizanGreen = MaterialTheme.colorScheme.primary
         Column(
             modifier = Modifier.weight(1f),
             horizontalAlignment = Alignment.Start

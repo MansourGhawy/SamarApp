@@ -98,13 +98,13 @@ fun DeviceActivationDialog(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFFEF2F2)),
+                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = stringResource(id = R.string.licensing_dialog_title),
-                        tint = SoftRed,
+                        tint = EmeraldPrimary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -114,7 +114,7 @@ fun DeviceActivationDialog(
                 Text(
                     text = stringResource(id = R.string.licensing_dialog_title),
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1B5E20),
+                    color = EmeraldPrimary,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center
                 )

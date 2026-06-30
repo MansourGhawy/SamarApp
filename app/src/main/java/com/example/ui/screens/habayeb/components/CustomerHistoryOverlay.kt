@@ -761,7 +761,7 @@ fun CustomerHistoryOverlay(
                     ) {
                         Text(
                             text = "التاريخ",
-                            modifier = Modifier.weight(0.8f),
+                            modifier = Modifier.weight(1.1f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -769,7 +769,7 @@ fun CustomerHistoryOverlay(
                         )
                         Text(
                             text = "التفاصيل",
-                            modifier = Modifier.weight(2.0f),
+                            modifier = Modifier.weight(1.7f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
@@ -909,7 +909,7 @@ fun CustomerHistoryOverlay(
                                     ) {
                                         // 1. Date/Time (Rightmost)
                                         Column(
-                                            modifier = Modifier.weight(0.8f),
+                                            modifier = Modifier.weight(1.1f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Row(
@@ -961,7 +961,7 @@ fun CustomerHistoryOverlay(
 
                                         // 2. Details (Middle-Right)
                                         Column(
-                                            modifier = Modifier.weight(2.0f),
+                                            modifier = Modifier.weight(1.7f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             val typeStr = when (tx.type) {

@@ -66,7 +66,7 @@ fun CustomerDetailsDialog(
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
 
     val customerTxs = remember(transactions, customer) {
-        transactions.filter { it.customerId == customer.id }.sortedByDescending { it.timestamp }
+        transactions.filter { it.customerId == customer.id }.sortedBy { it.timestamp }
     }
 
     val owedByThem = customerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }

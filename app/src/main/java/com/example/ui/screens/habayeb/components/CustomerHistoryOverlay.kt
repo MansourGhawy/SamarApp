@@ -108,7 +108,7 @@ fun CustomerHistoryOverlay(
 
     // Customer transactions list filtered by client ID
     val allCustomerTxs = remember(transactions, activeCustomer) {
-        transactions.filter { it.customerId == activeCustomer.id }.sortedByDescending { it.timestamp }
+        transactions.filter { it.customerId == activeCustomer.id }.sortedBy { it.timestamp }
     }
 
     // Filtered by Search query (supporting description and amount filtering)
@@ -760,12 +760,12 @@ fun CustomerHistoryOverlay(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "التاريخ والوقت",
+                            text = "التاريخ",
                             modifier = Modifier.weight(0.8f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
-                            textAlign = TextAlign.Right
+                            textAlign = TextAlign.Center
                         )
                         Text(
                             text = "التفاصيل",
@@ -789,7 +789,7 @@ fun CustomerHistoryOverlay(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF64748B),
-                            textAlign = TextAlign.Left
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -910,11 +910,11 @@ fun CustomerHistoryOverlay(
                                         // 1. Date/Time (Rightmost)
                                         Column(
                                             modifier = Modifier.weight(0.8f),
-                                            horizontalAlignment = Alignment.Start
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                horizontalArrangement = Arrangement.Center
                                             ) {
                                                 // Chronological Sequence Badge
                                                 Text(
@@ -947,23 +947,14 @@ fun CustomerHistoryOverlay(
                                                 }
                                             }
 
-                                            Spacer(modifier = Modifier.height(2.dp))
-
-                                            Text(
-                                                text = formattedTime,
-                                                fontSize = 10.sp,
-                                                color = Color(0xFF334155),
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1
-                                            )
-
-                                            Spacer(modifier = Modifier.height(0.dp))
+                                            Spacer(modifier = Modifier.height(1.dp))
 
                                             Text(
                                                 text = formattedDate,
-                                                fontSize = 9.sp,
-                                                color = Color(0xFF64748B),
-                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF334155),
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center,
                                                 maxLines = 1
                                             )
                                         }
@@ -1058,7 +1049,7 @@ fun CustomerHistoryOverlay(
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF64748B),
-                                            textAlign = TextAlign.Left
+                                            textAlign = TextAlign.Center
                                         )
                                     }
                                 }

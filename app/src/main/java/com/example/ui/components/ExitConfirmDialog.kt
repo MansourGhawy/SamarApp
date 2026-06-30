@@ -51,7 +51,7 @@ fun ExitConfirmDialog(
                     text = stringResource(id = R.string.dialog_exit_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3F51B5), // Brand Consistency
+                    color = MaterialTheme.colorScheme.primary, // Brand Consistency
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -115,10 +115,10 @@ fun ExitConfirmDialog(
                         )
                     }
 
-                    // YES Exit - Filled Brand Royal Navy color button
+                    // YES Exit - Filled Brand primary color button
                     Button(
                         onClick = { onConfirm(dontShowAgain) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .weight(1f)

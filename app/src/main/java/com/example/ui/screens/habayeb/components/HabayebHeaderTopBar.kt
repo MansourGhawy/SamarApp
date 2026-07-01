@@ -166,7 +166,7 @@ fun HabayebHeaderTopBar(
                     val formattedBalanceText = if (isPrivacyMode) {
                         "*****"
                     } else {
-                        val sign = if (netDebt < 0.0) "-" else ""
+                        val sign = ""
                         val formatted = String.format(java.util.Locale.ENGLISH, "%,.0f", kotlin.math.abs(netDebt))
                         "$sign$formatted $currencySymbol"
                     }

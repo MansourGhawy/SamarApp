@@ -306,22 +306,45 @@ object PdfReportGenerator {
         // Calculate Totals precisely
         var totalDebts = 0.0
         var totalPayments = 0.0
+        
+        var totalDebtsBase = 0.0
+        var totalPaymentsBase = 0.0
+
+        val uncalculatedForeignSums = mutableMapOf<String, Double>()
+
         for (tx in sortedTxs) {
+            val amountVal = if (tx.is_foreign) {
+                if (tx.is_rate_calculated) tx.equivalent_amount else 0.0
+            } else {
+                tx.amount
+            }
+            
+            val baseAmountVal = if (tx.is_foreign) 0.0 else tx.amount
+
             if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
-                totalDebts += tx.amount
+                totalDebts += amountVal
+                totalDebtsBase += baseAmountVal
+                if (tx.is_foreign && !tx.is_rate_calculated) {
+                    uncalculatedForeignSums[tx.currency_code] = (uncalculatedForeignSums[tx.currency_code] ?: 0.0) + tx.foreign_amount
+                }
             } else if (tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM") {
-                totalPayments += tx.amount
+                totalPayments += amountVal
+                totalPaymentsBase += baseAmountVal
+                if (tx.is_foreign && !tx.is_rate_calculated) {
+                    uncalculatedForeignSums[tx.currency_code] = (uncalculatedForeignSums[tx.currency_code] ?: 0.0) - tx.foreign_amount
+                }
             }
         }
 
-        val currencySymbol = "ريال"
+        val calculatedNetDebt = totalDebts - totalPayments
+        val currencySymbol = "ريال" // Should ideally be passed in, but we'll use the default format
         val formattedDebts = String.format(Locale.ENGLISH, "%,.2f", totalDebts) + " " + currencySymbol
         val formattedPayments = String.format(Locale.ENGLISH, "%,.2f", totalPayments) + " " + currencySymbol
-        val formattedNet = String.format(Locale.ENGLISH, "%,.2f", Math.abs(netDebt)) + " " + currencySymbol
+        val formattedNet = String.format(Locale.ENGLISH, "%,.2f", Math.abs(calculatedNetDebt)) + " " + currencySymbol
 
-        val netStatus = if (netDebt > 0) {
+        val netStatus = if (calculatedNetDebt > 0) {
             "(مطلوب منه)"
-        } else if (netDebt < 0) {
+        } else if (calculatedNetDebt < 0) {
             "(مطلوب له)"
         } else {
             "(متعادل)"
@@ -444,14 +467,20 @@ object PdfReportGenerator {
         val rowHeight = 35f
 
         for ((index, tx) in sortedTxs.withIndex()) {
-            if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
-                runningBal += tx.amount
+            val amountVal = if (tx.is_foreign) {
+                if (tx.is_rate_calculated) tx.equivalent_amount else 0.0
             } else {
-                runningBal -= tx.amount
+                tx.amount
             }
 
-            // check page limit (780f maximum for rows)
-            if (currentY + rowHeight > 780f) {
+            if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
+                runningBal += amountVal
+            } else {
+                runningBal -= amountVal
+            }
+
+            // check page limit (760f maximum for rows)
+            if (currentY + rowHeight > 760f) {
                 // Finish current page
                 drawFooter(canvas, currentPageNumber, totalPages, primaryColorHex, context)
                 pdfDocument.finishPage(page)
@@ -469,6 +498,14 @@ object PdfReportGenerator {
                 currentY = 60f
                 drawTableHeader(canvas, currentY)
                 currentY += 30f
+            }
+
+            if (tx.is_foreign) {
+                val paintForeignBg = Paint().apply {
+                    color = Color.parseColor("#F8FAFC") // Very light transparent grey/blue
+                    style = Paint.Style.FILL
+                }
+                canvas.drawRect(42f, currentY, 553f, currentY + rowHeight, paintForeignBg)
             }
 
             // Row background and line decoration (Faint row divider)
@@ -505,7 +542,21 @@ object PdfReportGenerator {
                 "PAYMENT_TO_THEM" -> context.getString(R.string.habayeb_pdf_tx_payment_to)
                 else -> context.getString(R.string.habayeb_pdf_tx_generic)
             }
-            val txLabel = if (tx.description.isNotEmpty()) "$txTypeStr - ${tx.description}" else txTypeStr
+            val txLabel = buildString {
+                append(txTypeStr)
+                if (tx.description.isNotEmpty()) {
+                    append(" - ")
+                    append(tx.description)
+                }
+                if (tx.is_foreign) {
+                    append("\n[${tx.foreign_amount} ${tx.currency_code}")
+                    if (tx.is_rate_calculated) {
+                        append(" | صرف: ${tx.exchange_rate}]")
+                    } else {
+                        append(" | غير محتسب]")
+                    }
+                }
+            }
             
             val layoutDesc = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 StaticLayout.Builder.obtain(txLabel, 0, txLabel.length, textPaintDesc, 191)
@@ -524,7 +575,13 @@ object PdfReportGenerator {
             canvas.restore()
 
             // Draw Owed or Payment values
-            val formattedAmount = String.format(Locale.ENGLISH, "%,.2f", tx.amount)
+            val formattedAmount = if (tx.is_foreign) {
+                if (tx.is_rate_calculated) {
+                    String.format(Locale.ENGLISH, "%,.0f", tx.equivalent_amount)
+                } else "-"
+            } else {
+                String.format(Locale.ENGLISH, "%,.2f", tx.amount)
+            }
             if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
                 // Owed cell (Red tint badge)
                 val badgeLeft = 182f
@@ -555,6 +612,76 @@ object PdfReportGenerator {
 
             currentY += rowHeight
         }
+
+        // --- Totals Footer Section ---
+        val footerHeight = 120f + (uncalculatedForeignSums.size * 20f)
+        if (currentY + footerHeight > 760f) {
+            drawFooter(canvas, currentPageNumber, totalPages, primaryColorHex, context)
+            pdfDocument.finishPage(page)
+
+            currentPageNumber++
+            pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, currentPageNumber).create()
+            page = pdfDocument.startPage(pageInfo)
+            canvas = page.canvas
+
+            drawSubsequentPageHeader(canvas, customer.name, primaryColorHex)
+            currentY = 60f
+        }
+        
+        currentY += 20f
+
+        val paintTotalsTitle = Paint().apply {
+            color = Color.parseColor(primaryColorHex)
+            textSize = 12f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        drawArabicText(canvas, "الملخص والإجماليات المستقلة", 42f, currentY, 511, paintTotalsTitle, Layout.Alignment.ALIGN_NORMAL)
+        currentY += 25f
+
+        val paintTotalsLabel = Paint().apply {
+            color = Color.parseColor("#4B5563")
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+        val paintTotalsVal = Paint().apply {
+            color = Color.parseColor("#111827")
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        
+        // 1. الافتراضي الكلي
+        drawArabicText(canvas, "الإجمالي الافتراضي الكلي (شاملاً التحويلات المفعّلة):", 200f, currentY, 353, paintTotalsLabel, Layout.Alignment.ALIGN_NORMAL)
+        drawArabicText(canvas, formattedNet, 42f, currentY, 150, paintTotalsVal, Layout.Alignment.ALIGN_OPPOSITE)
+        currentY += 20f
+        
+        // 2. الإجمالي بدون احتساب
+        val calculatedBaseNet = totalDebtsBase - totalPaymentsBase
+        val formattedBaseNet = String.format(Locale.ENGLISH, "%,.2f", Math.abs(calculatedBaseNet)) + " " + currencySymbol + if (calculatedBaseNet > 0) " (مطلوب منه)" else if (calculatedBaseNet < 0) " (مطلوب له)" else " (متعادل)"
+        drawArabicText(canvas, "الإجمالي بدون احتساب (العملة الافتراضية فقط):", 200f, currentY, 353, paintTotalsLabel, Layout.Alignment.ALIGN_NORMAL)
+        drawArabicText(canvas, formattedBaseNet, 42f, currentY, 150, paintTotalsVal, Layout.Alignment.ALIGN_OPPOSITE)
+        currentY += 20f
+
+        // 3. الإجماليات المستقلة للعملات غير المفعّلة
+        if (uncalculatedForeignSums.isNotEmpty()) {
+            currentY += 10f
+            drawArabicText(canvas, "الإجماليات المستقلة (غير محسوبة ضمن الإجمالي):", 200f, currentY, 353, paintTotalsLabel, Layout.Alignment.ALIGN_NORMAL)
+            currentY += 20f
+            
+            for ((currency, sum) in uncalculatedForeignSums) {
+                if (Math.abs(sum) > 0.001) {
+                    val status = if (sum > 0) " (مطلوب منه)" else if (sum < 0) " (مطلوب له)" else " (متعادل)"
+                    val formattedSum = String.format(Locale.ENGLISH, "%,.2f", Math.abs(sum)) + " " + currency + status
+                    
+                    drawArabicText(canvas, "إجمالي $currency:", 200f, currentY, 300, paintTotalsLabel, Layout.Alignment.ALIGN_NORMAL)
+                    drawArabicText(canvas, formattedSum, 42f, currentY, 150, paintTotalsVal, Layout.Alignment.ALIGN_OPPOSITE)
+                    currentY += 20f
+                }
+            }
+        }
+        // --- End Totals Footer Section ---
 
         // Draw final page footer and finish page
         drawFooter(canvas, currentPageNumber, totalPages, primaryColorHex, context)

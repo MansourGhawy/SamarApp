@@ -69,10 +69,10 @@ fun CustomerDetailsDialog(
         transactions.filter { it.customerId == customer.id }.sortedBy { it.timestamp }
     }
 
-    val owedByThem = customerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
-    val paymentByThem = customerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
-    val owedToThem = customerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
-    val paymentToThem = customerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
+    val owedByThem = customerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { if (it.is_foreign) { if (it.is_rate_calculated) it.equivalent_amount else 0.0 } else it.amount }
+    val paymentByThem = customerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { if (it.is_foreign) { if (it.is_rate_calculated) it.equivalent_amount else 0.0 } else it.amount }
+    val owedToThem = customerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { if (it.is_foreign) { if (it.is_rate_calculated) it.equivalent_amount else 0.0 } else it.amount }
+    val paymentToThem = customerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { if (it.is_foreign) { if (it.is_rate_calculated) it.equivalent_amount else 0.0 } else it.amount }
     val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
 
     val balanceText = try {
@@ -299,7 +299,7 @@ fun CustomerDetailsDialog(
                                 val isPositiveSign = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
                                 val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
                                 val indicatorColor = if (isGreenColor) SoftGreen else SoftRed
-                                val txPrefix = if (isPositiveSign) "+" else "-"
+                                val txPrefix = ""
 
                                 Card(
                                     shape = RoundedCornerShape(8.dp),

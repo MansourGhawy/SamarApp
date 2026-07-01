@@ -568,8 +568,8 @@ fun generateModernPdfReport(
         val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
         val pillBgColor = if (isGreenColor) "#F0FDF4" else "#FFF5F5"
         val pillTextColor = if (isGreenColor) "#16A34A" else "#DC2626"
-        val prefix = if (isPositiveSign) "+" else "-"
-        val formattedAmount = "$prefix ${formatReportNumber(tx.amount)} $txCurrencySymbol"
+        val prefix = ""
+        val formattedAmount = "${formatReportNumber(tx.amount)} $txCurrencySymbol"
 
         val paintPillBg = Paint().apply {
             color = Color.parseColor(pillBgColor)

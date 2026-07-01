@@ -116,7 +116,12 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
             var owedToThem = BigDecimal.ZERO
             var paymentToThem = BigDecimal.ZERO
             for (tx in custTxs) {
-                val amount = BigDecimal.valueOf(tx.amount)
+                val amountVal = if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else 0.0
+                } else {
+                    tx.amount
+                }
+                val amount = BigDecimal.valueOf(amountVal)
                 when (tx.type) {
                     HabayebTransactionType.OWED_BY_THEM.name -> owedByThem = owedByThem.add(amount)
                     HabayebTransactionType.PAYMENT_BY_THEM.name -> paymentByThem = paymentByThem.add(amount)
@@ -231,7 +236,13 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
         amount: Double,
         desc: String,
         timestamp: Long = System.currentTimeMillis() / 1000,
-        linkedMainTxId: String? = null
+        linkedMainTxId: String? = null,
+        isForeign: Boolean = false,
+        currencyCode: String = "DEFAULT",
+        foreignAmount: Double = 0.0,
+        exchangeRate: Double = 1.0,
+        isRateCalculated: Boolean = false,
+        equivalentAmount: Double = 0.0
     ) {
         if (isTrialExpired()) {
             showActivationRequired.value = true
@@ -247,7 +258,13 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                     amount = amount,
                     timestamp = timestamp,
                     description = desc,
-                    linkedMainTxId = linkedMainTxId
+                    linkedMainTxId = linkedMainTxId,
+                    is_foreign = isForeign,
+                    currency_code = currencyCode,
+                    foreign_amount = foreignAmount,
+                    exchange_rate = exchangeRate,
+                    is_rate_calculated = isRateCalculated,
+                    equivalent_amount = equivalentAmount
                 )
                 repository.insertHabayebTransaction(transaction)
                 withContext(Dispatchers.Main) {
@@ -266,6 +283,45 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            }
+        }
+    }
+
+    fun updateTransactionExchangeRate(txId: String, newRate: Double, calculateRate: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val tx = repository.getHabayebTransactionById(txId)
+                if (tx != null) {
+                    val finalRate = if (newRate <= 0.0) 1.0 else newRate
+                    val finalEquivalent = tx.foreign_amount * finalRate
+                    val updatedTx = tx.copy(
+                        exchange_rate = finalRate,
+                        is_rate_calculated = calculateRate,
+                        equivalent_amount = if (calculateRate) finalEquivalent else 0.0
+                    )
+                    repository.insertHabayebTransaction(updatedTx)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HabayebViewModel", "Error updating transaction exchange rate: ${e.message}", e)
+            }
+        }
+    }
+
+    fun toggleTransactionRateCalculation(txId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val tx = repository.getHabayebTransactionById(txId)
+                if (tx != null) {
+                    val nextCalculated = !tx.is_rate_calculated
+                    val finalEquivalent = tx.foreign_amount * tx.exchange_rate
+                    val updatedTx = tx.copy(
+                        is_rate_calculated = nextCalculated,
+                        equivalent_amount = if (nextCalculated) finalEquivalent else 0.0
+                    )
+                    repository.insertHabayebTransaction(updatedTx)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HabayebViewModel", "Error toggling transaction rate calculation: ${e.message}", e)
             }
         }
     }

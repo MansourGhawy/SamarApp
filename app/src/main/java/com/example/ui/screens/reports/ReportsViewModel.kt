@@ -122,11 +122,16 @@ class ReportsViewModel(application: Application) : AndroidViewModel(application)
             var owedToThem = 0.0
             var paymentToThem = 0.0
             for (tx in customerTxs) {
+                val amountVal = if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else 0.0
+                } else {
+                    tx.amount
+                }
                 when (tx.type) {
-                    "OWED_BY_THEM" -> owedByThem += tx.amount
-                    "PAYMENT_BY_THEM" -> paymentByThem += tx.amount
-                    "OWED_TO_THEM" -> owedToThem += tx.amount
-                    "PAYMENT_TO_THEM" -> paymentToThem += tx.amount
+                    "OWED_BY_THEM" -> owedByThem += amountVal
+                    "PAYMENT_BY_THEM" -> paymentByThem += amountVal
+                    "OWED_TO_THEM" -> owedToThem += amountVal
+                    "PAYMENT_TO_THEM" -> paymentToThem += amountVal
                 }
             }
             val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)

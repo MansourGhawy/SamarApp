@@ -101,6 +101,8 @@ fun CustomerHistoryOverlay(
     val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var isPdfExporting by remember { mutableStateOf(false) }
+    var showRateModifyDialog by remember { mutableStateOf(false) }
+    var exchangeTxToModify by remember { mutableStateOf<HabayebTransaction?>(null) }
 
     // Search state
     var txSearchQuery by remember { mutableStateOf("") }
@@ -119,20 +121,45 @@ fun CustomerHistoryOverlay(
             allCustomerTxs.filter { tx ->
                 tx.description.contains(txSearchQuery, ignoreCase = true) ||
                 tx.amount.toString().contains(txSearchQuery) ||
+                tx.foreign_amount.toString().contains(txSearchQuery) ||
                 (if (tx.type == "OWED_BY_THEM") "دين" else "سداد").contains(txSearchQuery)
             }
         }
     }
 
     // Calculations for overall grouped by currency
-    val currencyGroups = remember(allCustomerTxs) {
-        allCustomerTxs.groupBy { com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
+    val currencyGroups = remember(allCustomerTxs, currencySymbol) {
+        allCustomerTxs.groupBy { if (it.is_foreign) it.currency_code else com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
     }
 
-    val owedByThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "OWED_BY_THEM" }.sumOf { tx -> tx.amount } } }
-    val paymentByThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "PAYMENT_BY_THEM" }.sumOf { tx -> tx.amount } } }
-    val owedToThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "OWED_TO_THEM" }.sumOf { tx -> tx.amount } } }
-    val paymentToThemMap = remember(currencyGroups) { currencyGroups.mapValues { it.value.filter { tx -> tx.type == "PAYMENT_TO_THEM" }.sumOf { tx -> tx.amount } } }
+    val owedByThemMap = remember(currencyGroups) {
+        currencyGroups.mapValues { entry ->
+            entry.value.filter { tx -> tx.type == "OWED_BY_THEM" }.sumOf { tx ->
+                if (tx.is_foreign) tx.foreign_amount else tx.amount
+            }
+        }
+    }
+    val paymentByThemMap = remember(currencyGroups) {
+        currencyGroups.mapValues { entry ->
+            entry.value.filter { tx -> tx.type == "PAYMENT_BY_THEM" }.sumOf { tx ->
+                if (tx.is_foreign) tx.foreign_amount else tx.amount
+            }
+        }
+    }
+    val owedToThemMap = remember(currencyGroups) {
+        currencyGroups.mapValues { entry ->
+            entry.value.filter { tx -> tx.type == "OWED_TO_THEM" }.sumOf { tx ->
+                if (tx.is_foreign) tx.foreign_amount else tx.amount
+            }
+        }
+    }
+    val paymentToThemMap = remember(currencyGroups) {
+        currencyGroups.mapValues { entry ->
+            entry.value.filter { tx -> tx.type == "PAYMENT_TO_THEM" }.sumOf { tx ->
+                if (tx.is_foreign) tx.foreign_amount else tx.amount
+            }
+        }
+    }
     
     val netDebtMap = remember(currencyGroups) { 
         currencyGroups.keys.associateWith { curr ->
@@ -155,13 +182,14 @@ fun CustomerHistoryOverlay(
         val balancesMap = mutableMapOf<String, Double>()
         val currentBalMap = mutableMapOf<String, Double>()
         for (tx in chronological) {
-            val currency = com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol).first
+            val currency = if (tx.is_foreign) tx.currency_code else currencySymbol
             var currentBal = currentBalMap[currency] ?: 0.0
+            val amountVal = if (tx.is_foreign) tx.foreign_amount else tx.amount
             when (tx.type) {
-                "OWED_BY_THEM" -> currentBal += tx.amount
-                "PAYMENT_BY_THEM" -> currentBal -= tx.amount
-                "OWED_TO_THEM" -> currentBal -= tx.amount
-                "PAYMENT_TO_THEM" -> currentBal += tx.amount
+                "OWED_BY_THEM" -> currentBal += amountVal
+                "PAYMENT_BY_THEM" -> currentBal -= amountVal
+                "OWED_TO_THEM" -> currentBal -= amountVal
+                "PAYMENT_TO_THEM" -> currentBal += amountVal
             }
             currentBalMap[currency] = currentBal
             balancesMap[tx.id] = currentBal
@@ -384,10 +412,15 @@ fun CustomerHistoryOverlay(
             else -> "حركة حساب"
         }
         val dateStr = SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale("ar")).format(Date(tx.timestamp * 1000))
+        val amountStr = if (tx.is_foreign) {
+            "${tx.foreign_amount} ${tx.currency_code}" + if (tx.is_rate_calculated) " (يساوي ${formatCurrency(tx.equivalent_amount, currencySymbol)} بـ سعر صرف ${tx.exchange_rate})" else ""
+        } else {
+            formatCurrency(tx.amount, currencySymbol)
+        }
         val body = "إشعار حركة حساب - ميزان الدار:\n" +
                 "العميل: ${customer.name}\n" +
                 "النوع: $txTypeAr\n" +
-                "المبلغ: ${formatCurrency(tx.amount, currencySymbol)}\n" +
+                "المبلغ: $amountStr\n" +
                 "التفاصيل: ${tx.description.ifEmpty { "لا يوجد ملاحظات" }}\n" +
                 "التاريخ: $dateStr\n" +
                 "رصيدكم الإجمالي الحالي لدينا: ${formatCurrency(kotlin.math.abs(netDebt), currencySymbol)} (${if (netDebt > 0) "عليكم" else if (netDebt < 0) "لكم" else "متعادل"})"
@@ -416,10 +449,15 @@ fun CustomerHistoryOverlay(
             else -> "حركة حساب"
         }
         val dateStr = SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale("ar")).format(Date(tx.timestamp * 1000))
+        val amountStr = if (tx.is_foreign) {
+            "${tx.foreign_amount} ${tx.currency_code}" + if (tx.is_rate_calculated) " (يساوي ${formatCurrency(tx.equivalent_amount, currencySymbol)} بـ سعر صرف ${tx.exchange_rate})" else ""
+        } else {
+            formatCurrency(tx.amount, currencySymbol)
+        }
         val body = "*إشعار حركة حساب - ميزان الدار:*\n" +
                 "👤 *العميل:* ${customer.name}\n" +
                 "📌 *النوع:* $txTypeAr\n" +
-                "💰 *المبلغ:* ${formatCurrency(tx.amount, currencySymbol)}\n" +
+                "💰 *المبلغ:* $amountStr\n" +
                 "📝 *التفاصيل:* ${tx.description.ifEmpty { "لا يوجد ملاحظات" }}\n" +
                 "📅 *التاريخ:* $dateStr\n" +
                 "💼 *الرصيد الإجمالي الحالي:* ${formatCurrency(kotlin.math.abs(netDebt), currencySymbol)} (${if (netDebt > 0) "عليكم" else if (netDebt < 0) "لكم" else "متعادل"})"
@@ -862,7 +900,7 @@ fun CustomerHistoryOverlay(
                             val parsedCurrencyInfo = remember(tx.description) {
                                 com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol)
                             }
-                            val txCurrencySymbol = parsedCurrencyInfo.first
+                            val txCurrencySymbol = if (tx.is_foreign) tx.currency_code else parsedCurrencyInfo.first
                             val cleanDescription = parsedCurrencyInfo.second
 
                             val formattedDate = remember(tx.timestamp) {
@@ -878,7 +916,7 @@ fun CustomerHistoryOverlay(
                             val isPositiveSign = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
                             val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
                             val indicatorColor = if (isGreenColor) Color(0xFF10B981) else Color(0xFFEF4444)
-                            val txPrefix = if (isPositiveSign) "+" else "-"
+                            val txPrefix = ""
                             val isSelected = selectedTxIds.contains(tx.id)
                             val rowBgColor = if (isSelected) activeThemeColor.copy(alpha = 0.08f) else Color.White
                             val borderColor = if (isSelected) activeThemeColor else Color(0xFFE2E8F0)
@@ -886,7 +924,8 @@ fun CustomerHistoryOverlay(
                             // Historical running balance at this exact transaction
                             val currentHistBalance = runningBalances[tx.id] ?: 0.0
                             val formattedHistBal = try { String.format(Locale.ENGLISH, "%,.0f", currentHistBalance) } catch (e: Exception) { currentHistBalance.toString() }
-                            val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", tx.amount) } catch (e: Exception) { tx.amount.toString() }
+                            val amountToFormat = if (tx.is_foreign) tx.foreign_amount else tx.amount
+                            val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", amountToFormat) } catch (e: Exception) { amountToFormat.toString() }
 
                             val hasActiveRecurring = tx.id in activeRecurringTxIds
                             val txSeqNo = txSequenceNumbers[tx.id] ?: 0
@@ -1066,27 +1105,79 @@ fun CustomerHistoryOverlay(
                                                     )
                                                 }
                                             }
+
+                                            if (tx.is_foreign) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .background(if (tx.is_rate_calculated) Color(0xFFE6F4EA) else Color(0xFFF1F3F4))
+                                                        .border(0.5.dp, if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFF9AA0A6), RoundedCornerShape(6.dp))
+                                                        .clickable {
+                                                            exchangeTxToModify = tx
+                                                            showRateModifyDialog = true
+                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (tx.is_rate_calculated) Icons.Default.Check else Icons.Default.Close,
+                                                        contentDescription = null,
+                                                        tint = if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFFD93025),
+                                                        modifier = Modifier.size(11.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = if (tx.is_rate_calculated) "نشط (صرف: ${tx.exchange_rate})" else "صرف غير نشط ❌",
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFF5F6368)
+                                                    )
+                                                }
+                                            }
                                         }
 
                                         // 3. Amount with colorful indicator arrow (Middle-Left)
-                                        Row(
+                                        Column(
                                             modifier = Modifier.weight(1.0f),
-                                            horizontalArrangement = Arrangement.Center,
-                                            verticalAlignment = Alignment.CenterVertically
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
                                         ) {
-                                            Icon(
-                                                imageVector = if (isPositiveSign) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                                                contentDescription = null,
-                                                tint = indicatorColor,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "$txPrefix$formattedAmount $txCurrencySymbol",
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Black,
-                                                color = indicatorColor
-                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val txArrow = when (tx.type) {
+                                                    "PAYMENT_TO_THEM" -> Icons.Default.ArrowUpward
+                                                    "OWED_TO_THEM" -> Icons.Default.ArrowDownward
+                                                    "PAYMENT_BY_THEM" -> Icons.Default.ArrowDownward
+                                                    "OWED_BY_THEM" -> Icons.Default.ArrowUpward
+                                                    else -> if (isPositiveSign) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward
+                                                }
+                                                Icon(
+                                                    imageVector = txArrow,
+                                                    contentDescription = null,
+                                                    tint = indicatorColor,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "$txPrefix$formattedAmount $txCurrencySymbol",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = indicatorColor
+                                                )
+                                            }
+                                            if (tx.is_foreign && tx.is_rate_calculated) {
+                                                val formattedEquiv = try { String.format(Locale.ENGLISH, "%,.0f", tx.equivalent_amount) } catch (e: Exception) { tx.equivalent_amount.toString() }
+                                                Text(
+                                                    text = "($formattedEquiv $currencySymbol)",
+                                                    fontSize = 9.sp,
+                                                    color = Color.Gray,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
                                         }
 
                                         // 4. Running Balance (Leftmost)
@@ -1328,5 +1419,92 @@ fun CustomerHistoryOverlay(
             containerColor = Color.White,
             shape = RoundedCornerShape(20.dp)
         )
+    }
+
+    if (showRateModifyDialog && exchangeTxToModify != null) {
+        val tx = exchangeTxToModify!!
+        var rateInputStr by remember(tx.id) { mutableStateOf(if (tx.exchange_rate > 1.0) tx.exchange_rate.toString() else "") }
+        
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showRateModifyDialog = false }) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "تعديل سعر الصرف لعملية أجنبية",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = activeThemeColor
+                        )
+                        
+                        Text(
+                            text = "العملة: ${tx.currency_code} | المبلغ الأصلي: ${tx.foreign_amount}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                        
+                        OutlinedTextField(
+                            value = rateInputStr,
+                            onValueChange = { rateInputStr = it },
+                            label = { Text("سعر الصرف مقابل العملة الافتراضية", fontSize = 11.sp) },
+                            placeholder = { Text("مثال: 500", fontSize = 12.sp) },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = activeThemeColor,
+                                focusedLabelColor = activeThemeColor,
+                                cursorColor = activeThemeColor,
+                                unfocusedBorderColor = Color.LightGray
+                            ),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val parsedRate = rateInputStr.toDoubleOrNull() ?: 1.0
+                                    val finalRate = if (parsedRate <= 0.0) 1.0 else parsedRate
+                                    viewModel.updateTransactionExchangeRate(tx.id, finalRate, true)
+                                    showRateModifyDialog = false
+                                    exchangeTxToModify = null
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("تفعيل وحفظ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            
+                            Button(
+                                onClick = {
+                                    viewModel.updateTransactionExchangeRate(tx.id, tx.exchange_rate, false)
+                                    showRateModifyDialog = false
+                                    exchangeTxToModify = null
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("تعطيل الصرف", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

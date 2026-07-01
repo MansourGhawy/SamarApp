@@ -49,6 +49,7 @@ class FinanceRepository(internal val database: AppDatabase) {
     suspend fun clearCommitments() = commitmentDao.clearAllCommitments()
 
     // Transactions
+    suspend fun getTransactionById(id: String): TransactionDb? = transactionDao.getTransactionById(id)
     suspend fun saveTransaction(transaction: TransactionDb) = transactionDao.insertTransaction(transaction)
     suspend fun deleteTransaction(transaction: TransactionDb) = transactionDao.deleteTransaction(transaction)
     suspend fun deleteTransactionById(id: String) = transactionDao.deleteTransactionById(id)
@@ -123,6 +124,12 @@ class FinanceRepository(internal val database: AppDatabase) {
                     put("timestamp", tx.timestamp)
                     put("description", tx.description)
                     put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
+                    put("is_foreign", tx.is_foreign)
+                    put("currency_code", tx.currency_code)
+                    put("foreign_amount", tx.foreign_amount)
+                    put("exchange_rate", tx.exchange_rate)
+                    put("is_rate_calculated", tx.is_rate_calculated)
+                    put("equivalent_amount", tx.equivalent_amount)
                 })
             }
             put("transactions", txsArray)
@@ -191,6 +198,12 @@ class FinanceRepository(internal val database: AppDatabase) {
             put("timestamp", tx.timestamp)
             put("description", tx.description)
             put("linkedMainTxId", tx.linkedMainTxId ?: JSONObject.NULL)
+            put("is_foreign", tx.is_foreign)
+            put("currency_code", tx.currency_code)
+            put("foreign_amount", tx.foreign_amount)
+            put("exchange_rate", tx.exchange_rate)
+            put("is_rate_calculated", tx.is_rate_calculated)
+            put("equivalent_amount", tx.equivalent_amount)
         }.toString()
         val trashItem = DeletedItemEntity(id = tx.id, sourceSystem = "حبايب", originalTableName = "habayeb_transactions", jsonData = jsonData)
         saveDeletedItem(trashItem)

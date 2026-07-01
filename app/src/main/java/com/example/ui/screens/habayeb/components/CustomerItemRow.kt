@@ -182,10 +182,10 @@ fun CustomerItemRow(
                     val netDebt = customer.netDebt
                     if (netDebt > 0.0) {
                         AutoScaleText(
-                            text = formatCurrency(netDebt, currencySymbol),
+                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
                             baseFontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFEF4444)
+                            color = Color(0xFF10B981)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -196,10 +196,10 @@ fun CustomerItemRow(
                         )
                     } else if (netDebt < 0.0) {
                         AutoScaleText(
-                            text = formatCurrency(netDebt, currencySymbol),
+                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
                             baseFontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981)
+                            color = Color(0xFFEF4444)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

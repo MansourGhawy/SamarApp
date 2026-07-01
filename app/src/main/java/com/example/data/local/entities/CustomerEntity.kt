@@ -38,5 +38,11 @@ data class HabayebTransaction(
     val amount: Double,
     val timestamp: Long,
     val description: String,
-    val linkedMainTxId: String? = null
+    val linkedMainTxId: String? = null,
+    val is_foreign: Boolean = false,
+    val currency_code: String = "DEFAULT",
+    val foreign_amount: Double = 0.0,
+    val exchange_rate: Double = 1.0,
+    val is_rate_calculated: Boolean = false,
+    val equivalent_amount: Double = 0.0
 )

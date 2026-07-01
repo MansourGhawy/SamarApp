@@ -118,10 +118,26 @@ fun AddTransactionPopup(
     }
 
     var selectedTransactionCurrency by rememberSaveable {
-        mutableStateOf(initialCurrencyAndDesc.first)
+        mutableStateOf(editingTransaction?.currency_code?.let { if (it == "DEFAULT") currencySymbol else it } ?: initialCurrencyAndDesc.first)
     }
 
-    var amountStr by rememberSaveable { mutableStateOf(editingTransaction?.amount?.toInt()?.toString() ?: "") }
+    var isForeignSelected by rememberSaveable { mutableStateOf(editingTransaction?.is_foreign ?: false) }
+    var foreignExchangeRate by rememberSaveable { mutableStateOf(editingTransaction?.exchange_rate ?: 1.0) }
+    var isForeignRateCalculated by rememberSaveable { mutableStateOf(editingTransaction?.is_rate_calculated ?: false) }
+    var showExchangeRateDialog by remember { mutableStateOf(false) }
+    var selectedForeignSymbol by remember { mutableStateOf("") }
+
+    var amountStr by rememberSaveable {
+        mutableStateOf(
+            editingTransaction?.let {
+                if (it.is_foreign) {
+                    if (it.foreign_amount % 1.0 == 0.0) it.foreign_amount.toInt().toString() else it.foreign_amount.toString()
+                } else {
+                    if (it.amount % 1.0 == 0.0) it.amount.toInt().toString() else it.amount.toString()
+                }
+            } ?: ""
+        )
+    }
     var descStr by rememberSaveable { mutableStateOf(if (editingTransaction != null) initialCurrencyAndDesc.second else "") }
     var selectedType by rememberSaveable { mutableStateOf(editingTransaction?.type ?: initialSelectedType) }
     var showFastActionPopup by remember { mutableStateOf(false) }
@@ -191,7 +207,19 @@ fun AddTransactionPopup(
                     viewModel.deleteHabayebTransaction(editingTransaction.id)
                 }
 
-                val presetMainTxId = if (finalActionType == "PAYMENT_BY_THEM" && syncAsMainIncome) {
+                val finalEquivalentAmount = if (isForeignSelected) {
+                    if (isForeignRateCalculated) {
+                        amount * foreignExchangeRate
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                }
+
+                val mainIncomeAmount = if (isForeignSelected) finalEquivalentAmount else amount
+
+                val presetMainTxId = if (finalActionType == "PAYMENT_BY_THEM" && syncAsMainIncome && mainIncomeAmount > 0.0) {
                     "tx_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}"
                 } else null
 
@@ -199,7 +227,7 @@ fun AddTransactionPopup(
                     viewModel.addTransaction(
                         type = "INCOME",
                         category = context.getString(R.string.habayeb_category_other),
-                        amount = amount,
+                        amount = mainIncomeAmount,
                         description = "${context.getString(R.string.habayeb_pdf_tx_payment_by)}: ${customer.name}${if (descStr.isNotBlank()) " - " + descStr.trim() else ""}",
                         timestamp = dateMillis / 1000,
                         presetId = presetMainTxId
@@ -209,10 +237,16 @@ fun AddTransactionPopup(
                 viewModel.addHabayebTransaction(
                     customerId = customer.id,
                     type = finalActionType,
-                    amount = amount,
+                    amount = if (isForeignSelected) finalEquivalentAmount else amount,
                     desc = com.example.ui.screens.habayeb.utils.CurrencyConfig.formatDescriptionWithCurrency(descStr.trim(), selectedTransactionCurrency),
                     timestamp = dateMillis / 1000,
-                    linkedMainTxId = presetMainTxId
+                    linkedMainTxId = presetMainTxId,
+                    isForeign = isForeignSelected,
+                    currencyCode = selectedTransactionCurrency,
+                    foreignAmount = amount,
+                    exchangeRate = foreignExchangeRate,
+                    isRateCalculated = isForeignRateCalculated,
+                    equivalentAmount = finalEquivalentAmount
                 )
                 Toast.makeText(context, context.getString(R.string.habayeb_toast_tx_save_success), Toast.LENGTH_SHORT).show()
                 onDismiss()
@@ -428,7 +462,16 @@ fun AddTransactionPopup(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
-                                    selectedTransactionCurrency = sym
+                                    val isForeign = sym != currencySymbol
+                                    if (isForeign) {
+                                        selectedForeignSymbol = sym
+                                        showExchangeRateDialog = true
+                                    } else {
+                                        isForeignSelected = false
+                                        foreignExchangeRate = 1.0
+                                        isForeignRateCalculated = false
+                                        selectedTransactionCurrency = sym
+                                    }
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                 }
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -628,5 +671,95 @@ fun AddTransactionPopup(
             activeThemeColor = activeThemeColor,
             activeSubColor = activeSubColor
         )
+    }
+
+    if (showExchangeRateDialog) {
+        var rateInputStr by remember { mutableStateOf(if (foreignExchangeRate > 1.0) foreignExchangeRate.toString() else "") }
+        
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showExchangeRateDialog = false }) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "هل تود احتساب سعر الصرف؟",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = activeThemeColor
+                        )
+                        
+                        Text(
+                            text = "أدخل سعر صرف الـ [ ${com.example.ui.screens.habayeb.utils.CurrencyConfig.getBySymbol(selectedForeignSymbol)?.arabicName ?: selectedForeignSymbol} ] بالعملة الافتراضية",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        OutlinedTextField(
+                            value = rateInputStr,
+                            onValueChange = { rateInputStr = it },
+                            placeholder = { Text("مثال: 500", fontSize = 12.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = activeThemeColor,
+                                focusedLabelColor = activeThemeColor,
+                                cursorColor = activeThemeColor,
+                                unfocusedBorderColor = Color.LightGray
+                            ),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val parsedRate = rateInputStr.toDoubleOrNull() ?: 1.0
+                                    val finalRate = if (parsedRate <= 0.0) 1.0 else parsedRate
+                                    foreignExchangeRate = finalRate
+                                    isForeignRateCalculated = true
+                                    isForeignSelected = true
+                                    selectedTransactionCurrency = selectedForeignSymbol
+                                    showExchangeRateDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("نعم، احسب", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            
+                            Button(
+                                onClick = {
+                                    foreignExchangeRate = 1.0
+                                    isForeignRateCalculated = false
+                                    isForeignSelected = true
+                                    selectedTransactionCurrency = selectedForeignSymbol
+                                    showExchangeRateDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("لا، لا تحسب", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

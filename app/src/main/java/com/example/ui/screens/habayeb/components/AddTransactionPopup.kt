@@ -94,6 +94,7 @@ import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.data.local.entities.HabayebTransaction
 import com.example.ui.viewmodel.FinanceViewModel
+import com.example.ui.screens.CalculatorDialog
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -174,33 +175,6 @@ fun AddTransactionPopup(
     var isSaving by remember { mutableStateOf(false) }
 
     val activeColor = if (selectedType == "OWED_BY_THEM" || selectedType == "OWED_TO_THEM") Color(0xFFEF5350) else Color(0xFF66BB6A)
-
-    val datePickerDialog = remember {
-        val calendar = Calendar.getInstance().apply { timeInMillis = dateMillis }
-        android.app.DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                calendar.set(Calendar.YEAR, year)
-                calendar.set(Calendar.MONTH, month)
-                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-
-                android.app.TimePickerDialog(
-                    context,
-                    { _, hourOfDay, minute ->
-                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                        calendar.set(Calendar.MINUTE, minute)
-                        dateMillis = calendar.timeInMillis
-                    },
-                    calendar.get(Calendar.HOUR_OF_DAY),
-                    calendar.get(Calendar.MINUTE),
-                    false
-                ).show()
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-    }
 
     val executeSave = { finalActionType: String ->
         softwareKeyboardController?.hide()
@@ -679,7 +653,35 @@ fun AddTransactionPopup(
                                 color = Color.Gray,
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
-                            IconButton(onClick = { datePickerDialog.show() }, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = {
+                                    val calendar = Calendar.getInstance().apply { timeInMillis = dateMillis }
+                                    android.app.DatePickerDialog(
+                                        context,
+                                        { _, selectedYear, selectedMonth, selectedDayOfMonth ->
+                                            calendar.set(Calendar.YEAR, selectedYear)
+                                            calendar.set(Calendar.MONTH, selectedMonth)
+                                            calendar.set(Calendar.DAY_OF_MONTH, selectedDayOfMonth)
+
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, hourOfDay, minute ->
+                                                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                                    calendar.set(Calendar.MINUTE, minute)
+                                                    dateMillis = calendar.timeInMillis
+                                                },
+                                                calendar.get(Calendar.HOUR_OF_DAY),
+                                                calendar.get(Calendar.MINUTE),
+                                                false
+                                            ).show()
+                                        },
+                                        calendar.get(Calendar.YEAR),
+                                        calendar.get(Calendar.MONTH),
+                                        calendar.get(Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.CalendarToday,
                                     contentDescription = stringResource(id = R.string.habayeb_tx_date),
@@ -894,9 +896,9 @@ fun AddTransactionPopup(
     }
 
     if (showCalculator) {
-        CalculatorModal(
+        CalculatorDialog(
             onDismiss = { showCalculator = false },
-            onConfirmExpression = { value ->
+            onValueConfirmed = { value ->
                 amountStr = value.toInt().toString()
                 showCalculator = false
             },

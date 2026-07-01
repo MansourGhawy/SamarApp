@@ -76,7 +76,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,7 +100,6 @@ import com.example.ui.screens.habayeb.components.AddCustomerPopup
 import com.example.ui.screens.habayeb.components.CustomerHistoryOverlay
 import com.example.ui.screens.habayeb.components.CustomerItemRow
 import com.example.ui.screens.habayeb.components.AddTransactionPopup
-import com.example.ui.screens.habayeb.components.CalculatorModal
 import com.example.ui.screens.habayeb.components.HabayebFilterTabs
 import com.example.ui.screens.habayeb.components.HabayebHeaderTopBar
 import com.example.ui.screens.habayeb.components.HabayebFilterToolbar
@@ -229,6 +227,13 @@ fun HabayebScreen(
         }
     }
 
+    // Performance Profile: Defer heavy list rendering until navigation animation completes
+    var isScreenReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)
+        isScreenReady = true
+    }
+
     // Optimized, non-blocking asynchronous calculation of filtered and sorted customers list
     var filteredCustomers by remember { mutableStateOf(emptyList<CustomerUiState>()) }
 
@@ -339,8 +344,18 @@ fun HabayebScreen(
                     )
                 ) {
                     // Density Optimized List Area
-                    if (filteredCustomers.isEmpty()) {
-                        item {
+                    if (!isScreenReady && customersState.customers.isNotEmpty()) {
+                        item(key = "loading_skeleton") {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = EmeraldPrimary,
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
+                    } else if (filteredCustomers.isEmpty()) {
+                        item(key = "empty_state") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

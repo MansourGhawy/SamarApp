@@ -5,7 +5,13 @@ import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
 import androidx.room.Index
 
-@Entity(tableName = "habayeb_customers")
+@Entity(
+    tableName = "habayeb_customers",
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["createdAt"])
+    ]
+)
 data class HabayebCustomer(
     @PrimaryKey val id: String,
     val name: String,

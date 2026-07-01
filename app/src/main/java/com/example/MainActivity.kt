@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             android.widget.Toast.makeText(
                                 context,
-                                "تم تسجيل عدد $count معاملات مكررة تلقائياً بنجاح! 🌸",
+                                context.getString(R.string.toast_recurring_txs_success, count),
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         }
@@ -80,6 +80,31 @@ class MainActivity : ComponentActivity() {
 
             var permissionRequested by remember { mutableStateOf(false) }
             var showOnboardingDialog by remember { mutableStateOf(false) }
+            var shouldRequestPermissions by remember { mutableStateOf(false) }
+
+            val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val allGranted = permissions.values.all { it }
+                android.util.Log.d("MainActivity", "Permissions completed: allGranted=$allGranted")
+            }
+
+            LaunchedEffect(shouldRequestPermissions) {
+                if (shouldRequestPermissions) {
+                    val permissions = mutableListOf<String>()
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
+                        permissions.add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                        permissions.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    } else {
+                        permissions.add("android.permission.READ_MEDIA_IMAGES")
+                    }
+                    permissionLauncher.launch(permissions.toTypedArray())
+                    shouldRequestPermissions = false
+                }
+            }
 
             // Strictly check first launch status on start, merging database settings and highly-persistent SharedPreferences lock
             val isReallyFirstLaunch = settings.isFirstLaunch && !viewModel.hasShownOnboarding()
@@ -116,6 +141,7 @@ class MainActivity : ComponentActivity() {
                                     val updated = settings.copy(isFirstLaunch = false)
                                     viewModel.saveSettings(updated)
                                     showOnboardingDialog = false
+                                    shouldRequestPermissions = true // Request storage/post permissions immediately after welcome greeting!
                                 }
                             )
                         }

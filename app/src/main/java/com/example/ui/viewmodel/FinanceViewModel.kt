@@ -903,35 +903,24 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun getBaseBackupDirectory(): File {
         val context = getApplication<Application>()
-        val hasPublicAccess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        }
-
-        if (hasPublicAccess) {
-            val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val mainDir = File(publicDocDir, "Mizan_Backups")
-            try {
-                if (!mainDir.exists()) {
-                    val created = mainDir.mkdirs()
-                    if (created || mainDir.exists()) {
-                        return mainDir
-                    }
-                } else {
-                    return mainDir
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        
+        // Prioritize the public Documents folder: "الدفتر الذكي"
+        val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+        val mainDir = File(publicDocDir, "الدفتر الذكي")
+        try {
+            if (!mainDir.exists()) {
+                mainDir.mkdirs()
             }
+            if (mainDir.exists()) {
+                return mainDir
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         
         val appExternalDocsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) 
             ?: context.getExternalFilesDir(null)
-        val fallbackMainDir = File(appExternalDocsDir, "Mizan_Backups")
+        val fallbackMainDir = File(appExternalDocsDir, "الدفتر الذكي")
         if (!fallbackMainDir.exists()) {
             fallbackMainDir.mkdirs()
         }

@@ -354,9 +354,9 @@ fun SettingsView(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF075E54).copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color(0xFF0F766E).copy(alpha = 0.05f)
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                 )
             ) {
                 Row(
@@ -369,7 +369,7 @@ fun SettingsView(
                     Icon(
                         imageVector = Icons.Default.ArrowBackIosNew,
                         contentDescription = "الدخول",
-                        tint = Color(0xFF075E54),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     
@@ -378,13 +378,13 @@ fun SettingsView(
                             text = stringResource(R.string.drawer_security_label),
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = Color(0xFF075E54)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.Default.Security,
                             contentDescription = "الأمن والحماية",
-                            tint = Color(0xFF075E54),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
                     }

@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +39,6 @@ import com.example.data.local.entities.AppSettings
 import com.example.ui.navigation.Screen
 import com.example.ui.helper.dialPhoneNumber
 import com.example.ui.helper.openWhatsAppChat
-import com.example.ui.screens.habayeb.utils.CurrencyConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,13 +140,6 @@ fun AppNavigationDrawer(
                 icon = Icons.Default.Lock,
                 label = stringResource(id = R.string.drawer_security_label),
                 onClick = { onScreenSelected(Screen.SECURITY) }
-            )
-            
-            DrawerItem(
-                selected = currentScreen == Screen.REPORTS,
-                icon = Icons.Default.List,
-                label = stringResource(id = R.string.drawer_reports_label),
-                onClick = { onScreenSelected(Screen.REPORTS) }
             )
             
             DrawerItem(

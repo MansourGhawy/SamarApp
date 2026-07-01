@@ -76,6 +76,7 @@ import com.example.R
 import com.example.data.local.entities.HabayebCustomer
 import com.example.domain.StringUtils.getContactDetails
 import com.example.ui.viewmodel.FinanceViewModel
+import com.example.ui.screens.CalculatorDialog
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -108,31 +109,6 @@ fun AddCustomerPopup(
     val dateStr = remember(selectedCalendar) {
         val sdf = SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH)
         sdf.format(selectedCalendar.time)
-    }
-
-    val year = selectedCalendar.get(Calendar.YEAR)
-    val month = selectedCalendar.get(Calendar.MONTH)
-    val day = selectedCalendar.get(Calendar.DAY_OF_MONTH)
-
-    val datePickerDialog = remember {
-        android.app.DatePickerDialog(
-            context,
-            { _, selectedYear, selectedMonth, selectedDayOfMonth ->
-                val newCal = Calendar.getInstance().apply {
-                    set(Calendar.YEAR, selectedYear)
-                    set(Calendar.MONTH, selectedMonth)
-                    set(Calendar.DAY_OF_MONTH, selectedDayOfMonth)
-                    set(Calendar.HOUR_OF_DAY, 12)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                selectedCalendar = newCal
-            },
-            year,
-            month,
-            day
-        )
     }
 
     // Auto-focus & keyboard navigation setup
@@ -310,7 +286,32 @@ fun AddCustomerPopup(
                                             color = Color.Gray,
                                             modifier = Modifier.padding(horizontal = 4.dp)
                                         )
-                                        IconButton(onClick = { datePickerDialog.show() }, modifier = Modifier.size(24.dp)) {
+                                        IconButton(
+                                            onClick = {
+                                                val year = selectedCalendar.get(Calendar.YEAR)
+                                                val month = selectedCalendar.get(Calendar.MONTH)
+                                                val day = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                                android.app.DatePickerDialog(
+                                                    context,
+                                                    { _, selectedYear, selectedMonth, selectedDayOfMonth ->
+                                                        val newCal = Calendar.getInstance().apply {
+                                                            set(Calendar.YEAR, selectedYear)
+                                                            set(Calendar.MONTH, selectedMonth)
+                                                            set(Calendar.DAY_OF_MONTH, selectedDayOfMonth)
+                                                            set(Calendar.HOUR_OF_DAY, 12)
+                                                            set(Calendar.MINUTE, 0)
+                                                            set(Calendar.SECOND, 0)
+                                                            set(Calendar.MILLISECOND, 0)
+                                                        }
+                                                        selectedCalendar = newCal
+                                                    },
+                                                    year,
+                                                    month,
+                                                    day
+                                                ).show()
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
                                             Icon(
                                                 imageVector = Icons.Default.CalendarToday,
                                                 contentDescription = stringResource(id = R.string.habayeb_tx_date),
@@ -586,9 +587,9 @@ fun AddCustomerPopup(
     }
 
     if (showCalculator) {
-        CalculatorModal(
+        CalculatorDialog(
             onDismiss = { showCalculator = false },
-            onConfirmExpression = { value ->
+            onValueConfirmed = { value ->
                 initialAmountStr = value.toString()
                 showCalculator = false
             },

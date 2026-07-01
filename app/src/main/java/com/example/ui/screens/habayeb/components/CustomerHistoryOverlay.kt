@@ -129,34 +129,52 @@ fun CustomerHistoryOverlay(
 
     // Calculations for overall grouped by currency
     val currencyGroups = remember(allCustomerTxs, currencySymbol) {
-        allCustomerTxs.groupBy { if (it.is_foreign) it.currency_code else com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
+        allCustomerTxs.groupBy { tx ->
+            if (tx.is_foreign) {
+                if (tx.is_rate_calculated) {
+                    currencySymbol
+                } else {
+                    tx.currency_code
+                }
+            } else {
+                com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(tx.description, currencySymbol).first
+            }
+        }
     }
 
     val owedByThemMap = remember(currencyGroups) {
         currencyGroups.mapValues { entry ->
             entry.value.filter { tx -> tx.type == "OWED_BY_THEM" }.sumOf { tx ->
-                if (tx.is_foreign) tx.foreign_amount else tx.amount
+                if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else tx.foreign_amount
+                } else tx.amount
             }
         }
     }
     val paymentByThemMap = remember(currencyGroups) {
         currencyGroups.mapValues { entry ->
             entry.value.filter { tx -> tx.type == "PAYMENT_BY_THEM" }.sumOf { tx ->
-                if (tx.is_foreign) tx.foreign_amount else tx.amount
+                if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else tx.foreign_amount
+                } else tx.amount
             }
         }
     }
     val owedToThemMap = remember(currencyGroups) {
         currencyGroups.mapValues { entry ->
             entry.value.filter { tx -> tx.type == "OWED_TO_THEM" }.sumOf { tx ->
-                if (tx.is_foreign) tx.foreign_amount else tx.amount
+                if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else tx.foreign_amount
+                } else tx.amount
             }
         }
     }
     val paymentToThemMap = remember(currencyGroups) {
         currencyGroups.mapValues { entry ->
             entry.value.filter { tx -> tx.type == "PAYMENT_TO_THEM" }.sumOf { tx ->
-                if (tx.is_foreign) tx.foreign_amount else tx.amount
+                if (tx.is_foreign) {
+                    if (tx.is_rate_calculated) tx.equivalent_amount else tx.foreign_amount
+                } else tx.amount
             }
         }
     }
@@ -182,9 +200,11 @@ fun CustomerHistoryOverlay(
         val balancesMap = mutableMapOf<String, Double>()
         val currentBalMap = mutableMapOf<String, Double>()
         for (tx in chronological) {
-            val currency = if (tx.is_foreign) tx.currency_code else currencySymbol
+            val currency = if (tx.is_foreign && !tx.is_rate_calculated) tx.currency_code else currencySymbol
             var currentBal = currentBalMap[currency] ?: 0.0
-            val amountVal = if (tx.is_foreign) tx.foreign_amount else tx.amount
+            val amountVal = if (tx.is_foreign) {
+                if (tx.is_rate_calculated) tx.equivalent_amount else tx.foreign_amount
+            } else tx.amount
             when (tx.type) {
                 "OWED_BY_THEM" -> currentBal += amountVal
                 "PAYMENT_BY_THEM" -> currentBal -= amountVal
@@ -658,47 +678,56 @@ fun CustomerHistoryOverlay(
                                         )
                                     }
 
-                                    Column(
-                                        horizontalAlignment = Alignment.End,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        for (curr in currencyGroups.keys.sorted()) {
-                                            val cNetDebt = netDebtMap[curr] ?: 0.0
-                                            val textBalanceColor = when {
-                                                cNetDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
-                                                cNetDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
-                                                else -> Color(0xFF334155)
-                                            }
-                                            val stateLabel = when {
-                                                cNetDebt > 0.0 -> "مطلوب منه"
-                                                cNetDebt < 0.0 -> "مطلوب له"
-                                                else -> "متعادل"
-                                            }
+                                @OptIn(ExperimentalLayoutApi::class)
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    for (curr in currencyGroups.keys.sorted()) {
+                                        val cNetDebt = netDebtMap[curr] ?: 0.0
+                                        val textBalanceColor = when {
+                                            cNetDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
+                                            cNetDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
+                                            else -> Color(0xFF334155)
+                                        }
+                                        val stateLabel = when {
+                                            cNetDebt > 0.0 -> "مطلوب منه"
+                                            cNetDebt < 0.0 -> "مطلوب له"
+                                            else -> "متعادل"
+                                        }
+                                        
+                                        val signedNetDebtStr = if (cNetDebt < 0.0) {
+                                            "-" + formatCurrency(kotlin.math.abs(cNetDebt), curr)
+                                        } else {
+                                            formatCurrency(cNetDebt, curr)
+                                        }
 
-                                            // Compact colored balance badge
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(textBalanceColor.copy(alpha = 0.08f))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                    Text(
-                                                        text = formatCurrency(cNetDebt, curr),
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = textBalanceColor
-                                                    )
-                                                    Text(
-                                                        text = stateLabel,
-                                                        fontSize = 7.sp,
-                                                        color = textBalanceColor,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
+                                        // Compact colored balance badge
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(start = 4.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(textBalanceColor.copy(alpha = 0.08f))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = signedNetDebtStr,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = textBalanceColor
+                                                )
+                                                Text(
+                                                    text = stateLabel,
+                                                    fontSize = 7.sp,
+                                                    color = textBalanceColor,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
                                     }
+                                }
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -1181,8 +1210,9 @@ fun CustomerHistoryOverlay(
                                         }
 
                                         // 4. Running Balance (Leftmost)
+                                        val balCurrency = if (tx.is_foreign && !tx.is_rate_calculated) tx.currency_code else currencySymbol
                                         Text(
-                                            text = "$formattedHistBal $currencySymbol",
+                                            text = "$formattedHistBal $balCurrency",
                                             modifier = Modifier.weight(0.8f),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
@@ -1476,7 +1506,8 @@ fun CustomerHistoryOverlay(
                         ) {
                             Button(
                                 onClick = {
-                                    val parsedRate = rateInputStr.toDoubleOrNull() ?: 1.0
+                                    val cleanRateStr = com.example.ui.screens.habayeb.utils.CurrencyConfig.normalizeDigits(rateInputStr).trim()
+                                    val parsedRate = cleanRateStr.toDoubleOrNull() ?: 1.0
                                     val finalRate = if (parsedRate <= 0.0) 1.0 else parsedRate
                                     viewModel.updateTransactionExchangeRate(tx.id, finalRate, true)
                                     showRateModifyDialog = false

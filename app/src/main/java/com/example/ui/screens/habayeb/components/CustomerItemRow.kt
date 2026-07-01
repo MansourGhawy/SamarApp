@@ -196,7 +196,7 @@ fun CustomerItemRow(
                         )
                     } else if (netDebt < 0.0) {
                         AutoScaleText(
-                            text = formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
+                            text = "-" + formatCurrency(kotlin.math.abs(netDebt), currencySymbol),
                             baseFontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFEF4444)

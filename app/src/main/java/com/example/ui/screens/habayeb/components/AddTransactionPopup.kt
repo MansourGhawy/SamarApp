@@ -1,6 +1,13 @@
 package com.example.ui.screens.habayeb.components
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.AnimatedVisibility
@@ -18,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -124,8 +132,7 @@ fun AddTransactionPopup(
     var isForeignSelected by rememberSaveable { mutableStateOf(editingTransaction?.is_foreign ?: false) }
     var foreignExchangeRate by rememberSaveable { mutableStateOf(editingTransaction?.exchange_rate ?: 1.0) }
     var isForeignRateCalculated by rememberSaveable { mutableStateOf(editingTransaction?.is_rate_calculated ?: false) }
-    var showExchangeRateDialog by remember { mutableStateOf(false) }
-    var selectedForeignSymbol by remember { mutableStateOf("") }
+    var selectedForeignSymbol by remember { mutableStateOf(editingTransaction?.currency_code ?: "") }
 
     var amountStr by rememberSaveable {
         mutableStateOf(
@@ -147,12 +154,14 @@ fun AddTransactionPopup(
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(300)
-        try {
-            amountFocusRequester.requestFocus()
-            softwareKeyboardController?.show()
-        } catch(e: Exception) {}
+    LaunchedEffect(showFastActionPopup) {
+        if (!showFastActionPopup) {
+            kotlinx.coroutines.delay(200)
+            try {
+                amountFocusRequester.requestFocus()
+                softwareKeyboardController?.show()
+            } catch(e: Exception) {}
+        }
     }
 
     val isLendMode = selectedType == "OWED_BY_THEM" || selectedType == "PAYMENT_BY_THEM"
@@ -198,7 +207,8 @@ fun AddTransactionPopup(
         if (!isSaving) {
             isSaving = true
 
-            val amount = amountStr.toDoubleOrNull() ?: 0.0
+            val cleanAmountStr = com.example.ui.screens.habayeb.utils.CurrencyConfig.normalizeDigits(amountStr).trim()
+            val amount = cleanAmountStr.toDoubleOrNull() ?: 0.0
             if (amount <= 0.0) {
                 Toast.makeText(context, context.getString(R.string.habayeb_toast_valid_amount), Toast.LENGTH_SHORT).show()
                 isSaving = false
@@ -254,7 +264,15 @@ fun AddTransactionPopup(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = {
+            if (showFastActionPopup) {
+                showFastActionPopup = false
+            } else {
+                onDismiss()
+            }
+        }
+    ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val debtInteractionSource = remember { MutableInteractionSource() }
             val isDebtPressed by debtInteractionSource.collectIsPressedAsState()
@@ -285,12 +303,258 @@ fun AddTransactionPopup(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .animateContentSize(animationSpec = tween(300))
             ) {
+                AnimatedContent(
+                    targetState = showFastActionPopup,
+                    transitionSpec = {
+                        if (targetState) {
+                            (slideInHorizontally(animationSpec = tween(300)) { it } + fadeIn(animationSpec = tween(300))).togetherWith(
+                                slideOutHorizontally(animationSpec = tween(300)) { -it } + fadeOut(animationSpec = tween(300))
+                            ).using(androidx.compose.animation.SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> androidx.compose.animation.core.snap() }))
+                        } else {
+                            (slideInHorizontally(animationSpec = tween(300)) { -it } + fadeIn(animationSpec = tween(300))).togetherWith(
+                                slideOutHorizontally(animationSpec = tween(300)) { it } + fadeOut(animationSpec = tween(300))
+                            ).using(androidx.compose.animation.SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> androidx.compose.animation.core.snap() }))
+                        }
+                    },
+                    label = "FastActionPopupTransition"
+                ) { isFastAction ->
+                    if (isFastAction) {
+                        val settings = viewModel.settingsState.collectAsStateWithLifecycle().value
+                        val settingsRate = when (selectedForeignSymbol) {
+                            "ر.س" -> settings.exchangeRateSar
+                            "$" -> settings.exchangeRateUsd
+                            "ر.ي" -> settings.exchangeRateYer
+                            else -> 1.0
+                        }
+
+                        // Determine initial calculation mode based on transactional state
+                        var calculationMode by remember {
+                            mutableStateOf(
+                                if (!isForeignRateCalculated) "NONE"
+                                else if (foreignExchangeRate == settingsRate && settingsRate > 1.0) "AUTO"
+                                else "MANUAL"
+                            )
+                        }
+
+                        var rateInputStr by remember { 
+                            mutableStateOf(
+                                if (isForeignRateCalculated) {
+                                    if (calculationMode == "AUTO") settingsRate.toString() else foreignExchangeRate.toString()
+                                } else ""
+                            ) 
+                        }
+
+                        LaunchedEffect(calculationMode, settingsRate) {
+                            if (calculationMode == "AUTO") {
+                                rateInputStr = if (settingsRate > 0.0) settingsRate.toString() else ""
+                            } else if (calculationMode == "NONE") {
+                                rateInputStr = ""
+                            }
+                        }
+
+                        val rateFocusRequester = remember { FocusRequester() }
+                        LaunchedEffect(calculationMode) {
+                            if (isForeignSelected && calculationMode == "MANUAL") {
+                                kotlinx.coroutines.delay(100)
+                                try { rateFocusRequester.requestFocus() } catch (e: Exception) {}
+                            }
+                        }
+                        
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                IconButton(
+                                    onClick = { 
+                                        showFastActionPopup = false 
+                                        // Focus back on the first screen input field so keyboard is retained
+                                        try { amountFocusRequester.requestFocus() } catch (e: Exception) {}
+                                    },
+                                    modifier = Modifier.align(Alignment.CenterStart).size(24.dp)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = activeThemeColor)
+                                }
+                                Text(
+                                    text = "تأكيد المعاملة",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = activeThemeColor,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                            
+                            if (isForeignSelected) {
+                                // 3-Way Mode selector
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFF1F5F9))
+                                        .padding(2.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (calculationMode == "NONE") activeThemeColor else Color.Transparent)
+                                            .clickable { 
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                calculationMode = "NONE" 
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("لا يُحتسب", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (calculationMode == "NONE") Color.White else Color.Gray)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (calculationMode == "MANUAL") activeThemeColor else Color.Transparent)
+                                            .clickable { 
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                calculationMode = "MANUAL" 
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("صرف يدوي", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (calculationMode == "MANUAL") Color.White else Color.Gray)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (calculationMode == "AUTO") activeThemeColor else Color.Transparent)
+                                            .clickable { 
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                calculationMode = "AUTO" 
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("تلقائي (الإعدادات)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (calculationMode == "AUTO") Color.White else Color.Gray)
+                                    }
+                                }
+
+                                if (calculationMode != "NONE") {
+                                    OutlinedTextField(
+                                        value = rateInputStr,
+                                        onValueChange = { 
+                                            if (calculationMode == "MANUAL") {
+                                                rateInputStr = it 
+                                            }
+                                        },
+                                        placeholder = { Text("سعر الصرف", fontSize = 10.sp) },
+                                        readOnly = calculationMode == "AUTO",
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = activeThemeColor,
+                                            cursorColor = activeThemeColor,
+                                            unfocusedBorderColor = Color.LightGray,
+                                            focusedContainerColor = if (calculationMode == "AUTO") Color(0xFFF8FAFC) else Color.White,
+                                            unfocusedContainerColor = if (calculationMode == "AUTO") Color(0xFFF8FAFC) else Color.White
+                                        ),
+                                        singleLine = true,
+                                        textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .focusRequester(rateFocusRequester),
+                                        supportingText = {
+                                            if (calculationMode == "AUTO") {
+                                                Text("سعر الصرف العام مستورد تلقائياً من الإعدادات", fontSize = 9.sp, color = Color.Gray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                                            }
+                                        }
+                                    )
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2E8F0))
+                            }
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = {
+                                        if (isForeignSelected) {
+                                            when (calculationMode) {
+                                                "NONE" -> {
+                                                    foreignExchangeRate = 1.0
+                                                    isForeignRateCalculated = false
+                                                }
+                                                "AUTO" -> {
+                                                    foreignExchangeRate = settingsRate
+                                                    isForeignRateCalculated = true
+                                                }
+                                                "MANUAL" -> {
+                                                    val cleanRateStr = com.example.ui.screens.habayeb.utils.CurrencyConfig.normalizeDigits(rateInputStr).trim()
+                                                    val parsedRate = cleanRateStr.toDoubleOrNull() ?: 0.0
+                                                    if (parsedRate <= 0.0) {
+                                                        Toast.makeText(context, "يرجى إدخال سعر صرف صحيح", Toast.LENGTH_SHORT).show()
+                                                        return@Button
+                                                    }
+                                                    foreignExchangeRate = parsedRate
+                                                    isForeignRateCalculated = true
+                                                }
+                                            }
+                                        }
+                                        executeSave(if (isLendOperationSelected) "OWED_BY_THEM" else "OWED_TO_THEM")
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text("دين جديد", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = {
+                                        if (isForeignSelected) {
+                                            when (calculationMode) {
+                                                "NONE" -> {
+                                                    foreignExchangeRate = 1.0
+                                                    isForeignRateCalculated = false
+                                                }
+                                                "AUTO" -> {
+                                                    foreignExchangeRate = settingsRate
+                                                    isForeignRateCalculated = true
+                                                }
+                                                "MANUAL" -> {
+                                                    val cleanRateStr = com.example.ui.screens.habayeb.utils.CurrencyConfig.normalizeDigits(rateInputStr).trim()
+                                                    val parsedRate = cleanRateStr.toDoubleOrNull() ?: 0.0
+                                                    if (parsedRate <= 0.0) {
+                                                        Toast.makeText(context, "يرجى إدخال سعر صرف صحيح", Toast.LENGTH_SHORT).show()
+                                                        return@Button
+                                                    }
+                                                    foreignExchangeRate = parsedRate
+                                                    isForeignRateCalculated = true
+                                                }
+                                            }
+                                        }
+                                        executeSave(if (isLendOperationSelected) "PAYMENT_BY_THEM" else "PAYMENT_TO_THEM")
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text(if (isLendOperationSelected) "استلام دفعة" else "سداد دفعة", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
             Column(
                 modifier = Modifier
                     .padding(8.dp)
-                    .navigationBarsPadding()
-                    .imePadding()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -465,7 +729,8 @@ fun AddTransactionPopup(
                                     val isForeign = sym != currencySymbol
                                     if (isForeign) {
                                         selectedForeignSymbol = sym
-                                        showExchangeRateDialog = true
+                                        isForeignSelected = true
+                                        selectedTransactionCurrency = sym
                                     } else {
                                         isForeignSelected = false
                                         foreignExchangeRate = 1.0
@@ -596,10 +861,15 @@ fun AddTransactionPopup(
                 Button(
                     enabled = !isSaving,
                     onClick = {
-                        val amount = amountStr.toDoubleOrNull() ?: 0.0
+                        val cleanAmountStr = com.example.ui.screens.habayeb.utils.CurrencyConfig.normalizeDigits(amountStr).trim()
+                        val amount = cleanAmountStr.toDoubleOrNull() ?: 0.0
                         if (amount <= 0.0) {
                             Toast.makeText(context, context.getString(R.string.habayeb_toast_valid_amount), Toast.LENGTH_SHORT).show()
                             return@Button
+                        }
+                        if (!isForeignSelected) {
+                            focusManager.clearFocus()
+                            softwareKeyboardController?.hide()
                         }
                         showFastActionPopup = true
                     },
@@ -617,44 +887,6 @@ fun AddTransactionPopup(
                     )
                 }
             }
-        }
-        }
-    }
-
-    if (showFastActionPopup) {
-        androidx.compose.ui.window.Dialog(
-            onDismissRequest = { showFastActionPopup = false },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { executeSave(if (isLendOperationSelected) "OWED_BY_THEM" else "OWED_TO_THEM") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
-                        ) {
-                            Text("دين جديد", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Button(
-                            onClick = { executeSave(if (isLendOperationSelected) "PAYMENT_BY_THEM" else "PAYMENT_TO_THEM") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
-                        ) {
-                            Text(if (isLendOperationSelected) "استلام دفعة" else "سداد دفعة", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
@@ -671,95 +903,5 @@ fun AddTransactionPopup(
             activeThemeColor = activeThemeColor,
             activeSubColor = activeSubColor
         )
-    }
-
-    if (showExchangeRateDialog) {
-        var rateInputStr by remember { mutableStateOf(if (foreignExchangeRate > 1.0) foreignExchangeRate.toString() else "") }
-        
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showExchangeRateDialog = false }) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .padding(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "هل تود احتساب سعر الصرف؟",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = activeThemeColor
-                        )
-                        
-                        Text(
-                            text = "أدخل سعر صرف الـ [ ${com.example.ui.screens.habayeb.utils.CurrencyConfig.getBySymbol(selectedForeignSymbol)?.arabicName ?: selectedForeignSymbol} ] بالعملة الافتراضية",
-                            fontSize = 11.sp,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                        
-                        OutlinedTextField(
-                            value = rateInputStr,
-                            onValueChange = { rateInputStr = it },
-                            placeholder = { Text("مثال: 500", fontSize = 12.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = activeThemeColor,
-                                focusedLabelColor = activeThemeColor,
-                                cursorColor = activeThemeColor,
-                                unfocusedBorderColor = Color.LightGray
-                            ),
-                            singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    val parsedRate = rateInputStr.toDoubleOrNull() ?: 1.0
-                                    val finalRate = if (parsedRate <= 0.0) 1.0 else parsedRate
-                                    foreignExchangeRate = finalRate
-                                    isForeignRateCalculated = true
-                                    isForeignSelected = true
-                                    selectedTransactionCurrency = selectedForeignSymbol
-                                    showExchangeRateDialog = false
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("نعم، احسب", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                            
-                            Button(
-                                onClick = {
-                                    foreignExchangeRate = 1.0
-                                    isForeignRateCalculated = false
-                                    isForeignSelected = true
-                                    selectedTransactionCurrency = selectedForeignSymbol
-                                    showExchangeRateDialog = false
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("لا، لا تحسب", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

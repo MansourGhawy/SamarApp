@@ -23,5 +23,8 @@ data class AppSettings(
     val unifiedDeviceId: String = "",
     val isFirstLaunch: Boolean = true,
     val isAutoBackupEnabled: Boolean = false,
-    val isCloudSyncEnabled: Boolean = false
+    val isCloudSyncEnabled: Boolean = false,
+    val exchangeRateSar: Double = 1.0,
+    val exchangeRateUsd: Double = 1.0,
+    val exchangeRateYer: Double = 1.0
 )

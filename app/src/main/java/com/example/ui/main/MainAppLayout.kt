@@ -147,9 +147,9 @@ fun MainAppLayout(
                     scope.launch { drawerState.close() }
                     showBackupRestoreSheet = true
                 },
-                onCurrencyClick = {
-                    scope.launch { drawerState.close() }
-                    showCurrencyBallSelector = true
+                settings = settings,
+                onSaveSettings = { updated ->
+                    viewModel.saveSettings(updated)
                 },
                 versionName = versionName
             )
@@ -226,17 +226,6 @@ fun MainAppLayout(
                 }
             },
             onDismiss = { showBackupRestoreSheet = false }
-        )
-    }
-
-    if (showCurrencyBallSelector) {
-        CurrencyBubblePickerOverlay(
-            currentCurrencySymbol = settings.currencySymbol,
-            onCurrencySelected = { selectedSymbol ->
-                viewModel.saveSettings(settings.copy(currencySymbol = selectedSymbol))
-                showCurrencyBallSelector = false
-            },
-            onDismiss = { showCurrencyBallSelector = false }
         )
     }
 }

@@ -46,4 +46,18 @@ object CurrencyConfig {
     fun formatDescriptionWithCurrency(description: String, symbol: String): String {
         return "[$symbol] $description"
     }
+
+    /**
+     * Normalizes Arabic and Farsi digits to Western Arabic (English) digits, and replaces commas with dots.
+     */
+    fun normalizeDigits(input: String): String {
+        var result = input.replace(',', '.')
+        val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+        val farsiDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+        for (i in 0..9) {
+            result = result.replace(arabicDigits[i], (i + '0'.code).toChar())
+            result = result.replace(farsiDigits[i], (i + '0'.code).toChar())
+        }
+        return result
+    }
 }

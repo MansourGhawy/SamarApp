@@ -875,8 +875,10 @@ fun CustomerHistoryOverlay(
                                 sdf.format(Date(tx.timestamp * 1000))
                             }
 
-                            val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
-                            val indicatorColor = if (isPositive) Color(0xFF16A34A) else Color(0xFFDC2626)
+                            val isPositiveSign = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
+                            val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
+                            val indicatorColor = if (isGreenColor) Color(0xFF10B981) else Color(0xFFEF4444)
+                            val txPrefix = if (isPositiveSign) "+" else "-"
                             val isSelected = selectedTxIds.contains(tx.id)
                             val rowBgColor = if (isSelected) activeThemeColor.copy(alpha = 0.08f) else Color.White
                             val borderColor = if (isSelected) activeThemeColor else Color(0xFFE2E8F0)
@@ -1073,14 +1075,14 @@ fun CustomerHistoryOverlay(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Icon(
-                                                imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                                imageVector = if (isPositiveSign) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                                                 contentDescription = null,
                                                 tint = indicatorColor,
                                                 modifier = Modifier.size(14.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(
-                                                text = "$formattedAmount $txCurrencySymbol",
+                                                text = "$txPrefix$formattedAmount $txCurrencySymbol",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Black,
                                                 color = indicatorColor

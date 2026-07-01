@@ -69,30 +69,55 @@ fun CustomerDetailsDialog(
         transactions.filter { it.customerId == customer.id }.sortedBy { it.timestamp }
     }
 
-    val owedByThem = customerTxs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
-    val paymentByThem = customerTxs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
-    val owedToThem = customerTxs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
-    val paymentToThem = customerTxs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
-    val netDebt = (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
-
-    val balanceText = try {
-        val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
-        val formatter = java.text.DecimalFormat("#,##0", symbols)
-        val formatted = formatter.format(kotlin.math.abs(netDebt))
-        "$formatted $currencySymbol"
-    } catch (e: Exception) {
-        "${kotlin.math.abs(netDebt)} $currencySymbol"
+    val currencyGroups = remember(customerTxs) {
+        customerTxs.groupBy { com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, currencySymbol).first }
     }
 
-    val statusString = if (netDebt > 0) {
-        context.getString(R.string.reports_owed_by_them_status)
-    } else if (netDebt < 0) {
-        context.getString(R.string.reports_owed_to_them_status)
-    } else {
-        context.getString(R.string.reports_balanced_status)
+    val netDebtsMap = remember(currencyGroups) {
+        currencyGroups.mapValues { (curr, txs) ->
+            val owedByThem = txs.filter { it.type == "OWED_BY_THEM" }.sumOf { it.amount }
+            val paymentByThem = txs.filter { it.type == "PAYMENT_BY_THEM" }.sumOf { it.amount }
+            val owedToThem = txs.filter { it.type == "OWED_TO_THEM" }.sumOf { it.amount }
+            val paymentToThem = txs.filter { it.type == "PAYMENT_TO_THEM" }.sumOf { it.amount }
+            (owedByThem - paymentByThem) - (owedToThem - paymentToThem)
+        }
     }
 
-    val statusColor = if (netDebt > 0) SoftGreen else if (netDebt < 0) SoftRed else Color.Gray
+    val activeDebts = remember(netDebtsMap) {
+        netDebtsMap.filter { kotlin.math.abs(it.value) >= 0.01 }
+    }
+
+    val balanceText = remember(activeDebts) {
+        if (activeDebts.isEmpty()) {
+            "0.00 $currencySymbol"
+        } else {
+            activeDebts.map { (curr, debtVal) ->
+                val formatted = try {
+                    val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
+                    val formatter = java.text.DecimalFormat("#,##0", symbols)
+                    formatter.format(kotlin.math.abs(debtVal))
+                } catch (e: Exception) {
+                    "${kotlin.math.abs(debtVal)}"
+                }
+                "$formatted $curr"
+            }.joinToString(" و ")
+        }
+    }
+
+    val statusString = remember(activeDebts) {
+        if (activeDebts.isEmpty()) {
+            "متعادل"
+        } else {
+            activeDebts.map { (curr, debtVal) ->
+                val label = if (debtVal > 0) "عليه" else "له"
+                "$label ($curr)"
+            }.joinToString(" و ")
+        }
+    }
+
+    val netDebt = remember(netDebtsMap) {
+        netDebtsMap[currencySymbol] ?: 0.0
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -159,44 +184,92 @@ fun CustomerDetailsDialog(
                         item {
                             Card(
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.08f)),
-                                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f)),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.reports_net_debt_label),
-                                            fontSize = 11.sp,
-                                            color = Color.Gray
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = balanceText,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = statusColor
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(statusColor.copy(alpha = 0.15f))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = statusString,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = statusColor
-                                        )
+                                    Text(
+                                        text = stringResource(R.string.reports_net_debt_label),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Gray
+                                    )
+                                    
+                                    val nonZeroDebts = netDebtsMap.filter { kotlin.math.abs(it.value) >= 0.01 }
+                                    if (nonZeroDebts.isEmpty()) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "0.00 $currencySymbol",
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.Gray
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(Color.LightGray.copy(alpha = 0.2f))
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = context.getString(R.string.reports_balanced_status),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        nonZeroDebts.forEach { (curr, debtVal) ->
+                                            val cStatusColor = if (debtVal > 0) SoftRed else SoftGreen
+                                            val cStatusText = if (debtVal > 0) {
+                                                context.getString(R.string.reports_owed_by_them_status)
+                                            } else {
+                                                context.getString(R.string.reports_owed_to_them_status)
+                                            }
+                                            val formattedDebt = try {
+                                                val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
+                                                val formatter = java.text.DecimalFormat("#,##0", symbols)
+                                                formatter.format(kotlin.math.abs(debtVal)) + " " + curr
+                                            } catch (e: Exception) {
+                                                "${kotlin.math.abs(debtVal)} $curr"
+                                            }
+                                            
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = formattedDebt,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = cStatusColor
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(cStatusColor.copy(alpha = 0.12f))
+                                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = cStatusText,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = cStatusColor
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -296,8 +369,10 @@ fun CustomerDetailsDialog(
                                     else -> ""
                                 }
 
-                                val isDebit = tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
-                                val indicatorColor = if (isDebit) SoftRed else SoftGreen
+                                val isPositiveSign = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
+                                val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
+                                val indicatorColor = if (isGreenColor) SoftGreen else SoftRed
+                                val txPrefix = if (isPositiveSign) "+" else "-"
 
                                 Card(
                                     shape = RoundedCornerShape(8.dp),
@@ -360,9 +435,9 @@ fun CustomerDetailsDialog(
                                                 text = try {
                                                     val symbols = java.text.DecimalFormatSymbols(Locale.ENGLISH)
                                                     val formatter = java.text.DecimalFormat("#,##0", symbols)
-                                                    formatter.format(tx.amount) + " " + currencySymbol
+                                                    txPrefix + formatter.format(tx.amount) + " " + currencySymbol
                                                 } catch (e: Exception) {
-                                                    "${tx.amount} $currencySymbol"
+                                                    "$txPrefix${tx.amount} $currencySymbol"
                                                 },
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,

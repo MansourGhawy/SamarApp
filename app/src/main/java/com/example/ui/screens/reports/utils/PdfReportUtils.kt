@@ -564,10 +564,11 @@ fun generateModernPdfReport(
         canvas.drawText(truncatedDetails, columnsX[2], y + 4f, paintCellText)
 
         // Column 3: المبلغ
-        val isPositive = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
-        val pillBgColor = if (isPositive) "#F0FDF4" else "#FFF5F5"
-        val pillTextColor = if (isPositive) "#16A34A" else "#DC2626"
-        val prefix = if (isPositive) "+" else "-"
+        val isPositiveSign = tx.type == "PAYMENT_BY_THEM" || tx.type == "OWED_TO_THEM"
+        val isGreenColor = tx.type == "PAYMENT_BY_THEM" || tx.type == "PAYMENT_TO_THEM"
+        val pillBgColor = if (isGreenColor) "#F0FDF4" else "#FFF5F5"
+        val pillTextColor = if (isGreenColor) "#16A34A" else "#DC2626"
+        val prefix = if (isPositiveSign) "+" else "-"
         val formattedAmount = "$prefix ${formatReportNumber(tx.amount)} $txCurrencySymbol"
 
         val paintPillBg = Paint().apply {

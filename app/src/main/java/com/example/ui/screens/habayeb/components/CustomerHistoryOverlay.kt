@@ -115,7 +115,7 @@ fun CustomerHistoryOverlay(
 
     // Filtered by Search query (supporting description and amount filtering)
     val displayedTxs = remember(allCustomerTxs, txSearchQuery) {
-        if (txSearchQuery.isBlank()) {
+        val base = if (txSearchQuery.isBlank()) {
             allCustomerTxs
         } else {
             allCustomerTxs.filter { tx ->
@@ -125,6 +125,7 @@ fun CustomerHistoryOverlay(
                 (if (tx.type == "OWED_BY_THEM") "دين" else "سداد").contains(txSearchQuery)
             }
         }
+        base.sortedByDescending { it.timestamp }
     }
 
     // Calculations for overall grouped by currency
@@ -382,7 +383,7 @@ fun CustomerHistoryOverlay(
             else -> "رصيدكم متعادل"
         }
         val amt = formatCurrency(kotlin.math.abs(debt), currencySymbol)
-        val body = "كشف حساب من ميزان الدار لـ ${customer.name}:\n" +
+        val body = "كشف حساب مالي لـ ${customer.name}:\n" +
                 "الحالة الحالية: $debtStatus $amt.\n" +
                 "شكراً لتعاملكم الراقي معنا."
         try {
@@ -407,7 +408,7 @@ fun CustomerHistoryOverlay(
             else -> "رصيدكم متعادل"
         }
         val amt = formatCurrency(kotlin.math.abs(debt), currencySymbol)
-        val body = "كشف حساب من ميزان الدار لـ ${customer.name}:\n" +
+        val body = "كشف حساب مالي لـ ${customer.name}:\n" +
                 "الحالة الحالية: $debtStatus $amt.\n" +
                 "شكراً لتعاملكم الراقي معنا."
         try {
@@ -437,7 +438,7 @@ fun CustomerHistoryOverlay(
         } else {
             formatCurrency(tx.amount, currencySymbol)
         }
-        val body = "إشعار حركة حساب - ميزان الدار:\n" +
+        val body = "إشعار حركة حساب مالي:\n" +
                 "العميل: ${customer.name}\n" +
                 "النوع: $txTypeAr\n" +
                 "المبلغ: $amountStr\n" +
@@ -474,7 +475,7 @@ fun CustomerHistoryOverlay(
         } else {
             formatCurrency(tx.amount, currencySymbol)
         }
-        val body = "*إشعار حركة حساب - ميزان الدار:*\n" +
+        val body = "*إشعار حركة حساب مالي:*\n" +
                 "👤 *العميل:* ${customer.name}\n" +
                 "📌 *النوع:* $txTypeAr\n" +
                 "💰 *المبلغ:* $amountStr\n" +
@@ -512,344 +513,54 @@ fun CustomerHistoryOverlay(
                     var showShareMenu by remember { mutableStateOf(false) }
 
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .height(56.dp)
-                                .padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "رجوع",
-                                    tint = Color(0xFF1E293B)
-                                )
-                            }
-
-                            if (isSearchActive) {
-                                // Search Mode View
-                                Row(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(40.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFF1F5F9))
-                                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "بحث",
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    BasicTextField(
-                                        value = txSearchQuery,
-                                        onValueChange = { txSearchQuery = it },
-                                        textStyle = TextStyle(
-                                            color = Color(0xFF1E293B),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium
-                                        ),
-                                        cursorBrush = SolidColor(activeThemeColor),
-                                        singleLine = true,
-                                        modifier = Modifier.weight(1f),
-                                        decorationBox = { innerTextField ->
-                                            if (txSearchQuery.isEmpty()) {
-                                                Text(
-                                                    text = "بحث عن حركة...",
-                                                    color = Color.Gray.copy(alpha = 0.8f),
-                                                    fontSize = 13.sp
-                                                )
-                                            }
-                                            innerTextField()
-                                        }
-                                    )
-                                    if (txSearchQuery.isNotEmpty()) {
-                                        IconButton(
-                                            onClick = { txSearchQuery = "" },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "مسح",
-                                                tint = Color.Gray,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                IconButton(onClick = {
-                                    isSearchActive = false
-                                    txSearchQuery = ""
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "إلغاء البحث",
-                                        tint = Color(0xFF1E293B)
-                                    )
-                                }
-                            } else {
-                                // Standard Mode: Centered / Start-aligned account full name written by the user
-                                Text(
-                                    text = "تفاصيل الحساب",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF1E293B),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                // Action icons: Search
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    IconButton(onClick = { isSearchActive = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Search,
-                                            contentDescription = "بحث",
-                                            tint = Color(0xFF475569),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        CustomerHistoryTopBar(
+                            isSearchActive = isSearchActive,
+                            txSearchQuery = txSearchQuery,
+                            activeThemeColor = activeThemeColor,
+                            onSearchQueryChange = { txSearchQuery = it },
+                            onSearchClose = {
+                                isSearchActive = false
+                                txSearchQuery = ""
+                            },
+                            onSearchOpen = { isSearchActive = true },
+                            onDismiss = onDismiss
+                        )
 
                         if (!isSearchActive) {
                             HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
 
-                            // Compact Account Details & Financial Summary Card
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 2.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
-                                    .background(Color.White)
-                                    .padding(6.dp)
-                            ) {
-                                // Top row: Avatar, Name/Phone, and Elegant Balance Badge
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val avatarColor = getInitialColor(activeCustomer.name)
-                                    Box(
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(avatarColor.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = activeCustomer.name.trim().firstOrNull()?.toString()?.uppercase() ?: "؟",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = avatarColor
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(6.dp))
-
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalAlignment = Alignment.Start
-                                    ) {
-                                        Text(
-                                            text = activeCustomer.name,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = activeCustomer.phone.ifEmpty { "لا يوجد هاتف مسجل" },
-                                            fontSize = 9.sp,
-                                            color = Color.Gray,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-
-                                @OptIn(ExperimentalLayoutApi::class)
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
-                                    for (curr in currencyGroups.keys.sorted()) {
-                                        val cNetDebt = netDebtMap[curr] ?: 0.0
-                                        val textBalanceColor = when {
-                                            cNetDebt > 0.0 -> Color(0xFFDC2626) // Red (They owe you)
-                                            cNetDebt < 0.0 -> Color(0xFF16A34A) // Green (You owe them)
-                                            else -> Color(0xFF334155)
-                                        }
-                                        val stateLabel = when {
-                                            cNetDebt > 0.0 -> "مطلوب منه"
-                                            cNetDebt < 0.0 -> "مطلوب له"
-                                            else -> "متعادل"
-                                        }
-                                        
-                                        val signedNetDebtStr = if (cNetDebt < 0.0) {
-                                            "-" + formatCurrency(kotlin.math.abs(cNetDebt), curr)
-                                        } else {
-                                            formatCurrency(cNetDebt, curr)
-                                        }
-
-                                        // Compact colored balance badge
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(start = 4.dp)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(textBalanceColor.copy(alpha = 0.08f))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = signedNetDebtStr,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    color = textBalanceColor
-                                                )
-                                                Text(
-                                                    text = stateLabel,
-                                                    fontSize = 7.sp,
-                                                    color = textBalanceColor,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        }
-                                    }
+                            CustomerSummaryCard(
+                                activeCustomer = activeCustomer,
+                                currencyGroups = currencyGroups,
+                                netDebtMap = netDebtMap,
+                                owedByThemMap = owedByThemMap,
+                                paymentByThemMap = paymentByThemMap,
+                                owedToThemMap = owedToThemMap,
+                                paymentToThemMap = paymentToThemMap,
+                                activeThemeColor = activeThemeColor,
+                                isPdfExporting = isPdfExporting,
+                                onPdfExportClick = {
+                                    isPdfExporting = true
+                                    PdfReportGenerator.generateAndHandleCustomerPdfReportAsync(
+                                        context,
+                                        coroutineScope,
+                                        activeCustomer,
+                                        netDebt,
+                                        allCustomerTxs,
+                                        "SHARE",
+                                        onFinished = { isPdfExporting = false }
+                                    )
+                                },
+                                onWhatsAppClick = {
+                                    triggerWhatsAppStatement(activeCustomer, netDebt)
+                                },
+                                onEditClick = {
+                                    showEditNameDialog = true
+                                },
+                                onDeleteClick = {
+                                    confirmDeleteCust = true
                                 }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-                                HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // Bottom row: Actions & Sub-totals
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Actions
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val isPhoneAvailable = activeCustomer.phone.isNotBlank()
-                                        val iconModifier = Modifier.size(28.dp).clip(RoundedCornerShape(6.dp))
-
-                                        // PDF
-                                        Box(
-                                            modifier = iconModifier
-                                                .background(activeThemeColor.copy(alpha = 0.1f))
-                                                .clickable(enabled = !isPdfExporting) {
-                                                     isPdfExporting = true
-                                                     PdfReportGenerator.generateAndHandleCustomerPdfReportAsync(
-                                                         context,
-                                                         coroutineScope,
-                                                         activeCustomer,
-                                                         netDebt,
-                                                         allCustomerTxs,
-                                                         "SHARE",
-                                                         onFinished = { isPdfExporting = false }
-                                                     )
-                                                 },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (isPdfExporting) {
-                                                 CircularProgressIndicator(
-                                                     modifier = Modifier.size(14.dp),
-                                                     color = activeThemeColor,
-                                                     strokeWidth = 1.5.dp
-                                                 )
-                                             } else {
-                                                 Icon(Icons.Default.Description, contentDescription = "مشاركة PDF", tint = activeThemeColor, modifier = Modifier.size(14.dp))
-                                             }
-                                        }
-                                        
-                                        // WhatsApp
-                                        Box(
-                                            modifier = iconModifier
-                                                .background(if (isPhoneAvailable) Color(0xFF16A34A).copy(alpha = 0.1f) else Color.Gray.copy(alpha = 0.1f))
-                                                .clickable(enabled = isPhoneAvailable) { triggerWhatsAppStatement(activeCustomer, netDebt) },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Default.Chat, contentDescription = "واتساب", tint = if (isPhoneAvailable) Color(0xFF16A34A) else Color.Gray.copy(alpha = 0.35f), modifier = Modifier.size(14.dp))
-                                        }
-
-                                        // Edit
-                                        Box(
-                                            modifier = iconModifier
-                                                .background(Color(0xFFF1F5F9))
-                                                .clickable { showEditNameDialog = true },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", tint = Color(0xFF475569), modifier = Modifier.size(14.dp))
-                                        }
-
-                                        // Delete
-                                        Box(
-                                            modifier = iconModifier
-                                                .background(Color(0xFFEF4444).copy(alpha = 0.1f))
-                                                .clickable { confirmDeleteCust = true },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
-                                        }
-                                    }
-
-                                    // Small sub-totals
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        for (curr in currencyGroups.keys.sorted()) {
-                                            val cOwed = owedByThemMap[curr] ?: 0.0
-                                            val cPaid = paymentByThemMap[curr] ?: 0.0
-                                            val cOwedTo = owedToThemMap[curr] ?: 0.0
-                                            val cPaidTo = paymentToThemMap[curr] ?: 0.0
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                                ) {
-                                                    Text("ديون:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                                                    Text(
-                                                        text = formatCurrency(cOwed, curr),
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFFDC2626)
-                                                    )
-                                                }
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                                ) {
-                                                    Text("سداد:", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                                                    Text(
-                                                        text = formatCurrency(cPaid + cOwedTo, curr),
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFF16A34A)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            )
                         }
                     } // Close Column(modifier = Modifier.fillMaxWidth())
                 } // Close Surface
@@ -964,264 +675,41 @@ fun CustomerHistoryOverlay(
                                 } else null
                             }
 
-                            // Clean table-row layout
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 3.dp)
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (isTxMultiSelectActive) {
-                                                if (isSelected) selectedTxIds.remove(tx.id)
-                                                else selectedTxIds.add(tx.id)
-                                                
-                                                if (selectedTxIds.isEmpty()) {
-                                                    isTxMultiSelectActive = false
-                                                }
-                                            } else {
-                                                transactionForOptionsDialog = tx
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!isTxMultiSelectActive) {
-                                                isTxMultiSelectActive = true
-                                                selectedTxIds.add(tx.id)
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
-                                        }
-                                    ),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = rowBgColor),
-                                border = BorderStroke(1.dp, borderColor),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(IntrinsicSize.Min),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Professional indicator bar
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .width(4.dp)
-                                            .background(
-                                                brush = Brush.verticalGradient(
-                                                    colors = listOf(
-                                                        indicatorColor,
-                                                        indicatorColor.copy(alpha = 0.6f)
-                                                    )
-                                                )
-                                            )
-                                    )
-                                    
-                                    Row(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(horizontal = 12.dp, vertical = 1.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // 1. Date/Time (Rightmost)
-                                        Column(
-                                            modifier = Modifier.weight(1.1f),
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center
-                                            ) {
-                                                // Chronological Sequence Badge
-                                                Text(
-                                                    text = "#$txSeqNo",
-                                                    fontSize = 9.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = activeThemeColor,
-                                                    modifier = Modifier
-                                                        .background(activeThemeColor.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                                )
-                                                if (hasActiveRecurring) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(16.dp)
-                                                            .background(activeThemeColor.copy(alpha = 0.12f), CircleShape)
-                                                            .clickable {
-                                                                // Clicking the clock button directly opens scheduler config
-                                                                transactionForAutoRepeatDialog = tx
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Schedule,
-                                                            contentDescription = "تعديل التكرار التلقائي",
-                                                            tint = activeThemeColor,
-                                                            modifier = Modifier.size(10.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            Spacer(modifier = Modifier.height(1.dp))
-
-                                            Text(
-                                                text = formattedDate,
-                                                fontSize = 10.sp,
-                                                color = Color(0xFF334155),
-                                                fontWeight = FontWeight.Bold,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1
-                                            )
-                                        }
-
-                                        // 2. Details (Middle-Right)
-                                        Column(
-                                            modifier = Modifier.weight(1.7f),
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            val typeStr = when (tx.type) {
-                                                "OWED_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_by) // دين عليه
-                                                "PAYMENT_BY_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_by) // استلام دفعة
-                                                "OWED_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_owed_to) // دين له
-                                                "PAYMENT_TO_THEM" -> stringResource(id = R.string.habayeb_pdf_tx_payment_to) // سداد دفعة
-                                                else -> stringResource(id = R.string.habayeb_pdf_tx_generic)
-                                            }
-                                            Text(
-                                                text = typeStr,
-                                                fontSize = 9.sp,
-                                                color = indicatorColor.copy(alpha = 0.8f),
-                                                fontWeight = FontWeight.Bold,
-                                                textAlign = TextAlign.Center
-                                            )
-                                            Text(
-                                                text = cleanDescription.ifEmpty { "لا يوجد ملاحظات" },
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF1E293B),
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            
-                                            // Rich Badges explaining recurring status
-                                            if (hasActiveRecurring) {
-                                                Spacer(modifier = Modifier.height(1.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .background(Color(0xFFFEF3C7), RoundedCornerShape(6.dp))
-                                                        .border(0.5.dp, Color(0xFFF59E0B), RoundedCornerShape(6.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 1.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "مصدر تكرار مجدول 🔄",
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFFB45309)
-                                                    )
-                                                }
-                                            } else if (tx.linkedMainTxId != null) {
-                                                Spacer(modifier = Modifier.height(1.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .background(Color(0xFFEFF6FF), RoundedCornerShape(6.dp))
-                                                        .border(0.5.dp, Color(0xFF3B82F6), RoundedCornerShape(6.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 1.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "توليد تلقائي (تابع للمعامله #${parentTxSeq ?: "?"})",
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFF1D4ED8)
-                                                    )
-                                                }
-                                            }
-
-                                            if (tx.is_foreign) {
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Row(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(if (tx.is_rate_calculated) Color(0xFFE6F4EA) else Color(0xFFF1F3F4))
-                                                        .border(0.5.dp, if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFF9AA0A6), RoundedCornerShape(6.dp))
-                                                        .clickable {
-                                                            exchangeTxToModify = tx
-                                                            showRateModifyDialog = true
-                                                        }
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (tx.is_rate_calculated) Icons.Default.Check else Icons.Default.Close,
-                                                        contentDescription = null,
-                                                        tint = if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFFD93025),
-                                                        modifier = Modifier.size(11.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = if (tx.is_rate_calculated) "نشط (صرف: ${tx.exchange_rate})" else "صرف غير نشط ❌",
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = if (tx.is_rate_calculated) Color(0xFF137333) else Color(0xFF5F6368)
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        // 3. Amount with colorful indicator arrow (Middle-Left)
-                                        Column(
-                                            modifier = Modifier.weight(1.0f),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Row(
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                val txArrow = when (tx.type) {
-                                                    "PAYMENT_TO_THEM" -> Icons.Default.ArrowUpward
-                                                    "OWED_TO_THEM" -> Icons.Default.ArrowDownward
-                                                    "PAYMENT_BY_THEM" -> Icons.Default.ArrowDownward
-                                                    "OWED_BY_THEM" -> Icons.Default.ArrowUpward
-                                                    else -> if (isPositiveSign) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward
-                                                }
-                                                Icon(
-                                                    imageVector = txArrow,
-                                                    contentDescription = null,
-                                                    tint = indicatorColor,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = "$txPrefix$formattedAmount $txCurrencySymbol",
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    color = indicatorColor
-                                                )
-                                            }
-                                            if (tx.is_foreign && tx.is_rate_calculated) {
-                                                val formattedEquiv = try { String.format(Locale.ENGLISH, "%,.0f", tx.equivalent_amount) } catch (e: Exception) { tx.equivalent_amount.toString() }
-                                                Text(
-                                                    text = "($formattedEquiv $currencySymbol)",
-                                                    fontSize = 9.sp,
-                                                    color = Color.Gray,
-                                                    textAlign = TextAlign.Center
-                                                )
-                                            }
-                                        }
-
-                                        // 4. Running Balance (Leftmost)
-                                        val balCurrency = if (tx.is_foreign && !tx.is_rate_calculated) tx.currency_code else currencySymbol
-                                        Text(
-                                            text = "$formattedHistBal $balCurrency",
-                                            modifier = Modifier.weight(0.8f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF64748B),
-                                            textAlign = TextAlign.Center
-                                        )
+                            CustomerTransactionRow(
+                                tx = tx,
+                                currencySymbol = currencySymbol,
+                                isSelected = isSelected,
+                                isTxMultiSelectActive = isTxMultiSelectActive,
+                                hasActiveRecurring = hasActiveRecurring,
+                                txSeqNo = txSeqNo,
+                                parentTxSeq = parentTxSeq,
+                                currentHistBalance = currentHistBalance,
+                                activeThemeColor = activeThemeColor,
+                                onSelectToggle = {
+                                    if (isSelected) selectedTxIds.remove(tx.id)
+                                    else selectedTxIds.add(tx.id)
+                                    if (selectedTxIds.isEmpty()) {
+                                        isTxMultiSelectActive = false
                                     }
+                                },
+                                onLongClick = {
+                                    if (!isTxMultiSelectActive) {
+                                        isTxMultiSelectActive = true
+                                        selectedTxIds.add(tx.id)
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                },
+                                onOptionsClick = {
+                                    transactionForOptionsDialog = tx
+                                },
+                                onScheduleClick = {
+                                    transactionForAutoRepeatDialog = tx
+                                },
+                                onExchangeRateClick = {
+                                    exchangeTxToModify = tx
+                                    showRateModifyDialog = true
                                 }
-                            }
+                            )
                         }
                     }
                 }

@@ -22,9 +22,6 @@ fun MainAppContent(
     currentScreen: Screen,
     viewModel: FinanceViewModel,
     settings: AppSettings,
-    monthlyLedger: List<MonthLedger>,
-    totalCash: BigDecimal,
-    commitments: List<com.example.data.local.entities.FixedCommitment>,
     contentPadding: PaddingValues = PaddingValues(),
     onNavigate: (Screen) -> Unit,
     onMenuClick: () -> Unit,
@@ -51,20 +48,9 @@ fun MainAppContent(
                 Screen.LEDGER -> {
                     MainLedgerView(
                         viewModel = viewModel,
-                        monthlyLedger = monthlyLedger,
-                        totalCash = totalCash,
-                        commitments = commitments,
                         settings = settings,
                         onBackIntercept = {},
                         onMenuClick = onMenuClick,
-                        contentPadding = contentPadding
-                    )
-                }
-                Screen.REPORTS -> {
-                    ReportsView(
-                        viewModel = viewModel,
-                        settings = settings,
-                        currencySymbol = settings.currencySymbol,
                         contentPadding = contentPadding
                     )
                 }

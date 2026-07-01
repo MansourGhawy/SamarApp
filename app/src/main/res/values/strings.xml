@@ -22,32 +22,24 @@
     <string name="lock_delete_btn">حذف</string>
 
     <!-- Makhzan / Smart Inventory -->
-    <string name="makhzan_title">المخزن الذكي</string>
-    <string name="makhzan_total_capital_all">رأس المال الكلي للقسم</string>
-    <string name="makhzan_total_capital_category">رأس مال (%s)</string>
     
     <!-- Habayeb / Customer Accounts -->
-    <string name="habayeb_title">حسابات العملاء (الحبايب)</string>
+    <string name="habayeb_title">حسابات العملاء والديون</string>
     
     <!-- Trash / Recycle Bin -->
     <string name="trash_title">سلة المحذوفات</string>
-    <string name="trash_empty">السلة فارغة</string>
 
     <!-- Drawer & Navigation (الدرج والقوائم) -->
     <string name="app_name_main">الدفتر الذكي</string>
-    <string name="app_slogan">التحكم المالي المتكامل بأبسط صورة</string>
     <string name="drawer_security_label">الامان وقفل التطبيق</string>
-    <string name="drawer_reports_label">التقارير</string>
     <string name="drawer_trash_label">سلة المحذوفات</string>
     <string name="drawer_backup_label1">النسخ الاحتياطي والاسترداد</string>
     <string name="drawer_business_profile_label">بيانات النشاط التجاري</string>
     <string name="drawer_currency_label">إعدادات العملة</string>
     <string name="drawer_app_version">الإصدار v%s</string>
-    <string name="nav_habayeb_label">🤝 حسابات حبايب</string>
-    <string name="nav_ledger_label">⚖️ الدفتر الذكي</string>
-    <string name="nav_makhzan_label">📦 المخزن الذكي</string>
 
     <!-- Second Batch: Toast & Dialog Strings -->
+    <string name="toast_recurring_txs_success">تم تسجيل عدد %1$d معاملات مكررة تلقائياً بنجاح! 🌸</string>
     <string name="toast_backup_export_success">تم تصدير النسخة بنجاح في المستندات 📁</string>
     <string name="toast_backup_export_failed">فشل في الحفظ</string>
     <string name="toast_restore_success">تمت استعادة السجل بنجاح 🎉</string>
@@ -63,22 +55,15 @@
     <string name="support_phone_number">+967774004399</string>
 
     <!-- Calculator Dialog (الآلة الحاسبة) -->
-    <string name="calc_error">خطأ برياضي</string>
     <string name="calc_close_desc">إغلاق</string>
     <string name="calc_title">حاسبة الديون السريعة 🧮</string>
-    <string name="calc_backspace_desc">تراجع</string>
-    <string name="calc_ok">موافق OK</string>
-    <string name="calc_clear">تصفير</string>
-    <string name="calc_confirm_transfer">تأكيد الترحيل وحفظ الناتج 📥</string>
 
     <!-- Onboarding / Welcome Screens (جولات الترحيب) -->
     <string name="onboarding_slogan">🏠 الدفتر الذكي.. بوابتك لإدارة مالية متكاملة وسهلة</string>
     <string name="onboarding_mizan_title">الدفتر الذكي:</string>
     <string name="onboarding_mizan_desc">شريكك المالي الأكثر ذكاءً لتنظيم وإدارة ميزانيتك، مصروفاتك، وإيراداتك اليومية بكل دقة واحترافية.</string>
-    <string name="onboarding_habayeb_title">حسابات حبايب:</string>
+    <string name="onboarding_habayeb_title">ديون العملاء والجهات:</string>
     <string name="onboarding_habayeb_desc">تتبع مستحقاتك والتزاماتك المالية مع الزبائن، الموردين، والأصدقاء بكل سهولة وثقة.</string>
-    <string name="onboarding_makhzan_title">المخزن الذكي:</string>
-    <string name="onboarding_makhzan_desc">جرد بضائعك بدقة بالغة، وإدارة عمليات التوريد والتصدير بالجملة والتجزئة بسلاسة.</string>
     <string name="onboarding_trash_title">سلة المحذوفات الذكية:</string>
     <string name="onboarding_trash_desc">أمانٌ كامل! استرجع أي معاملة أو منتج قمت بحذفه بالخطأ بضغطة واحدة وبدون قلق.</string>
     <string name="onboarding_backup_title">التأمين والنسخ الاحتياطي:</string>
@@ -86,45 +71,18 @@
     <string name="onboarding_start_button">أهلاً بك، ابدأ الاستخدام 🏠</string>
 
     <!-- Section 1: Makhzan (المخزن الذكي) -->
-    <string name="makhzan_app_bar_title">المخزن الذكي</string>
-    <string name="makhzan_app_bar_subtitle">إدارة المخزون والعمليات</string>
-    <string name="makhzan_category_capital_label">رأس مال القسم الحالي:</string>
-    <string name="makhzan_capital_in_makhzan">رأس المال في المخزن</string>
-    <string name="makhzan_barcode_scanner_desc">قراءة باركود</string>
 
     <!-- Section 2: Habayeb (حسابات حبايب / العملاء والديون) -->
-    <string name="habayeb_subtitle">حسابات العملاء والموردين</string>
-    <string name="habayeb_selected_count">تم تحديد (%s)</string>
     <string name="habayeb_empty_list">قائمة الحسابات فارغة.\nابدأ بإضافة أول جهة اتصال عبر زر الإضافة (+)</string>
     <string name="habayeb_search_hint">بحث باسم العميل...</string>
     <string name="habayeb_close_search">إغلاق البحث</string>
-    <string name="habayeb_delete_bulk">حذف جماعي</string>
-    <string name="habayeb_back_to_wallet">الرجوع للمحفظة</string>
-    <string name="habayeb_select_all">تحديد الكل</string>
     <string name="habayeb_search_label">البحث</string>
     <string name="habayeb_net_total_for_you">إجمالي الصافي لك</string>
     <string name="habayeb_net_total_on_you">إجمالي المبلغ عليك</string>
-    <string name="habayeb_net_balance">إجمالي الرصيد الصافي</string>
-    <string name="habayeb_net_title_assets">إجمالي الرصيد الصافي (مستحق لي ↗️)</string>
-    <string name="habayeb_net_title_liabilities">إجمالي الرصيد الصافي (مطلوب مني ↘️)</string>
-    <string name="habayeb_net_title_balanced">إجمالي الرصيد الصافي (متعادل ⚖️)</string>
-    <string name="habayeb_net_badge_assets">المبلغ بالصافي لصالحك بالكامل ✨</string>
-    <string name="habayeb_net_badge_liabilities">المبلغ بالصافي التزام/دين للناس عليك ⚠️</string>
-    <string name="habayeb_net_badge_balanced">جميع الحسابات متساوية ومتوازنة بالتمام 🤝</string>
-    <string name="habayeb_visibility_toggle">عرض المبالغ</string>
-    <string name="habayeb_owed_by_them">لي عند الناس</string>
-    <string name="habayeb_owed_to_them">علي للناس</string>
-    <string name="habayeb_debt_status_by">عليه لي</string>
-    <string name="habayeb_debt_status_to">له عندي</string>
-    <string name="habayeb_total_customers">%s زبائن</string>
-    <string name="habayeb_sort_financial">ترتيب مالي</string>
-    <string name="habayeb_sort_historical">ترتيب تاريخي</string>
     <string name="habayeb_add_account">إضافة حساب جديد 👥</string>
     <string name="habayeb_account_name">اسم الحساب</string>
     <string name="habayeb_amount">المبلغ</string>
     <string name="habayeb_calculator">الآلة الحاسبة</string>
-    <string name="habayeb_register_owed_by">تسجيل دين لي</string>
-    <string name="habayeb_register_owed_to">تسجيل دين علي</string>
     <string name="habayeb_tx_date">تاريخ المعاملة:</string>
     <string name="habayeb_cancel">إلغاء</string>
     <string name="habayeb_confirm_save">تأكيد وحفظ 💾</string>
@@ -139,37 +97,15 @@
     <string name="habayeb_delete_account_title">حذف كلي للحساب 🗑️</string>
     <string name="habayeb_delete_account_confirm">هل أنت متأكد من حذف الحساب \'%s\' مع جميع حركاته المالية نهائياً؟</string>
     <string name="habayeb_delete_yes">نعم، حذف</string>
-    <string name="habayeb_account_details">تفاصيل الحساب</string>
     <string name="habayeb_edit_name_title">تعديل اسم الزبون</string>
     <string name="habayeb_save_edit">حفظ التعديل</string>
     <string name="habayeb_edit_name_desc">تعديل الاسم</string>
-    <string name="habayeb_no_phone">لا يوجد هاتف</string>
-    <string name="habayeb_remaining_balance">الرصيد المتبقي</string>
     <string name="habayeb_status_owed_by">عليـه دين</string>
     <string name="habayeb_status_owed_to">لـه دين</string>
     <string name="habayeb_status_balanced">متزن</string>
-    <string name="habayeb_export_pdf">تصدير كشف PDF</string>
-    <string name="habayeb_share_text">مشاركة نصية سريعة</string>
-    <string name="habayeb_tx_history">سجل حركة الحساب</string>
-    <string name="habayeb_no_txs">لا توجد معاملات مسجلة بعد لهذا الحساب.</string>
     <string name="habayeb_add_tx_button">إضافة معاملة جديدة ➕</string>
-    <string name="habayeb_whatsapp_text">مراسلة واتساب</string>
-    <string name="habayeb_call">اتصال هاتفي</string>
-    <string name="habayeb_edit_tx_title">تعديل بيانات المعاملة 📝</string>
-    <string name="habayeb_add_tx_title">إضافة معاملة مالية جديدة 💰</string>
-    <string name="habayeb_payment_from">استلام سداد (مقبوض منه)</string>
-    <string name="habayeb_payment_to">تسديد مبلغ (مدفوع له)</string>
-    <string name="habayeb_new_debt_by">دين جديد عليه (مطلوب منه)</string>
-    <string name="habayeb_new_debt_to">دين جديد له (مطلوب له)</string>
     <string name="habayeb_tx_desc_optional">تفاصيل المعاملة / البيان (اختياري)</string>
-    <string name="habayeb_edit_date">تعديل التاريخ</string>
     <string name="habayeb_sync_main_income">تضمين كإيراد في الدفتر الذكي</string>
-    <string name="habayeb_save_confirm">تأكيد وحفظ</string>
-    <string name="habayeb_calc_title">حاسبة الديون السريعة 🧮</string>
-    <string name="habayeb_calc_formula_error">خطأ في الصيغة</string>
-    <string name="habayeb_calc_confirm">تأكيد الحساب وترحيله 📥</string>
-    <string name="habayeb_edit_account_title">تعديل حساب حبيب 👥</string>
-    <string name="habayeb_confirm_save_edit">تأكيد الحفظ 💾</string>
     <string name="habayeb_toast_attachment_success">تم إلحاق المستند من التخزين بنجاح 📎</string>
     <string name="habayeb_toast_attachment_failed">فشل الإرفاق: %s</string>
     <string name="habayeb_toast_storage_permission">الرجاء تفعيل إذن التخزين لإرفاق مستند 📂</string>
@@ -181,27 +117,13 @@
     <string name="habayeb_toast_valid_amount">الرجاء كتابة مبلغ المعاملة بصحيح</string>
     <string name="habayeb_toast_tx_save_success">تم حفظ المعاملة بنجاح</string>
     <string name="habayeb_toast_delete_success">تم حذف الحساب بنجاح</string>
-    <string name="habayeb_toast_contact_error">خطأ آمن في جلب جهة الاتصال: %s</string>
-    <string name="habayeb_toast_contact_clean_error">خطأ آمن في تطهير رقم جهة الاتصال: %s</string>
     <string name="habayeb_toast_pdf_export_failed">فشل تصدير كشف الحساب: %s</string>
-    <string name="habayeb_pdf_title">كشف حساب ديون والتزامات حبايب الدار</string>
-    <string name="habayeb_pdf_client_name">اسم العميل: %s</string>
-    <string name="habayeb_pdf_phone">الهاتف: %s</string>
-    <string name="habayeb_pdf_date">تاريخ كشف الحساب: %s</string>
-    <string name="habayeb_pdf_balance_owed_by">الرصيد الصافي (مطلوب منه):</string>
-    <string name="habayeb_pdf_balance_owed_to">الرصيد الصافي (مطلوب له):</string>
     <string name="habayeb_pdf_balance_balanced">الرصيد الصافي (متساوي):</string>
-    <string name="habayeb_pdf_balance_val">%s ريال يمني</string>
-    <string name="habayeb_pdf_history_title">سجل تفاصيل الحركات والمعاملات المالية</string>
     <string name="habayeb_pdf_tx_owed_by">دين عليه</string>
     <string name="habayeb_pdf_tx_payment_by">استلام دفعة</string>
     <string name="habayeb_pdf_tx_owed_to">دين له</string>
     <string name="habayeb_pdf_tx_payment_to">سداد دفعة</string>
     <string name="habayeb_pdf_tx_generic">حركة مالية</string>
-    <string name="habayeb_pdf_tx_format">%1$s - %2$s [%3$s]</string>
-    <string name="habayeb_pdf_val_format">%s ريال</string>
-    <string name="habayeb_pdf_footer">الدفتر الذكي - مستند مالي معتمد وآمن تم إنشاؤه تلقائياً 🌸</string>
-    <string name="toast_delete_success">تم الحذف بنجاح</string>
     <string name="toast_delete_failed">فشل الحذف</string>
 
     <!-- Section 3: PDF Reports & Sharing (التقارير و PDF) -->
@@ -231,117 +153,16 @@
     <string name="licensing_confirm_btn">تأكيد التفعيل ✅</string>
 
     <!-- Section 6: Add Product Dialog Localization -->
-    <string name="add_product_title">إضافة منتج جديد</string>
-    <string name="basic_info_title">البيانات الأساسية</string>
-    <string name="product_name_label">اسم المنتج</string>
-    <string name="product_category_label">تصنيف المنتج</string>
-    <string name="purchase_price_label">سعر الشراء</string>
-    <string name="selling_price_label">سعر البيع</string>
-    <string name="expected_profit_calc">الربح المتوقع: %1$s ر.ي (%2$d%%)</string>
-    <string name="expected_profit_dynamic">يتم احتساب هامش الربح المتوقع ديناميكياً</string>
-    <string name="wholesales_retail_toggle">تمكين البيع بالجملة والتجزئة</string>
-    <string name="total_added_qty_label">الكمية الإجمالية التي ستضاف للمخزن: %1$s %2$s</string>
-    <string name="parent_unit_name_label">اسم وحدة الجملة</string>
-    <string name="sub_unit_name_label">اسم وحدة التجزئة</string>
-    <string name="sub_unit_count_label">عدد التجزئة في الجملة</string>
-    <string name="parent_qty_label">كمية الجملة</string>
-    <string name="child_qty_label">كمية التجزئة الإضافية</string>
-    <string name="low_stock_threshold_label">حد التنبيه بنفاد المخزون</string>
-    <string name="low_stock_placeholder">حدد الحد الأدنى للتنبيه</string>
-    <string name="added_qty_label">الكمية الواردة</string>
-    <string name="notes_and_details">ملاحظات وتفاصيل إضافية</string>
-    <string name="err_fill_basics">فضلاً قم بملء اسم المنتج وتصنيفه أولاً</string>
-    <string name="btn_cancel">إلغاء</string>
-    <string name="btn_add_and_save">إضافة وحفظ</string>
 
     <!-- Section 7: Product Detail Sheet & Timeline Localization -->
-    <string name="detail_product_details">تفاصيل السلعة</string>
-    <string name="detail_product_category">السجل والأصل للمجموعة: %s</string>
-    <string name="detail_purchase_unit">شراء الوحدة</string>
-    <string name="detail_selling_unit">بيع الوحدة</string>
-    <string name="detail_profit_margin">هامش ربح الوحدة</string>
-    <string name="detail_current_stock">المخزون الحالي المتوفر</string>
-    <string name="detail_safety_limit">حد الأمان للتنبيه</string>
-    <string name="detail_invested_capital">رأس المال المستثمر</string>
-    <string name="detail_expected_sales">مبيعات متكاملة متوقعة</string>
-    <string name="detail_target_profits">الأرباح الكلية المستهدفة</string>
-    <string name="detail_btn_restock">إضافة كمية (وارد)</string>
-    <string name="detail_btn_sale">تسريح كمية (صادر)</string>
-    <string name="detail_history_title">سجل حركة السلعة</string>
-    <string name="detail_init_stock">المخزون المتوفر</string>
-    <string name="detail_tx_supply">توريد (وارد)</string>
-    <string name="detail_tx_sale">بيع (صادر)</string>
-    <string name="detail_qty_val">الكمية: %s</string>
-    <string name="detail_price_val">السعر: %s</string>
-    <string name="detail_note_val">ملاحظة: %s</string>
-    <string name="detail_smart_today">اليوم</string>
-    <string name="detail_smart_yesterday">أمس</string>
-    <string name="detail_btn_edit">تعديل</string>
-    <string name="detail_btn_delete">حذف</string>
-    <string name="detail_btn_close">إغلاق</string>
 
-    <string name="makhzan_selected_count">تم تحديد %d منتجات</string>
-    <string name="makhzan_confirm_delete_bulk">هل أنت متأكد من حذف المنتجات المحددة نهائياً؟ سيتم نقلها لسلة المحذوفات.</string>
-    <string name="makhzan_bulk_delete_title">تأكيد الحذف المتعدد 🗑️</string>
-    <string name="makhzan_update_purchase_price">تحديث سعر الشراء الحالي عند التوريد</string>
-    <string name="makhzan_undo_transaction">تراجع عن العملية (موازنة المخزون)</string>
-    <string name="makhzan_restock_success">تم إضافة الوارد وتحديث المخزون بنجاح</string>
-    <string name="makhzan_sale_success">تم تسجيل الصادر وتحديث المخزون بنجاح</string>
-    <string name="makhzan_confirm_delete_product">هل أنت متأكد من حذف هذا المنتج وكافة بياناته؟</string>
-    <string name="makhzan_transaction_customer">اسم العميل / المستلم</string>
-    <string name="makhzan_transaction_note">ملاحظات المعاملة</string>
-    <string name="makhzan_total_equiv">(= %1$d %2$s كلياً)</string>
-    <string name="makhzan_low_stock_warning">⚠️ تنبيه: المخزون منخفض</string>
-    <string name="makhzan_alert_on_out">تنبيه عند نفاذ: %s</string>
-    <string name="makhzan_capital_invested">رأس المال المستثمر</string>
-    <string name="makhzan_expected_sales">المبيعات المتوقعة</string>
-    <string name="makhzan_target_profits">الأرباح الكلية المستهدفة</string>
-    <string name="makhzan_history_title">سجل حركة السلعة</string>
-    <string name="makhzan_no_transactions">لا توجد حركات مسجلة لهذا المنتج بعد.</string>
-    <string name="makhzan_stock_is">المخزون الحالي: %s</string>
 
     <!-- Section 8: Purchase Price Calculator Localization -->
-    <string name="purchase_calc_title">حاسبة سعر الشراء الذكية</string>
-    <string name="purchase_calc_subtitle">احسب تكلفة الوحدة من سعر الجملة بسهولة</string>
-    <string name="purchase_calc_divide_by">تقسيم على %s</string>
-    <string name="purchase_calc_confirm_transfer">تأكيد الحساب وترحيله 📥</string>
-    <string name="purchase_calc_clear">C</string>
-    <string name="purchase_calc_error">خطأ في الصيغة</string>
     
     <!-- Smart Makhzan UI Additions -->
-    <string name="makhzan_quick_audit_mode">وضع الجرد السريع</string>
-    <string name="makhzan_add_category_title">إضافة قسم جديد</string>
-    <string name="makhzan_category_name_label">اسم القسم</string>
-    <string name="makhzan_expected_roi_label">العائد المتوقع</string>
-    <string name="makhzan_product_empty_state_search">لا توجد نتائج مطابقة لبحثك</string>
-    <string name="makhzan_product_empty_state_warehouse">المستودع فارغ حالياً</string>
-    <string name="makhzan_search_hint">ابحث عن منتج، فئة...</string>
-    <string name="makhzan_back_button_desc">رجوع</string>
-    <string name="makhzan_privacy_toggle_desc">عرض المبالغ</string>
-    <string name="makhzan_add_category_button">إضافة قسم</string>
-    <string name="makhzan_category_added_success">تم إضافة القسم الجديد بنجاح</string>
-    <string name="makhzan_enter_category_name_error">يرجى إدخال اسم القسم أولاً</string>
-    <string name="makhzan_add_category_desc">أدخل اسم القسم الجديد الذي ترغب في إضافته للمخزن لتصنيف المنتجات برياضة وتنظيم وسهولة:</string>
-    <string name="makhzan_category_placeholder">مثال: بهارات، مشروبات...</string>
-    <string name="makhzan_increase_stock">زيادة</string>
-    <string name="makhzan_decrease_stock">خصم</string>
-    <string name="makhzan_label_purchase">شراء</string>
-    <string name="makhzan_label_selling">بيع</string>
-    <string name="makhzan_label_profit">ربح</string>
-    <string name="makhzan_label_critical">حرج</string>
-    <string name="makhzan_stock_available_now">المخزون المتوفر حالياً</string>
-    <string name="makhzan_buy_unit">شراء الـ %s</string>
-    <string name="makhzan_sell_unit">بيع الـ %s</string>
-    <string name="makhzan_profit_margin_unit">هامش ربح الـ %s</string>
-    <string name="makhzan_safety_threshold_unit">حد الأمان لـ %s</string>
-    <string name="makhzan_history_title_latest">🕒 سجل حركة المخزون والعمليات الأخيرة</string>
-    <string name="makhzan_financial_valuation_title">📊 المركز المالي الكلي والتقييم للمخزون</string>
-    <string name="makhzan_no_movements_registered">لا توجد أي حركات وارد أو صادر مسجلة حالياً.</string>
-    <string name="makhzan_movements_count_pattern">%s حركة</string>
     
     <!-- Section 9: Main Ledger View (شاشة دفتر الأستاذ) -->
     <string name="ledger_title">الدفتر الذكي</string>
-    <string name="ledger_subtitle">صمام أمان التدبير المالي</string>
     <string name="ledger_actual_cash">المبلغ المتاح الفعلي</string>
     <string name="ledger_visibility_desc">عرض المبالغ</string>
     <string name="ledger_link_debts">تضمين الديون المستحقة 🔗</string>
@@ -362,8 +183,6 @@
     <string name="ledger_add_expense_title">إضافة مصروف جديد 🛒</string>
     <string name="ledger_amount_label">القيمة المالية (%1$s)</string>
     <string name="ledger_desc_label_placeholder">الوصف أو البيان (مثال: عشاء، للتموين)</string>
-    <string name="ledger_category_label">التصنيف: %1$s</string>
-    <string name="ledger_choose_category_placeholder">اختر التصنيف المالي... 🏷️</string>
     <string name="ledger_save_tx_btn">حفظ المعاملة ✅</string>
     <string name="ledger_share_via">مشاركة عبر</string>
     <string name="ledger_daily_totals_title">صافي حركة اليوم:</string>
@@ -373,10 +192,7 @@
     <string name="ledger_share_total_expense">🛒 *إجمالي ما صُرف:* %1$s\n</string>
     <string name="ledger_no_txs_today">لا توجد حركات مسجلة لهذا اليوم.\n</string>
     <string name="ledger_share_tx_format">%1$s %2$s - %3$s\n</string>
-    <string name="ledger_share_tx_desc">   📝 %1$s\n</string>
     <string name="ledger_whatsapp_whatsapp">مشاركة واتساب 💬</string>
-    <string name="ledger_obligation_reached_high">مصروفات اليوم أعلى من الأمس بـ %1$s. يرجى مراجعة نفقاتك لضمان تحقيق أهداف الميزانية.</string>
-    <string name="ledger_financial_status_stable">الوضع المالي مستقر وطيب للدار اليوم 🌸. بارك الله في أرزاق بيتكم وعمركم بكل فضل ويسر ورضا.</string>
     <string name="ledger_beginning_new_month">ــ بداية شهر جديد ــ</string>
     <string name="ledger_day_today">اليوم</string>
     <string name="ledger_day_yesterday">الأمس</string>
@@ -423,77 +239,17 @@
     <string name="ledger_category_overall_income">الواردات الإجمالية 💰</string>
     <string name="ledger_category_expense">منصرف</string>
 
-    <!-- Section 8: Reports Screen Localization (شاشة التقارير) -->
-    <string name="reports_main_title">السجلات والتقارير الشاملة 📈</string>
-    <string name="reports_live_data">بيانات حية ⚡</string>
-    <string name="reports_mizan_subtitle">تحليل الإيرادات والمصروفات</string>
-    <string name="reports_habayeb_subtitle">أوضاع الأرباح والديون الجارية</string>
-    <string name="reports_makhzan_subtitle">جرد القيمة الرأسمالية وموجودات السلع</string>
-    <string name="reports_tab_mizan">الدفتر الذكي 📊</string>
-    <string name="reports_tab_habayeb">ديون حبايب 🤝</string>
-    <string name="reports_tab_makhzan">بضاعة المخزن 📦</string>
-    <string name="reports_share_text">مشاركة كـ نص منسق 💬</string>
-    <string name="reports_period_daily">يومي</string>
-    <string name="reports_period_weekly">أسبوعي</string>
-    <string name="reports_period_monthly">شهري</string>
-    <string name="reports_period_yearly">سنوي</string>
-    <string name="reports_period_custom">مخصص</string>
-    <string name="reports_period_all">شامل</string>
-    <string name="reports_total_income_label">الوارد الكلي 🔵</string>
-    <string name="reports_total_expense_label">المصروفات 🔴</string>
-    <string name="reports_net_savings_label">صافي المتبقي 🟢</string>
-    <string name="reports_expenses_chart_title">التوزيع البياني الدائري للمصروفات 🎂</string>
-    <string name="reports_no_expenses_message">لا توجد مصروفات خلال هذه الفترة.</string>
-    <string name="reports_total_spent_label">إجمالي المنصرف</string>
-    <string name="reports_expenses_by_category_title">توزيع النفقات حسب البواب المتاحة 📁</string>
-    <string name="reports_expense_percentage_pattern">يمثل %s%% من المنصرف الكلي</string>
-    <string name="reports_owed_by_them_label">مطلوب لنا (حقوق) 📥</string>
-    <string name="reports_owed_to_them_label">مطلوب علينا (التزامات) 📤</string>
-    <string name="reports_net_debt_label">صافي ميزان الدين ⚖️</string>
-    <string name="reports_habayeb_search_placeholder">بحث عن اسم الحبيب أو رقم الهاتف...</string>
-    <string name="reports_habayeb_directory_title">دليل حسابات الديون وأرصدة حبايب الدار 🤝</string>
-    <string name="reports_habayeb_search_empty">لا توجد تطابقات لاسم الحبيب المطلوبة 🔍</string>
-    <string name="reports_owed_by_them_status">مطلوب منه (لنا عنده)</string>
-    <string name="reports_owed_to_them_status">مطلوب له (له عندنا)</string>
-    <string name="reports_balanced_status">برئ الذمة (مخلص)</string>
-    <string name="reports_whatsapp_message_pattern">مرحباً يا حبيبنا %1$s، نود إعلامك بأن رصيد حسابك المسجل لدينا هو: %2$s (%3$s). نسأل الله التيسير والبركة للجميع!</string>
-    <string name="reports_makhzan_totals_title">الأرصدة وعوائد المخزن الإجمالية 📈</string>
-    <string name="reports_makhzan_registered_items">أصناف المواد المسجلة:</string>
-    <string name="reports_makhzan_items_sorted_pattern">%s أصناف تم فرزها</string>
-    <string name="reports_makhzan_total_qty_label">إجمالي كميات المنتج:</string>
-    <string name="reports_makhzan_qty_registered_pattern">%s قطعة مسجلة</string>
-    <string name="reports_makhzan_cost_value_label">إجمالي رأس المال (سعر الشراء):</string>
-    <string name="reports_makhzan_selling_value_label">القيمة البيعية المتوقعة:</string>
-    <string name="reports_makhzan_potential_profit_label">الأرباح الكامنة المتوقعة عند البيع:</string>
-    <string name="reports_makhzan_low_stock_title">الأصناف شارفت على النفاد وبحاجة للتزود 🚨</string>
-    <string name="reports_makhzan_stock_safe">بفضل الله، الكميات آمنة وفوق عتبة التحذير للجميع! ✅</string>
-    <string name="reports_makhzan_qty_remaining_pattern">المتبقي: %1$s %2$s</string>
-    <string name="reports_makhzan_low_stock_threshold_pattern">إنذار النفاد: %1$s %2$s</string>
-    <string name="reports_enter_days_prompt">أدخل عدد الأيام لحسابها:</string>
-    <string name="reports_or_choose_date">أو إختر تاريخ محدد:</string>
-    <string name="reports_choose_date_range">تحديد التواريخ من - إلى</string>
-    <string name="reports_apply_days">تطبيق الأيام</string>
-    <string name="reports_apply">تطبيق</string>
-    <string name="reports_custom_period_title">فترة مخصصة</string>
-    <string name="reports_choose_period">اختر الفترة</string>
-    <string name="reports_start_end_date">تاريخ البداية والنهاية</string>
-    <string name="reports_back">رجوع</string>
-
     <!-- SettingsView Screen (شاشة الإعدادات) -->
     <string name="settings_title">إعدادات الدفتر الذكي والميزانية ⚙️</string>
     <string name="settings_subtitle">تهيئة المظاهر وهويات السند وأنظمة النسخ الاحتياطي والأمن</string>
     <string name="settings_currency_title">عملة الحساب الافتراضية 💰</string>
     <string name="settings_currency_hint">رمز العملة المالية (مثال: ر.ي، $)</string>
     <string name="settings_signature_title">بصمة وتوقيع التطبيق المعتمدة 🔐</string>
-    <string name="settings_signature_desc">تم تحميل ملف تشكيل التوقيع mizan.keystore بنجاح. التطبيق مؤمّن ويعمل بالبصمة الرسمية المعتمدة للاتصالات ومزامنة السحاب وتوافق حزمة البرمجيات بنجاح.</string>
+    <string name="settings_signature_desc">تم تحميل ملف تشكيل التوقيع smart_ledger.keystore بنجاح. التطبيق مؤمّن ويعمل بالبصمة الرسمية المعتمدة للاتصالات ومزامنة السحاب وتوافق حزمة البرمجيات بنجاح.</string>
     <string name="settings_sha1_label">بصمة معرّف SHA-1:</string>
     <string name="settings_sha256_label">بصمة معرّف SHA-256:</string>
     <string name="settings_sha1_copied">تم نسخ بصمة SHA-1 للحافظة 📋</string>
     <string name="settings_sha256_copied">تم نسخ بصمة SHA-256 للحافظة 📋</string>
-    <string name="settings_app_lock_label">قفل التطبيق والأمان</string>
-    <string name="settings_app_lock_disabled">تم إيقاف ميزة قفل التطبيق والأمن 🔓</string>
-    <string name="settings_change_passcode">تغيير رمز قفل التطبيق 🔢</string>
-    <string name="settings_update_recovery">تحديث عبارة الاسترداد الفائقة 🔑</string>
     <string name="settings_quad_backup_title">مركز النسخ الاحتياطي الموحد (Quad-Backup) 🌐</string>
     <string name="settings_quad_backup_subtitle">نظام التلقائي واليدوي لحفظ السجلات لتبادل البيانات أو تأمينها</string>
     <string name="settings_backup_portable_title">١. أرشيف الملفات المحمولة (.mzd)</string>
@@ -506,40 +262,12 @@
     <string name="settings_restore_paste">استعادة باللصق 📝</string>
     <string name="settings_backup_gdrive_title">٣. الرفع اليدوي لـ Google Drive</string>
     <string name="settings_backup_gdrive_desc">رفع وحفظ ملف النسخ الاحتياطي بشكل يدوي في مجلدات Drive ومشاركته بمرونة.</string>
-    <string name="settings_sync_gdrive_direct_title">٤. المزامنة السحابية المباشرة مع الحساب</string>
-    <string name="settings_sync_gdrive_connected_pattern">مرتبط ومفتوح: %s ✅</string>
-    <string name="settings_browse_cloud_backups">تصفح وأرشيف النسخ السحابية ☁️📂</string>
-    <string name="settings_gdrive_logout">تسجيل الخروج وتبديل الحساب 🚪</string>
-    <string name="settings_gdrive_logout_ing">جاري إلغاء الصلاحيات... 🚪</string>
-    <string name="settings_gdrive_logout_success">تم قطع الاتصال الجذري للحساب بنجاح 🚪🔐</string>
-    <string name="settings_gdrive_unauthorized_alert">⚠️ تنبيه: التطبيق مرتبط حالياً بهذا البريد. إذا كنت ترغب في تفعيل حساب آخر أو واجهت أي تعارض، يرجى الضغط على زر تسجيل الخروج والتبديل أدناه.</string>
-    <string name="settings_restore_single_text_title">استعادة من نص مفرَد</string>
-    <string name="settings_restore_single_text_desc">قم بلصق محتوى النسخة الاحتياطية هنا:</string>
-    <string name="settings_restore_single_text_placeholder">الصق النص المشفّر هنا...</string>
-    <string name="settings_restore_now">استعادة الان</string>
-    <string name="settings_local_discovered_backups">ملفات النسخ التاريخية المكتشفة بالهاتف:</string>
     <string name="settings_no_local_backups">لا توجد نسخ سابقة محفوظة محلياً في مجلد الدفتر الذكي 📁</string>
-    <string name="settings_auto_backup_daily">النسخ التلقائي اليومي</string>
     <string name="settings_auto_backup_desc">يقوم بأخذ نسخة احتياطية محلية وسحابية (إذا كان الحساب مربوطاً) بشكل يومي في الخلفية.</string>
-    <string name="settings_danger_zone_desc">انتبه: سيتم حذف جميع المعاملات ولا مجال للاستعادة إلا بملف النسخة الاحتياطية.</string>
     <string name="settings_delete_all_data">حذف جميع بيانات السجل (ضغط مطول ⏳)</string>
     <string name="settings_delete_all_data_progress">جاري التحقق من الحذف...</string>
-    <string name="settings_setup_passcode_title">تعيين قفل التطبيق والأمان 🛡️</string>
-    <string name="settings_setup_passcode_subtitle">قم بإنشاء رمز حماية لخصوصية السجلات والتحويلات المعتمدة</string>
-    <string name="settings_passcode_field">رمز القفل المكون من 4 أرقام</string>
-    <string name="settings_passcode_placeholder">مثال: 1234</string>
-    <string name="settings_confirm_passcode_field">تأكيد الرمز السري</string>
-    <string name="settings_confirm_passcode_placeholder">أعد كتابة الرمز نفسه للتحقق</string>
-    <string name="settings_recovery_phrase_field">مفتاح أمان الاسترداد</string>
-    <string name="settings_recovery_phrase_placeholder">اكتب مفتاح أمان الاسترداد (مثال: فاطمة أو أحمد)</string>
-    <string name="settings_security_warning">تنبيه أمني بالغ الأهمية ⚠️:\n\nالتطبيق يحمي خصوصيتك محلياً بالكامل. في حال نسيت رمز القفل وعبارة الاسترداد، لن يتمكن أحد -بما في ذلك المطور- من فك تشفير بياناتك أو استعادتها نهائياً، وستفقد بياناتك للأبد.</string>
-    <string name="settings_save_phrase_tip">قم بحفظ هذه العبارة بدقة لأنها مفتاح أمانك الوحيد.</string>
-    <string name="settings_recovery_hint_field">تلميح الذاكرة</string>
-    <string name="settings_recovery_hint_placeholder">مثال: اسم الزوجة أو صديق الطفولة</string>
-    <string name="settings_acknowledge_checkbox">أؤكد حفظي الآمن لمفتاح الاسترداد والرمز السري خارج الهاتف وأتحمل المسؤولية كاملة.</string>
-    <string name="settings_save_passcode_btn">حفظ وتغليق القفل 💾</string>
     <string name="settings_permissions_dialog_title">طلب صلاحيات النسخ الاحتياطي ⚙️💾</string>
-    <string name="settings_permissions_dialog_desc">لتفعيل نظام التخزين والمزامنة التلقائي وحفظ ملفات (.mzd) في ذاكرة الهاتف العامة (Documents/Mizan_Backups)، يتطلب التطبيق الحصول صراحة على الصلاحيات التالية لتفادي فشل الحفظ أو الحظر:</string>
+    <string name="settings_permissions_dialog_desc">لتفعيل نظام التخزين والمزامنة التلقائي وحفظ ملفات (.mzd) في ذاكرة الهاتف العامة (Documents/SmartLedger_Backups)، يتطلب التطبيق الحصول صراحة على الصلاحيات التالية لتفادي فشل الحفظ أو الحظر:</string>
     <string name="settings_permissions_storage_label">صلاحية الوصول ومساحة التخزين لإنشاء الأرشيف</string>
     <string name="settings_permissions_manage_files_label">إدارة ملفات الجهاز (لتخطي حماية الأندرويد 11+)</string>
     <string name="settings_permissions_notifications_label">صلاحية الإشعارات لتلقي تنبيهات نجاح/فشل المزامنة</string>
@@ -550,13 +278,6 @@
     <string name="settings_trap_dialog_desc">هل أنت متأكد تماماً من مسح كافة السجلات؟ هذا الإجراء سيمحي كل شيء نهائياً من الصندوق واليوميات والالتزامات ولا يمكن تدارك أو استرجاع المعلومات مجدداً.</string>
     <string name="settings_trap_dialog_cancel">تراجع، حافظ على بياناتي 🛡️</string>
     <string name="settings_trap_dialog_confirm">نعم، امسح كل سجلاتي نهائياً</string>
-    <string name="settings_security_gate_title">بوابة التحقق الأمني 🛡️</string>
-    <string name="settings_security_gate_desc">لتأكيد هويتك وحماية خصوصية التطبيق، الرجاء إدخال الرمز السري الحالي المكون من 4 أرقام أو عبارة الاسترداد الخاصة بك للمتابعة.</string>
-    <string name="settings_security_gate_error">الرمز أو العبارة غير متطابقة مسبقاً! ❌</string>
-    <string name="settings_security_gate_confirm">تحقق ومتابعة</string>
-    <string name="settings_security_gate_cancel">إلغاء الإجراء</string>
-    <string name="settings_security_gate_label">رمز القفل أو عبارة الاسترداد</string>
-    <string name="settings_security_gate_placeholder">أدخل بيانات التحقق...</string>
     <string name="settings_toast_cloud_syncing">جاري رفع وتأمين السحاب... ☁️</string>
     <string name="settings_toast_synced_desc">تمت المزامنة وحفظ النسخة ☁️</string>
     <string name="settings_toast_permission_manage_files">الرجاء تفعيل صلاحية \'إدارة جميع الملفات\' للتمكن من حفظ النسخ في مجلد Documents المالي الموحد.</string>
@@ -734,9 +455,7 @@
     <string name="biz_back">رجوع</string>
     <string name="biz_logo_title">شعار النشاط التجاري</string>
     <string name="biz_logo_desc">شعار النشاط</string>
-    <string name="biz_add_logo">إضافة شعار</string>
     <string name="biz_edit">تعديل</string>
-    <string name="biz_logo_tip">انقر لتغيير الشعار أو تعديله</string>
     <string name="biz_details_section">تفاصيل النشاط التجاري</string>
     <string name="biz_label_name">الاسم التجاري</string>
     <string name="biz_placeholder_name">مثال: شركة الوفاء للتجارة</string>
@@ -776,14 +495,12 @@
     <string name="sec_checkbox_ack">أؤكد حفظي الآمن لمفتاح الاسترداد والرمز السري خارج الهاتف وأتحمل المسؤولية كاملة</string>
     <string name="sec_toast_enabled_success">تم تفعيل قفل التطبيق والأمان بنجاح 🛡️</string>
     <string name="sec_btn_activate">تفعيل وحفظ رمز القفل 💾</string>
-    <string name="sec_card_title_warning">تنبيه الخصوصية والنسخ الاحتياطي</string>
     <string name="sec_card_desc_warning">التطبيق يحمي خصوصيتك محلياً بالكامل بترميز مشفر. عبارة الاسترداد الفائقة هي طريقتك الوحيدة للوصول للبيانات حال نسيان رمز القفل.</string>
     <string name="sec_hint_pattern">تلميح الذاكرة الحالي: %1$s</string>
-    <string name="sec_phrase_copylabel">عبارة أمان التطبيق للفقد والطوارئ</string>
     <string name="sec_btn_copy">نسخ عبارة الأمان</string>
     <string name="sec_toast_copied">تم نسخ عبارة الأمان الأساسية للحافظة 📋</string>
     <string name="sec_status_active">الأمان نشط بالكامل</string>
-    <string name="sec_status_inactive">تأمين الدار والبيانات</string>
+    <string name="sec_status_inactive">تأمين التطبيق والبيانات</string>
     <string name="sec_desc_active">تطبيقك محمي بتشفير محلي قوي</string>
     <string name="sec_desc_inactive">أنشئ رمز أمان لمنع التطفل والوصول غير المصرح به</string>
     <string name="sec_setup_title">إعداد رمز القفل الجديد</string>
@@ -808,38 +525,10 @@
     <string name="trash_delete_warning_title">تنبيه الحذف النهائي 🚫</string>
     <string name="trash_delete_warning_desc">هل أنت متأكد من حذف هذا السجل بشكل نهائي؟ لن تتمكن من استعادته مرة أخرى أبداً.</string>
     <string name="trash_delete_permanently">حذف نهائي</string>
-    <string name="trash_restore_action">استعادة ✅</string>
     <string name="trash_filter_all">الكل</string>
-    <string name="trash_filter_habayeb">حسابات حبايب 👥</string>
-    <string name="trash_filter_makhzan">منتجات المخزن 📦</string>
-    <string name="trash_filter_general">الإيرادات والمصروفات ⚖️</string>
-    <string name="trash_linked_with">تابع لحساب: %1$s</string>
-    <string name="trash_bundle_tx_count">حزمة مشمولة: %1$d معاملات</string>
-    <string name="trash_net_value">صافي القيمة: %1$s ر.ي</string>
-    <string name="trash_qty_changed">كمية: %1$s (%2$s)</string>
-    <string name="trash_target_amount">المستهدف: %1$s</string>
-    <string name="trash_selling_price">السعر: %1$s</string>
-    <string name="trash_phone">الهاتف: %1$s</string>
     <string name="trash_item_unknown">بيانات غير متوفرة</string>
 
     <!-- Category Bottom Sheet Strings -->
-    <string name="cat_tab_food_dar">أغذية الدار</string>
-    <string name="cat_tab_bills_dar">فواتير الدار</string>
-    <string name="cat_tab_family">العائلة</string>
-    <string name="cat_tab_other">أخرى ومخصص</string>
-    <string name="cat_close">إغلاق</string>
-    <string name="cat_title">التصنيف المالي 🏷️</string>
-    <string name="cat_btn_done">تم</string>
-    <string name="cat_btn_edit">تعديل</string>
-    <string name="cat_btn_add_new">إضافة تصنيف جديد ➕</string>
-    <string name="cat_empty_list">لا توجد تصنيفات في هذا القسم</string>
-    <string name="cat_delete_desc">حذف</string>
-    <string name="cat_dialog_title">تصنيف مالي جديد</string>
-    <string name="cat_label_name">اسم التصنيف</string>
-    <string name="cat_label_select_tab">اختر القسم:</string>
-    <string name="cat_label_select_emoji">اختر رمزاً للتصنيف:</string>
-    <string name="cat_btn_add_action">إضافة ✔️</string>
-    <string name="cat_btn_cancel">إلغاء</string>
 
     <!-- Auto Backup Worker & Sync Strings -->
     <string name="autobackup_channel_name">النسخ الاحتياطي التلقائي</string>
@@ -862,29 +551,11 @@
     <string name="settings_signature_unavailable">غير متوفر</string>
     <string name="settings_signature_desc_sha1">نسخ بصمة SHA-1</string>
     <string name="settings_signature_desc_sha256">نسخ بصمة SHA-256</string>
-    <string name="security_err_db_integrity_compromised">تحذير أمني: تم رصد محاولة تلاعب بسلامة هيكل البيانات المحلي! 🛡️</string>
-    <string name="security_err_sandbox_violation">حدث انتهاك أمني في بيئة القفل المحمية للتطبيق. ⚠️</string>
-    <string name="security_err_migration_critical">خطأ حرج في ترحيل قاعدة البيانات! تم حماية البيانات الأصيلة من الفقد المدمر وتم إيقاف العملية محاسبياً.</string>
     <!-- Dynamic Component Strings -->
-    <string name="unsaved_changes_msg">لديك بيانات غير محفوظة. هل أنت متأكد من رغبتك في الإغلاق؟</string>
-    <string name="continue_editing">متابعة التعديل</string>
-    <string name="initial_quantity_label">الكمية الافتتاحية</string>
     
-    <string name="cancel_sale_msg">هل أنت متأكد من إلغاء عملية البيع قبل إتمامها؟</string>
-    <string name="continue_sale">متابعة البيع</string>
-    <string name="register_sale_title">تسجيل حركة مبيعات</string>
-    <string name="available_stock_label">المخزون المتوفر</string>
-    <string name="sold_quantity_label">الكمية المباعة</string>
-    <string name="qty_exceeds_stock_error">الكمية المطلوبة أكبر من المخزون المتوفر!</string>
-    <string name="transaction_notes_optional">ملاحظات (اختياري)</string>
-    <string name="confirm_sale_btn">تأكيد البيع</string>
 
-    <string name="makhzan_bento_capital">رأس المال</string>
-    <string name="makhzan_bento_profit">الربح المتوقع</string>
-    <string name="makhzan_bento_alerts">تنبيهات المخزون</string>
-    <string name="makhzan_search_placeholder">ابحث عن منتج...</string>
 
-    <string name="nav_habayeb_plain">حسابات حبايب</string>
+    <string name="nav_habayeb_plain">ديون العملاء</string>
     <string name="nav_ledger_plain">الدفتر الذكي</string>
     <string name="toast_save_failed">فشل حفظ البيانات</string>
     <string name="toast_operation_failed">فشلت العملية</string>

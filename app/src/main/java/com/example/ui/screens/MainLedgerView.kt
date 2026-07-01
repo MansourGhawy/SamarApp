@@ -85,6 +85,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun MainLedgerView(
     viewModel: FinanceViewModel,
+    monthlyLedger: List<MonthLedger>,
+    totalCash: BigDecimal,
+    commitments: List<FixedCommitment>,
     settings: AppSettings,
     onBackIntercept: (Boolean) -> Unit, // intercepts back to cancel selection mode if active
     onMenuClick: () -> Unit = {},
@@ -92,10 +95,6 @@ fun MainLedgerView(
 ) {
     val bottomPadding = contentPadding.calculateBottomPadding()
     val topPadding = contentPadding.calculateTopPadding()
-
-    val totalCash by viewModel.totalCashState.collectAsStateWithLifecycle()
-    val commitments by viewModel.commitmentsState.collectAsStateWithLifecycle()
-    val monthlyLedger by viewModel.monthlyLedgerState.collectAsStateWithLifecycle()
 
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -153,13 +152,6 @@ fun MainLedgerView(
 
     // Pop-up dialog day state tracking key
     var activeDayKey by remember { mutableStateOf<String?>(null) }
-
-    // Performance Profile: Defer heavy list rendering until navigation animation completes
-    var isScreenReady by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(100) // Small delay to allow navigation transition to complete smoothly
-        isScreenReady = true
-    }
 
     // Search state
     var showSearch by remember { mutableStateOf(false) }
@@ -284,7 +276,7 @@ fun MainLedgerView(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Compact Header + Total Cash + Coverage Ratio
-            item(key = "header_total_cash") {
+            item {
                 val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
                 val allKeys = remember(monthlyLedger) {
                     monthlyLedger.flatMap { ml -> ml.days.map { "${ml.monthKey}_${it.dayNumber}" } }
@@ -335,7 +327,7 @@ fun MainLedgerView(
             }
 
             // Commitments Summary Cards - Row 1 of the 2x2 Grid block
-            item(key = "commitments_summary") {
+            item {
                 CommitmentsSummaryCards(
                     commitments = commitments,
                     computedCommitments = computedCommitments,
@@ -351,7 +343,7 @@ fun MainLedgerView(
 
             // No data placeholder
             if (monthlyLedger.isEmpty()) {
-                item(key = "empty_state") {
+                item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -371,24 +363,12 @@ fun MainLedgerView(
                 }
             }
 
-            // Performance Profile: Deferred Loading for heavy list items
-            if (!isScreenReady && monthlyLedger.isNotEmpty()) {
-                item(key = "loading_skeleton") {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = EmeraldPrimary,
-                            strokeWidth = 3.dp
-                        )
-                    }
-                }
-            } else {
-                // Ledger Month-by-month list
-                monthlyLedger.forEachIndexed { monthIdx, monthLedger ->
-                    val isCollapsed = collapsedMonths.contains(monthLedger.monthKey)
+            // Ledger Month-by-month list
+            monthlyLedger.forEachIndexed { monthIdx, monthLedger ->
+                val isCollapsed = collapsedMonths.contains(monthLedger.monthKey)
 
-                    // Month Header
-                    item(key = "header_${monthLedger.monthKey}") {
+                // Month Header
+                item {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -483,7 +463,7 @@ fun MainLedgerView(
 
                 // Month Transition Separator
                 if (monthIdx < monthlyLedger.size - 1) {
-                    item(key = "transition_${monthLedger.monthKey}") {
+                    item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -494,8 +474,7 @@ fun MainLedgerView(
                         }
                     }
                 }
-            } // End of forEachIndexed
-        } // End of else block for deferred loading
+            }
         }
 
         // Floating action buttons (Dual floating configuration) - Compressed & modern

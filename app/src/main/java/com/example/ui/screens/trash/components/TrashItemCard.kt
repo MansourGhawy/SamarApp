@@ -1,6 +1,5 @@
 package com.example.ui.screens.trash.components
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -9,15 +8,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,7 +23,6 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.local.entities.DeletedItemEntity
 import com.example.data.local.entities.HabayebCustomer
-import com.example.domain.FormatUtils
 import org.json.JSONObject
 import java.util.*
 
@@ -36,7 +32,6 @@ fun TrashItemCard(
     item: DeletedItemEntity,
     customersList: List<HabayebCustomer>,
     isSelected: Boolean,
-    currencySymbol: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onRestore: () -> Unit,
@@ -46,395 +41,294 @@ fun TrashItemCard(
 
     // Human-friendly table categorization labels
     val typeLabel = when (item.originalTableName) {
-        "transactions" -> "حركة مالية (الدفتر)"
-        "habayeb_transactions" -> "معاملة دين (العملاء)"
+        "transactions" -> "حركة مالية (الدار)"
+        "habayeb_transactions" -> "معاملة دين (حبايب)"
         "fixed_commitments" -> "التزام مالي"
         "habayeb_customers" -> "حساب عميل"
-        "habayeb_bundle" -> "حساب عميل بجميع معاملاته"
-        "dar_bundle" -> "حزمة الدفتر الذكي"
+        "habayeb_bundle" -> "حساب عميل بجميع معاملاته 👥"
+        "dar_bundle" -> "حزمة ميزان الدار"
         else -> item.originalTableName
     }
 
-    val typeIcon: ImageVector = when (item.originalTableName) {
-        "transactions" -> Icons.Default.ReceiptLong
-        "habayeb_transactions" -> Icons.Default.Handshake
-        "fixed_commitments" -> Icons.Default.TaskAlt
-        "habayeb_customers" -> Icons.Default.Person
-        "habayeb_bundle" -> Icons.Default.People
-        "dar_bundle" -> Icons.Default.Inventory
-        else -> Icons.Default.InsertDriveFile
-    }
-
-    // System theme styling (No Olive green!)
+    // Deluxe brand tag colors with customized Glassmorphic card theme
     val systemColor = when (item.sourceSystem) {
-        "حبايب" -> MaterialTheme.colorScheme.secondary // Neon Cyan Accent
-        else -> MaterialTheme.colorScheme.primary       // Glowing Violet/Purple
+        "حبايب" -> Color(0xFF1E3A8A)    // Premium Dark Blue
+        else -> Color(0xFF0F766E)       // Emerald Primary
     }
 
-    val systemLabel = when (item.sourceSystem) {
-        "حبايب" -> "الديون 👥"
-        else -> "الدفتر الذكي 🏠"
-    }
-
-    var indicatorColor = systemColor
-    val jsonObj = remember(item.jsonData) {
-        try {
-            JSONObject(item.jsonData)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    // Dynamic extraction of info
-    var titleText = stringResource(id = R.string.trash_item_unknown)
-    var amountText = ""
-    var isExpense = false
-    var subText = ""
-    var exchangeInfoText = ""
-
-    if (jsonObj != null) {
-        when (item.originalTableName) {
-            "transactions" -> {
-                titleText = jsonObj.optString("description", "").ifEmpty { jsonObj.optString("category", "معاملة") }
-                val amountVal = jsonObj.optDouble("amount", 0.0)
-                isExpense = jsonObj.optString("type") == "EXPENSE"
-                indicatorColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-                val prefix = if (isExpense) "-" else "+"
-                amountText = "$prefix${FormatUtils.formatDoubleCurrency(amountVal, currencySymbol)}"
-                subText = "التصنيف: " + jsonObj.optString("category", "")
-            }
-
-            "habayeb_transactions" -> {
-                val customerId = jsonObj.optString("customerId", "")
-                val resolvedName = customersList.find { it.id == customerId }?.name ?: "عميل غير معروف"
-                titleText = resolvedName
-
-                val amountVal = jsonObj.optDouble("amount", 0.0)
-                val type = jsonObj.optString("type", "")
-                
-                // Debt types: OWED_BY_THEM / PAYMENT_BY_THEM / OWED_TO_THEM / PAYMENT_TO_THEM
-                val isNegative = type == "OWED_BY_THEM" || type == "PAYMENT_TO_THEM"
-                isExpense = isNegative
-                indicatorColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-
-                val typeAr = when (type) {
-                    "OWED_BY_THEM" -> "دين عليه ↗️"
-                    "PAYMENT_BY_THEM" -> "سداد منه ↙️"
-                    "OWED_TO_THEM" -> "دين له ↙️"
-                    "PAYMENT_TO_THEM" -> "سداد له ↗️"
-                    else -> type
-                }
-                subText = "نوع المعاملة: $typeAr" + if (jsonObj.optString("description", "").isNotEmpty()) " | " + jsonObj.optString("description", "") else ""
-
-                val isForeign = jsonObj.optBoolean("is_foreign", false)
-                if (isForeign) {
-                    val foreignAmount = jsonObj.optDouble("foreign_amount", 0.0)
-                    val currencyCode = jsonObj.optString("currency_code", "DEFAULT")
-                    amountText = FormatUtils.formatDoubleCurrency(foreignAmount, currencyCode)
-                    
-                    val isRateCalculated = jsonObj.optBoolean("is_rate_calculated", false)
-                    if (isRateCalculated) {
-                        val equivalentVal = jsonObj.optDouble("equivalent_amount", 0.0)
-                        val rate = jsonObj.optDouble("exchange_rate", 1.0)
-                        exchangeInfoText = "يعادل ${FormatUtils.formatDoubleCurrency(equivalentVal, currencySymbol)} (صرف: $rate)"
-                    }
-                } else {
-                    amountText = FormatUtils.formatDoubleCurrency(amountVal, currencySymbol)
-                }
-            }
-
-            "fixed_commitments" -> {
-                titleText = jsonObj.optString("name", "التزام مالي")
-                val targetVal = jsonObj.optDouble("targetAmount", 0.0)
-                amountText = FormatUtils.formatDoubleCurrency(targetVal, currencySymbol)
-                val progressVal = jsonObj.optDouble("currentProgress", 0.0)
-                val formattedProgress = try { String.format(Locale.getDefault(), "%.1f", progressVal) } catch (e: Exception) { progressVal.toString() }
-                subText = "نسبة الإنجاز الحالي: %$formattedProgress"
-                indicatorColor = MaterialTheme.colorScheme.primary
-            }
-
-            "habayeb_customers" -> {
-                titleText = jsonObj.optString("name", "عميل")
-                val phoneStr = jsonObj.optString("phone", "").ifEmpty { "لا يوجد هاتف" }
-                amountText = phoneStr
-                subText = jsonObj.optString("notes", "").ifEmpty { "لا توجد ملاحظات" }
-                indicatorColor = MaterialTheme.colorScheme.secondary
-            }
-
-            "habayeb_bundle" -> {
-                val cust = jsonObj.optJSONObject("customer")
-                if (cust != null) {
-                    titleText = cust.optString("name", "عميل")
-                    val phoneStr = cust.optString("phone", "").ifEmpty { "لا يوجد هاتف" }
-                    amountText = phoneStr
-                }
-                val txCount = jsonObj.optInt("totalTransactions", 0)
-                subText = "حزمة عميل: تشمل $txCount معاملات تابعة"
-                indicatorColor = MaterialTheme.colorScheme.secondary
-            }
-
-            "dar_bundle" -> {
-                val count = jsonObj.optJSONArray("transactions")?.length() ?: 0
-                titleText = jsonObj.optString("name", "حزمة ميزان الدار")
-                val totalNet = jsonObj.optDouble("totalNet", 0.0)
-                amountText = FormatUtils.formatDoubleCurrency(totalNet, currencySymbol)
-                subText = "تشمل $count حركات مالية محذوفة معاً"
-                indicatorColor = MaterialTheme.colorScheme.primary
-            }
-
-            else -> {
-                titleText = jsonObj.optString("name", jsonObj.optString("description", "سجل مجهول"))
-                indicatorColor = MaterialTheme.colorScheme.outline
+    val indicatorColor = when {
+        item.originalTableName.startsWith("habayeb_") -> Color(0xFF2563EB) // Blue
+        else -> {
+            try {
+                val json = JSONObject(item.jsonData)
+                if (json.optString("type", "") == "EXPENSE") Color(0xFFF43F5E) else Color(0xFF10B981)
+            } catch (e: Exception) {
+                Color(0xFF0F766E)
             }
         }
     }
 
-    val cardBorder = if (isSelected) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-    } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    }
+    val cardBorder = if (isSelected) BorderStroke(2.dp, Color(0xFF0F766E)) else BorderStroke(0.8.dp, Color(0xFFE2E8F0))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 2.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 4.dp),
         border = cardBorder
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Header Row: Type Badge, System Tag, Delete Date
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color(0xFF0F766E).copy(alpha = 0.06f))
+                )
+            }
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Glassmorphic interactive color tag strip on the side (RTL alignment safe)
+                Box(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .background(indicatorColor)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Category Icon + Label Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(systemColor.copy(alpha = 0.08f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    // Header badges and timestamp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(
-                                imageVector = typeIcon,
-                                contentDescription = null,
-                                tint = systemColor,
-                                modifier = Modifier.size(12.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF64748B).copy(alpha = 0.1f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = typeLabel,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF475569)
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(systemColor.copy(alpha = 0.1f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = item.sourceSystem,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = systemColor
+                                )
+                            }
+                        }
+
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF0F766E)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        } else {
+                            val parsedDate = try {
+                                java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale("ar")).format(Date(item.deletedAt))
+                            } catch (e: Exception) {
+                                ""
+                            }
                             Text(
-                                text = typeLabel,
-                                fontSize = 10.sp,
+                                text = parsedDate,
+                                fontSize = 11.sp,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
+                    }
+
+                    // Polymorphic extraction of JSON data safely
+                    val jsonObj = remember(item.jsonData) {
+                        try {
+                            JSONObject(item.jsonData)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    var titleText = stringResource(id = R.string.trash_item_unknown)
+                    var amountText = ""
+                    var subText = ""
+
+                    if (jsonObj != null) {
+                        when (item.originalTableName) {
+                            "transactions" -> {
+                                titleText = jsonObj.optString("description", "").ifEmpty { jsonObj.optString("category", "معاملة الدار") }
+                                val amountVal = jsonObj.optDouble("amount", 0.0)
+                                val prefix = if (jsonObj.optString("type") == "EXPENSE") "-" else "+"
+                                val formatted = try { String.format(Locale.getDefault(), "%,.2f", amountVal) } catch (e: Exception) { amountVal.toString() }
+                                amountText = "$prefix$formatted ر.ي"
+                                subText = "التصنيف: " + jsonObj.optString("category", "")
+                             }
+
+                            "habayeb_transactions" -> {
+                                // Linked directly with parent account name
+                                val customerId = jsonObj.optString("customerId", "")
+                                val resolvedName = customersList.find { it.id == customerId }?.name ?: "عميل غير معروف"
+                                titleText = stringResource(id = R.string.trash_linked_with, resolvedName)
+
+                                val amt = jsonObj.optDouble("amount", 0.0)
+                                val t = jsonObj.optString("type", "")
+                                val typeAr = when (t) {
+                                    "OWED_BY_THEM" -> "دين عليه"
+                                    "PAYMENT_BY_THEM" -> "سداد منه"
+                                    "OWED_TO_THEM" -> "دين له"
+                                    "PAYMENT_TO_THEM" -> "سداد له"
+                                    else -> t
+                                }
+                                val formatted = try { String.format(Locale.getDefault(), "%,.2f", amt) } catch (e: Exception) { amt.toString() }
+                                amountText = "$formatted  ر.ي ($typeAr)"
+                                subText = jsonObj.optString("description", "")
+                            }
+
+                            "fixed_commitments" -> {
+                                titleText = jsonObj.optString("name", "هدف مالي")
+                                val targetVal = jsonObj.optDouble("targetAmount", 0.0)
+                                val formattedTarget = try { String.format(Locale.getDefault(), "%,.2f", targetVal) } catch (e: Exception) { targetVal.toString() }
+                                amountText = stringResource(id = R.string.trash_target_amount, formattedTarget)
+                                val progressVal = jsonObj.optDouble("currentProgress", 0.0)
+                                val formattedProgress = try { String.format(Locale.getDefault(), "%.1f", progressVal) } catch (e: Exception) { progressVal.toString() }
+                                subText = "نسبة الإنجاز الحالي: %$formattedProgress"
+                            }
+
+                            "habayeb_customers" -> {
+                                titleText = jsonObj.optString("name", "عميل")
+                                val phoneStr = jsonObj.optString("phone", "").ifEmpty { "ليس لديه هاتف" }
+                                amountText = stringResource(id = R.string.trash_phone, phoneStr)
+                                subText = jsonObj.optString("notes", "")
+                            }
+
+                            "habayeb_bundle" -> {
+                                val cust = jsonObj.optJSONObject("customer")
+                                if (cust != null) {
+                                    titleText = cust.optString("name", "عميل حبايب")
+                                    val phoneStr = cust.optString("phone", "").ifEmpty { "ليس لديه هاتف" }
+                                    amountText = stringResource(id = R.string.trash_phone, phoneStr)
+                                }
+                                val txCount = jsonObj.optInt("totalTransactions", 0)
+                                subText = stringResource(id = R.string.trash_bundle_tx_count, txCount)
+                            }
+
+                            "dar_bundle" -> {
+                                val txsArray = jsonObj.optJSONArray("transactions")
+                                val count = txsArray?.length() ?: 0
+                                titleText = "حزمة ميزان الدار"
+                                amountText = stringResource(id = R.string.trash_bundle_tx_count, count)
+                            }
+
+                            else -> {
+                                titleText = jsonObj.optString("name", jsonObj.optString("description", "سجل مجهول"))
+                            }
+                        }
+                    } else {
+                        titleText = "تعذر قراءة التفاصيل"
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = titleText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E293B),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (amountText.isNotEmpty()) {
+                            Text(
+                                text = amountText,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = systemColor
                             )
                         }
-                    }
-
-                    // System Source Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = systemLabel,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                } else {
-                    val parsedDate = try {
-                        java.text.SimpleDateFormat("yyyy/MM/dd hh:mm a", Locale("ar")).format(Date(item.deletedAt))
-                    } catch (e: Exception) {
-                        ""
-                    }
-                    Text(
-                        text = parsedDate,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Light
-                    )
-                }
-            }
-
-            // Main Content Row: Icon / Indicator Strip, Info Column, Amount Column
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Sleek minimalist rounded indicator strip
-                    Box(
-                        modifier = Modifier
-                            .width(4.dp)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(indicatorColor)
-                    )
-
-                    // Title and Description
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = titleText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
                         if (subText.isNotEmpty()) {
                             Text(
                                 text = subText,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                maxLines = 1,
+                                color = Color(0xFF64748B),
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                }
 
-                // Amount Section
-                if (amountText.isNotEmpty()) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = amountText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (item.originalTableName == "transactions" || item.originalTableName == "habayeb_transactions") {
-                                if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
+                    // Bottom CTA Action buttons
+                    if (!isSelected) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDeleteConfirm = true },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF43F5E)),
+                                border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.3f))
+                            ) {
+                                Text(
+                                    text = stringResource(id = R.string.trash_delete_permanently),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-                        )
-                        if (exchangeInfoText.isNotEmpty()) {
-                            Text(
-                                text = exchangeInfoText,
-                                fontSize = 9.sp,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Action Buttons (Restore / Permanent Delete) - Only if NOT in multi-selection mode
-            if (!isSelected) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(32.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteForever,
-                                contentDescription = null,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = stringResource(id = R.string.trash_delete_permanently),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = onRestore,
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .height(32.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Restore,
-                                contentDescription = null,
-                                modifier = Modifier.size(13.dp),
-                                tint = Color.White
-                            )
-                            Text(
-                                text = "استعادة السجل",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
+                            Button(
+                                onClick = onRestore,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E))
+                            ) {
+                                Text(
+                                    text = stringResource(id = R.string.trash_restore_action),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
@@ -451,7 +345,7 @@ fun TrashItemCard(
                         onPermanentDelete()
                         showDeleteConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF43F5E)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
@@ -465,7 +359,7 @@ fun TrashItemCard(
                 TextButton(onClick = { showDeleteConfirm = false }) {
                     Text(
                         text = stringResource(id = R.string.trash_cancel),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(0xFF64748B),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -474,19 +368,17 @@ fun TrashItemCard(
                 Text(
                     text = stringResource(id = R.string.trash_delete_warning_title),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontSize = 16.sp
                 )
             },
             text = {
                 Text(
                     text = stringResource(id = R.string.trash_delete_warning_desc),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 14.sp
                 )
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(16.dp)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
         )
     }
 }

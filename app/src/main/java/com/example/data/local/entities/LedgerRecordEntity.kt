@@ -16,8 +16,7 @@ data class FixedCommitment(
     tableName = "transactions",
     indices = [
         Index(value = ["timestamp"]),
-        Index(value = ["category"]),
-        Index(value = ["type"])
+        Index(value = ["category"])
     ]
 )
 data class TransactionDb(

@@ -32,9 +32,6 @@ class FinanceRepository(internal val database: AppDatabase) {
     fun getTransactionsForCustomerFlow(customerId: String): Flow<List<HabayebTransaction>> = 
         habayebDao.getTransactionsForCustomerFlow(customerId)
 
-    fun getTransactionsPagingSourceForCustomer(customerId: String): androidx.paging.PagingSource<Int, HabayebTransaction> =
-        habayebDao.getTransactionsPagingSourceForCustomer(customerId)
-
     // Deleted Items Trash
     suspend fun saveDeletedItem(item: DeletedItemEntity) = deletedItemDao.insertDeletedItem(item)
     suspend fun removeDeletedItem(item: DeletedItemEntity) = deletedItemDao.deleteItem(item)

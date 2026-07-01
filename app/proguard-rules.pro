@@ -52,9 +52,3 @@
 # Keep our UI state structures as they represent model models in our view levels
 -keep class com.example.ui.state.** { *; }
 
-# OkHttp Platform rules
--dontwarn okhttp3.internal.platform.**
--dontwarn org.conscrypt.**
--dontwarn org.bouncycastle.**
--dontwarn org.openjsse.**
-

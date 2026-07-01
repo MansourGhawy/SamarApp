@@ -110,6 +110,10 @@ fun MainAppLayout(
         }
     }
 
+    val totalCash by viewModel.totalCashState.collectAsStateWithLifecycle()
+    val commitments by viewModel.commitmentsState.collectAsStateWithLifecycle()
+    val monthlyLedger by viewModel.monthlyLedgerState.collectAsStateWithLifecycle()
+
     BackHandler {
         val defaultStart = try {
             Screen.valueOf(defaultStartDest)
@@ -170,6 +174,9 @@ fun MainAppLayout(
                     currentScreen = currentScreen,
                     viewModel = viewModel,
                     settings = settings,
+                    monthlyLedger = monthlyLedger,
+                    totalCash = totalCash,
+                    commitments = commitments,
                     contentPadding = innerPadding,
                     onNavigate = { currentScreen = it },
                     onMenuClick = { scope.launch { drawerState.open() } },

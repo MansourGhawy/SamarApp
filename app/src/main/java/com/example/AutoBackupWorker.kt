@@ -37,9 +37,9 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
         fun scheduleDailyBackupWorker(context: Context) {
             val workManager = WorkManager.getInstance(context)
             
-            // Unrestricted network constraint so local daily backup always runs offline!
+            // Smarter, power & data defensive constraints
             val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                .setRequiredNetworkType(NetworkType.CONNECTED) // Require network connection to minimize cloud upload failures
                 .setRequiresBatteryNotLow(true)                // Save device battery health
                 .build()
 
@@ -92,25 +92,10 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
             val sdfMonth = SimpleDateFormat("yyyy-MM", Locale.US)
             val monthStr = sdfMonth.format(Date())
             
-            val documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
-            var mainDir = File(documentsDir, "الدفتر الذكي")
-            try {
-                if (!mainDir.exists()) {
-                    mainDir.mkdirs()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to create public Documents directory, falling back to private storage", e)
-            }
-
-            if (!mainDir.exists()) {
-                val appPrivateDir = context.getExternalFilesDir(null) ?: context.filesDir
-                mainDir = File(appPrivateDir, "الدفتر الذكي")
-                if (!mainDir.exists()) {
-                    mainDir.mkdirs()
-                }
-            }
-
+            val appPrivateDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val mainDir = File(appPrivateDir, "Mizan_Backups")
             val targetDir = File(mainDir, monthStr)
+
             if (!targetDir.exists()) {
                 val created = targetDir.mkdirs()
                 if (!created) {
@@ -122,8 +107,7 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
             val sdfName = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US)
             val dateStr = sdfName.format(Date())
-            val fileName = "Mzd_$dateStr.mzd"
-            val file = File(targetDir, fileName)
+            val file = File(targetDir, "Mzd_$dateStr.mzd")
 
             var localWrittenSuccessfully = false
             try {
@@ -131,7 +115,7 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
                 file.bufferedWriter().use { writer ->
                     writer.write(jsonStr)
                 }
-                if (file.exists() && file.length() > 500) { // Real IO validation
+                if (file.exists() && file.length() > 1024) { // Real IO validation (must be more than 1KB)
                     localWrittenSuccessfully = true
                 }
             } catch (writeEx: Exception) {
@@ -145,25 +129,13 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
                 var cloudSynced = false
                 
                 if (isLinked) {
-                    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                    val hasNetwork = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        val nw = connectivityManager.activeNetwork
-                        val actNw = connectivityManager.getNetworkCapabilities(nw)
-                        actNw != null && actNw.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    } else {
-                        val nwInfo = connectivityManager.activeNetworkInfo
-                        nwInfo != null && nwInfo.isConnected
-                    }
-
-                    if (hasNetwork) {
-                        // Upload this specific file!
-                        cloudSynced = syncHelper.uploadBackupToDriveWithFilename(fileName, jsonStr)
-                    }
+                    // Upload this specific file!
+                    cloudSynced = syncHelper.uploadBackupToDriveWithFilename("Mzd_$dateStr.mzd", jsonStr)
                     
                     if (!cloudSynced) {
-                        Log.w(TAG, "Google Cloud synchronization failed or offline. Enqueueing background CloudUploadWorker.")
-                        // Enqueue guaranteed upload for as soon as we connect to internet
-                        CloudUploadWorker.enqueueUpload(context, file.absolutePath, fileName)
+                        Log.w(TAG, "Google Cloud synchronization failed. Retrying in subsequent WorkManager cycles.")
+                        // Reschedule background work cleanly using WorkManager periodic retry policy
+                        return Result.retry()
                     }
                 }
                 

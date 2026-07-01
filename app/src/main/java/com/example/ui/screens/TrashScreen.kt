@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +13,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,13 +49,12 @@ fun TrashScreen(
     onBack: () -> Unit,
     contentPadding: PaddingValues = PaddingValues()
 ) {
-    // 100% Lifecycle-aware state flow tracking
+    // 100% Lifecycle-aware state flow tracking for better memory optimization
     val items by viewModel.deletedItemsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
     val customersList by viewModel.habayebCustomersState.collectAsStateWithLifecycle()
-    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
-    val currencySymbol = settings.currencySymbol
 
     var selectedFilter by remember { mutableStateOf(FilterType.ALL) }
+    var showFilterMenu by remember { mutableStateOf(false) }
 
     // Search Mode States
     var isSearchActive by remember { mutableStateOf(false) }
@@ -81,7 +81,7 @@ fun TrashScreen(
         isSelectionMode = false
     }
 
-    // Advanced Filter and Instant Search algorithm
+    // Advanced Filter and Instant Search algorithm with Arabic Normalization compatibility (Asynchronously calculated on Dispatchers.Default to prevent main-thread blockage)
     var processedItems by remember { mutableStateOf(emptyList<DeletedItemEntity>()) }
 
     LaunchedEffect(items, searchQuery, selectedFilter) {
@@ -94,6 +94,7 @@ fun TrashScreen(
                 FilterType.HABAYEB -> list.filter {
                     it.sourceSystem == "حبايب" || it.originalTableName.startsWith("habayeb_")
                 }
+
                 FilterType.LEDGER -> list.filter {
                     it.sourceSystem == "دار" ||
                             it.originalTableName == "transactions" ||
@@ -121,7 +122,7 @@ fun TrashScreen(
                                 notes.contains(queryClean) ||
                                 category.contains(queryClean)
                     } catch (e: Exception) {
-                        // Fail-safe skip on malformed JSON
+                        // Fail-safe skip on malformated JSON
                     }
                     match
                 }
@@ -146,8 +147,8 @@ fun TrashScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(64.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 2.dp
+                        color = Color.White,
+                        tonalElevation = 3.dp
                     ) {
                         Row(
                             modifier = Modifier
@@ -162,7 +163,7 @@ fun TrashScreen(
                                 Icon(
                                     imageVector = Icons.Default.ArrowForward,
                                     contentDescription = stringResource(id = R.string.trash_back),
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                    tint = Color(0xFF1E293B)
                                 )
                             }
                             TextField(
@@ -171,8 +172,7 @@ fun TrashScreen(
                                 placeholder = {
                                     Text(
                                         text = stringResource(id = R.string.trash_search_placeholder),
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        fontSize = 14.sp
                                     )
                                 },
                                 modifier = Modifier.weight(1f),
@@ -182,15 +182,13 @@ fun TrashScreen(
                                     disabledContainerColor = Color.Transparent,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                 ),
                                 singleLine = true,
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = Color(0xFF0F766E)
                                     )
                                 },
                                 trailingIcon = {
@@ -199,8 +197,7 @@ fun TrashScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Clear,
                                                 contentDescription = null,
-                                                modifier = Modifier.size(16.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
                                     }
@@ -215,15 +212,13 @@ fun TrashScreen(
                                 Text(
                                     text = stringResource(id = R.string.trash_selected_count, selectedItemIds.size),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = Color(0xFF1E293B)
                                 )
                             } else {
                                 Text(
                                     text = stringResource(id = R.string.trash_title) + " 🗑️",
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = Color(0xFF1E293B)
                                 )
                             }
                         },
@@ -233,7 +228,7 @@ fun TrashScreen(
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = stringResource(id = R.string.trash_cancel_selection),
-                                        tint = MaterialTheme.colorScheme.onSurface
+                                        tint = Color(0xFF1E293B)
                                     )
                                 }
                             } else {
@@ -241,7 +236,7 @@ fun TrashScreen(
                                     Icon(
                                         imageVector = Icons.Default.ArrowForward,
                                         contentDescription = stringResource(id = R.string.trash_back),
-                                        tint = MaterialTheme.colorScheme.onSurface
+                                        tint = Color(0xFF1E293B)
                                     )
                                 }
                             }
@@ -256,7 +251,7 @@ fun TrashScreen(
                                     Icon(
                                         imageVector = Icons.Default.Restore,
                                         contentDescription = stringResource(id = R.string.trash_restore_selected),
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = Color(0xFF0F766E)
                                     )
                                 }
                                 IconButton(onClick = {
@@ -267,178 +262,164 @@ fun TrashScreen(
                                     Icon(
                                         imageVector = Icons.Default.DeleteForever,
                                         contentDescription = stringResource(id = R.string.trash_delete_selected_permanently),
-                                        tint = MaterialTheme.colorScheme.error
+                                        tint = Color(0xFFF43F5E)
                                     )
                                 }
                             } else {
                                 if (items.isNotEmpty()) {
+                                    // Visual AssistChip selector for deep and interactive filters
+                                    Box {
+                                        AssistChip(
+                                            onClick = { showFilterMenu = true },
+                                            label = {
+                                                Text(
+                                                    text = when (selectedFilter) {
+                                                        FilterType.ALL -> stringResource(id = R.string.trash_filter_all)
+                                                        FilterType.HABAYEB -> stringResource(id = R.string.trash_filter_habayeb)
+                                                        FilterType.LEDGER -> stringResource(id = R.string.trash_filter_general)
+                                                    },
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF0F766E),
+                                                    fontSize = 11.sp
+                                                )
+                                            },
+                                            trailingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowDropDown,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF0F766E),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            },
+                                            colors = AssistChipDefaults.assistChipColors(
+                                                containerColor = Color(0xFF0F766E).copy(alpha = 0.08f)
+                                            ),
+                                            border = BorderStroke(
+                                                width = 1.dp,
+                                                color = Color(0xFF0F766E).copy(alpha = 0.15f)
+                                            ),
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+
+                                        DropdownMenu(
+                                            expanded = showFilterMenu,
+                                            onDismissRequest = { showFilterMenu = false },
+                                            modifier = Modifier.background(Color.White)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.trash_filter_all)) },
+                                                onClick = {
+                                                    selectedFilter = FilterType.ALL
+                                                    showFilterMenu = false
+                                                }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.trash_filter_habayeb)) },
+                                                onClick = {
+                                                    selectedFilter = FilterType.HABAYEB
+                                                    showFilterMenu = false
+                                                }
+                                            )
+
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.trash_filter_general)) },
+                                                onClick = {
+                                                    selectedFilter = FilterType.LEDGER
+                                                    showFilterMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
+
                                     IconButton(onClick = { isSearchActive = true }) {
                                         Icon(
                                             imageVector = Icons.Default.Search,
                                             contentDescription = stringResource(id = R.string.trash_search),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = Color(0xFF475569)
                                         )
                                     }
                                     IconButton(onClick = { showEmptyConfirm = true }) {
                                         Icon(
                                             imageVector = Icons.Default.DeleteForever,
                                             contentDescription = stringResource(id = R.string.trash_empty_bin),
-                                            tint = MaterialTheme.colorScheme.error
+                                            tint = Color(0xFFF43F5E)
                                         )
                                     }
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surface
-                        )
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
                     )
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color(0xFFF8FAFC)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Instant Filter Chips (Sleek Horizontal Scroll Row instead of Hidden Dropdown!)
-            if (items.isNotEmpty() && !isSelectionMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    FilterChip(
-                        selected = selectedFilter == FilterType.ALL,
-                        onClick = { selectedFilter = FilterType.ALL },
-                        label = { Text("الكل", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selectedFilter == FilterType.ALL,
-                            selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-
-                    FilterChip(
-                        selected = selectedFilter == FilterType.HABAYEB,
-                        onClick = { selectedFilter = FilterType.HABAYEB },
-                        label = { Text("الديون 👥", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.secondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selectedFilter == FilterType.HABAYEB,
-                            selectedBorderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-
-                    FilterChip(
-                        selected = selectedFilter == FilterType.LEDGER,
-                        onClick = { selectedFilter = FilterType.LEDGER },
-                        label = { Text("الدفتر 🏠", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selectedFilter == FilterType.LEDGER,
-                            selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        ),
-                        shape = RoundedCornerShape(20.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE2E8F0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(54.dp),
+                            tint = Color(0xFF94A3B8)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = stringResource(id = R.string.trash_empty_message),
+                        fontSize = 18.sp,
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(processedItems, key = { it.id }) { item ->
+                    val isSelected = selectedItemIds.contains(item.id)
 
-            if (items.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteSweep,
-                                contentDescription = null,
-                                modifier = Modifier.size(42.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(id = R.string.trash_empty_message),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "سلة المحذوفات الذكية نظيفة وفارغة حالياً.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(processedItems, key = { it.id }) { item ->
-                        val isSelected = selectedItemIds.contains(item.id)
-
-                        TrashItemCard(
-                            item = item,
-                            customersList = customersList,
-                            isSelected = isSelected,
-                            currencySymbol = currencySymbol,
-                            onLongClick = {
-                                if (!isSelectionMode) {
-                                    isSelectionMode = true
-                                    toggleSelection(item.id)
-                                }
-                            },
-                            onClick = {
-                                if (isSelectionMode) {
-                                    toggleSelection(item.id)
-                                }
-                            },
-                            onRestore = { viewModel.restoreDeletedItem(item) },
-                            onPermanentDelete = { viewModel.permanentlyDeleteDeletedItem(item) }
-                        )
-                    }
+                    TrashItemCard(
+                        item = item,
+                        customersList = customersList,
+                        isSelected = isSelected,
+                        onLongClick = {
+                            if (!isSelectionMode) {
+                                isSelectionMode = true
+                                toggleSelection(item.id)
+                            }
+                        },
+                        onClick = {
+                            if (isSelectionMode) {
+                                toggleSelection(item.id)
+                            }
+                        },
+                        onRestore = { viewModel.restoreDeletedItem(item) },
+                        onPermanentDelete = { viewModel.permanentlyDeleteDeletedItem(item) }
+                    )
                 }
             }
         }
@@ -453,7 +434,7 @@ fun TrashScreen(
                         viewModel.emptyTrash()
                         showEmptyConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF43F5E)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
@@ -467,7 +448,7 @@ fun TrashScreen(
                 TextButton(onClick = { showEmptyConfirm = false }) {
                     Text(
                         text = stringResource(id = R.string.trash_cancel),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(0xFF64748B),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -476,20 +457,19 @@ fun TrashScreen(
                 Text(
                     text = stringResource(id = R.string.trash_confirm_empty_title),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontSize = 18.sp
                 )
             },
             text = {
                 Text(
                     text = stringResource(id = R.string.trash_confirm_empty_desc),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp
                 )
             },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White
         )
     }
 }
+

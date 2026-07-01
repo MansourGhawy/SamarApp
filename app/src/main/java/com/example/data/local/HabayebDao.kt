@@ -47,9 +47,6 @@ interface HabayebDao {
     @Query("SELECT * FROM habayeb_transactions WHERE customerId = :customerId ORDER BY timestamp DESC")
     fun getTransactionsForCustomerFlow(customerId: String): Flow<List<HabayebTransaction>>
 
-    @Query("SELECT * FROM habayeb_transactions WHERE customerId = :customerId ORDER BY timestamp DESC")
-    fun getTransactionsPagingSourceForCustomer(customerId: String): androidx.paging.PagingSource<Int, HabayebTransaction>
-
     @Query("SELECT * FROM habayeb_transactions")
     suspend fun getAllTransactionsDirect(): List<HabayebTransaction>
 

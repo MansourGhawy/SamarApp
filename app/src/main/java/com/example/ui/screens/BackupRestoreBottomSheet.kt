@@ -557,7 +557,7 @@ fun BackupRestoreBottomSheet(
                         showExportOptions = !showExportOptions
                         showImportOptions = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), // Elegant primary color
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)), // Elegant deep zayti/olive
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()

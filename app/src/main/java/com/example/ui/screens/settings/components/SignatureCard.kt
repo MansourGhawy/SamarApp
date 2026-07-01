@@ -99,13 +99,13 @@ fun SignatureCard() {
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        .background(Color(0xFF0F766E).copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color(0xFF0F766E),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -113,7 +113,7 @@ fun SignatureCard() {
                 Text(
                     text = stringResource(R.string.settings_signature_title),
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF0F766E),
                     fontSize = 14.sp
                 )
             }

@@ -106,40 +106,27 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
     // --- Customer UI States & Accounting Calculations ---
     val customersUiState: StateFlow<CustomersUiState> = combine(
         habayebCustomersState,
-        habayebTransactionsState,
-        settingsState
-    ) { customers, transactions, settings ->
-        val defaultCurrencySymbol = settings.currencySymbol
+        habayebTransactionsState
+    ) { customers, transactions ->
         val txsByCustomer = transactions.groupBy { it.customerId }
         val customerStates = customers.map { customer ->
             val custTxs = txsByCustomer[customer.id] ?: emptyList()
-            
-            // Group transactions by currency and calculate independent balances
-            val currencyGroups = custTxs.groupBy { 
-                com.example.ui.screens.habayeb.utils.CurrencyConfig.parseTransactionCurrency(it.description, defaultCurrencySymbol).first 
-            }
-            
-            val netDebtsMap = currencyGroups.mapValues { (curr, txs) ->
-                var owedByThem = BigDecimal.ZERO
-                var paymentByThem = BigDecimal.ZERO
-                var owedToThem = BigDecimal.ZERO
-                var paymentToThem = BigDecimal.ZERO
-                for (tx in txs) {
-                    val amount = BigDecimal.valueOf(tx.amount)
-                    when (tx.type) {
-                        HabayebTransactionType.OWED_BY_THEM.name -> owedByThem = owedByThem.add(amount)
-                        HabayebTransactionType.PAYMENT_BY_THEM.name -> paymentByThem = paymentByThem.add(amount)
-                        HabayebTransactionType.OWED_TO_THEM.name -> owedToThem = owedToThem.add(amount)
-                        HabayebTransactionType.PAYMENT_TO_THEM.name -> paymentToThem = paymentToThem.add(amount)
-                    }
+            var owedByThem = BigDecimal.ZERO
+            var paymentByThem = BigDecimal.ZERO
+            var owedToThem = BigDecimal.ZERO
+            var paymentToThem = BigDecimal.ZERO
+            for (tx in custTxs) {
+                val amount = BigDecimal.valueOf(tx.amount)
+                when (tx.type) {
+                    HabayebTransactionType.OWED_BY_THEM.name -> owedByThem = owedByThem.add(amount)
+                    HabayebTransactionType.PAYMENT_BY_THEM.name -> paymentByThem = paymentByThem.add(amount)
+                    HabayebTransactionType.OWED_TO_THEM.name -> owedToThem = owedToThem.add(amount)
+                    HabayebTransactionType.PAYMENT_TO_THEM.name -> paymentToThem = paymentToThem.add(amount)
                 }
-                (owedByThem.subtract(paymentByThem)).subtract(owedToThem.subtract(paymentToThem)).toDouble()
             }
-            
-            // Net debt in default currency as fallback/main
-            val netDebt = netDebtsMap[defaultCurrencySymbol] ?: 0.0
+            val netDebtBd = (owedByThem.subtract(paymentByThem)).subtract(owedToThem.subtract(paymentToThem))
+            val netDebt = netDebtBd.toDouble()
             val lastTxTime = custTxs.maxOfOrNull { it.timestamp } ?: customer.createdAt
-            
             CustomerUiState(
                 id = customer.id,
                 name = customer.name,
@@ -148,7 +135,6 @@ class HabayebViewModel(application: Application) : AndroidViewModel(application)
                 createdAt = customer.createdAt,
                 totalTransactions = custTxs.size,
                 netDebt = netDebt,
-                netDebtsByCurrency = netDebtsMap,
                 lastTransactionTimestamp = lastTxTime,
                 originalCustomer = customer
             )

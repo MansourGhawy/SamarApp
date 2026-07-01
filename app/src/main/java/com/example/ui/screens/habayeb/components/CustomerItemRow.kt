@@ -51,7 +51,6 @@ import com.example.ui.helper.AutoScaleText
 import com.example.ui.helper.formatCurrency
 import com.example.ui.helper.getInitialColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.text.style.TextAlign
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -176,53 +175,53 @@ fun CustomerItemRow(
                 }
 
                 Column(
-                    horizontalAlignment = Alignment.End,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier.padding(start = 6.dp)
                 ) {
-                    val activeBalances = customer.netDebtsByCurrency.filter { kotlin.math.abs(it.value) >= 0.01 }
-                    if (activeBalances.isEmpty()) {
+                    val netDebt = customer.netDebt
+                    if (netDebt > 0.0) {
+                        AutoScaleText(
+                            text = formatCurrency(netDebt, currencySymbol),
+                            baseFontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEF4444)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(id = R.string.habayeb_status_owed_by),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = textSecondaryColor
+                        )
+                    } else if (netDebt < 0.0) {
+                        AutoScaleText(
+                            text = formatCurrency(netDebt, currencySymbol),
+                            baseFontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(id = R.string.habayeb_status_owed_to),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = textSecondaryColor
+                        )
+                    } else {
                         Text(
                             text = stringResource(id = R.string.habayeb_pdf_balance_balanced).replace("الرصيد الصافي (متساوي):", "خالص").trim(),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = textSecondaryColor,
-                            textAlign = TextAlign.End
+                            color = textSecondaryColor
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(id = R.string.habayeb_status_balanced),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Normal,
-                            color = textSecondaryColor,
-                            textAlign = TextAlign.End
+                            color = textSecondaryColor
                         )
-                    } else {
-                        activeBalances.forEach { (curr, balance) ->
-                            val isOwedByThem = balance > 0.0
-                            val color = if (isOwedByThem) Color(0xFFEF4444) else Color(0xFF10B981)
-                            val statusLabel = if (isOwedByThem) {
-                                stringResource(id = R.string.habayeb_status_owed_by)
-                            } else {
-                                stringResource(id = R.string.habayeb_status_owed_to)
-                            }
-                            AutoScaleText(
-                                text = formatCurrency(kotlin.math.abs(balance), curr),
-                                baseFontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = color,
-                                textAlign = TextAlign.End
-                            )
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text(
-                                text = statusLabel,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = textSecondaryColor,
-                                textAlign = TextAlign.End
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
                     }
                 }
             }

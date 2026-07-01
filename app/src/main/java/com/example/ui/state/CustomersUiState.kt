@@ -13,7 +13,6 @@ data class CustomerUiState(
     val createdAt: Long = 0L,
     val totalTransactions: Int = 0,
     val netDebt: Double = 0.0,
-    val netDebtsByCurrency: Map<String, Double> = emptyMap(),
     val lastTransactionTimestamp: Long = 0L,
     val isStable: Boolean = true,
     val originalCustomer: HabayebCustomer
